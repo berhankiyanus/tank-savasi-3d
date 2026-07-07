@@ -24,6 +24,8 @@ const L = {
     buy: 'SATIN AL', owned: 'SEÇ', selected: '✓ SEÇİLİ', locked: w => `🔒 Dalga ${w}`,
     noMoney: 'Yetersiz 🪙!', sHealth: 'Can', sSpeed: 'Hız', sFire: 'Ateş',
     reward: '🪙', bestWave: w => `En iyi: Dalga ${w}`,
+    ballBtn: '1v1 TOP MAÇI', ballSub: t => `Topu ateşle karşı base'e sok! İlk ${t} gol kazanır.`,
+    golYou: 'GOL! 🎉', golOpp: 'Gol yediniz!', ballScore: 'GOL',
   },
   en: {
     title: 'TANK BATTLE 3D',
@@ -45,6 +47,8 @@ const L = {
     buy: 'BUY', owned: 'SELECT', selected: '✓ SELECTED', locked: w => `🔒 Wave ${w}`,
     noMoney: 'Not enough 🪙!', sHealth: 'HP', sSpeed: 'Speed', sFire: 'Fire',
     reward: '🪙', bestWave: w => `Best: Wave ${w}`,
+    ballBtn: '1v1 BALL MATCH', ballSub: t => `Shoot the ball into the rival base! First to ${t} goals wins.`,
+    golYou: 'GOAL! 🎉', golOpp: 'They scored!', ballScore: 'GOAL',
   },
 };
 let lang = localStorage.getItem('tanklang') || ((navigator.language || 'tr').startsWith('tr') ? 'tr' : 'en');
@@ -102,6 +106,13 @@ const TANK_R = 1.25;
 const ENEMY_SPEED = 4.6, ENEMY_TURN = 1.9, ENEMY_BSPEED = 17;
 const KILL_TARGET = 5;
 const KILL_COINS = 15;
+const BALL_R = 1.7;
+const BALL_TARGET = 3;
+const BULLET_IMPULSE = 11;
+const BALL_MAX_SPEED = 34;
+const PITCH = { PW: 36, PH: 48, BASE: 9 };
+PITCH.baseZ1 = PITCH.PH / 2 - PITCH.BASE;   // güney base sınırı (+15)
+PITCH.baseZ2 = -(PITCH.PH / 2 - PITCH.BASE); // kuzey base sınırı (-15)
 
 const cellX = c => (c - (COLS - 1) / 2) * CELL;
 const cellZ = r => (r - (ROWS - 1) / 2) * CELL;
@@ -409,9 +420,16 @@ setPlayerTank();
 let enemies = [];
 let wave = 1, score = 0, roundCoins = 0;
 let state = 'menu'; // menu | play | over
-let mode = 'solo';  // solo | duel
+let mode = 'solo';  // solo | duel | ball
 const keys = {};
 let recoil = 0;
+
+// top maçı (1v1) durumu
+let ball = null;
+const ballMeshes = [];
+let isAuthority = false;
+let pendingMode = 'duel';
+let netYou = null, netMode = null, netBegun = false;
 
 function fire(owner) {
   const isPlayer = owner === player;
@@ -472,7 +490,12 @@ function hitFlash() {
 }
 function updateHUD() {
   const t = T();
-  if (mode === 'duel' && duel) {
+  if (mode === 'ball' && ball && duel) {
+    waveEl.textContent = duel.code ? `${t.roomLbl} ${duel.code}` : '';
+    const me = duel.you === 1 ? ball.g1 : ball.g2;
+    const op = duel.you === 1 ? ball.g2 : ball.g1;
+    scoreEl.textContent = `${t.you} ${me} — ${op} ${t.opp}`;
+  } else if (mode === 'duel' && duel) {
     waveEl.textContent = duel.code ? `${t.roomLbl} ${duel.code}` : '';
     scoreEl.textContent = `${t.you} ${duel.myKills} — ${duel.myDeaths} ${t.opp}`;
   } else {
@@ -489,6 +512,8 @@ function showPanel(id) {
 function openMenu() {
   state = 'menu';
   mode = 'solo';
+  clearBallMode();
+  if (!wallInst) buildArena(0);
   const t = T();
   $('title').textContent = t.title;
   $('submsg').textContent = t.sub;
@@ -505,6 +530,7 @@ function applyLang() {
   $('keys').innerHTML = IS_TOUCH ? t.keysTouch : t.keysDesk;
   $('btn-single').textContent = t.single;
   $('btn-duel').textContent = t.duel;
+  $('btn-ball').textContent = t.ballBtn;
   $('btn-garage').textContent = t.garage;
   $('btn-create').textContent = t.create;
   $('btn-join').textContent = t.join;
@@ -628,9 +654,11 @@ function closeNet() {
   if (ws) { ws.onclose = null; ws.close(); ws = null; }
   if (duel && duel.remoteMesh) scene.remove(duel.remoteMesh);
   duel = null;
+  netYou = null; netMode = null; netBegun = false;
 }
 function netSend(obj) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(obj)); }
 function connectNet(onOpen) {
+  netYou = null; netMode = null; netBegun = false;
   const proto = location.protocol === 'https:' ? 'wss://' : 'ws://';
   try { ws = new WebSocket(proto + location.host); }
   catch { duelStatusEl.textContent = T().connFail; return; }
@@ -639,13 +667,24 @@ function connectNet(onOpen) {
   ws.onclose = () => { if (mode === 'duel' && state === 'play') peerLeft(); };
   ws.onmessage = ev => { let m; try { m = JSON.parse(ev.data); } catch { return; } handleNet(m); };
 }
+function tryBegin() {
+  if (netBegun) return;
+  if (netYou === 1) netMode = pendingMode;
+  if (netYou != null && netMode != null) {
+    netBegun = true;
+    if (netMode === 'ball') beginBall(netYou); else beginDuel(netYou);
+  }
+}
 function handleNet(m) {
   const t = T();
   if (m.t === 'room') { if (duel) duel.code = m.code; duelStatusEl.innerHTML = `${t.roomLbl} <span class="code">${m.code}</span><br>${t.waiting}`; }
   else if (m.t === 'err') { duelStatusEl.textContent = t.joinFail; }
-  else if (m.t === 'start') { beginDuel(m.you); }
+  else if (m.t === 'start') { netYou = m.you; if (netYou === 1) netSend({ t: 'gamemode', mode: pendingMode }); tryBegin(); }
+  else if (m.t === 'gamemode') { netMode = m.mode; tryBegin(); }
   else if (!duel) { return; }
   else if (m.t === 'skin') { applyRemoteSkin(m.color, m.scale); }
+  else if (m.t === 'ball') { if (ball && !isAuthority) { ball.tx = m.x; ball.tz = m.z; ball.mesh.rotation.x = m.rx; ball.mesh.rotation.z = m.rz; } }
+  else if (m.t === 'goal') { if (ball) { applyGoal(m.g1, m.g2, m.scorer); if (m.done) { ball.over = true; endBall(); } } }
   else if (m.t === 'state') {
     duel.tx = m.x; duel.tz = m.z; duel.ta = m.a;
     if (m.alive && !duel.remoteAlive) { duel.remoteAlive = true; duel.remoteMesh.visible = true; }
@@ -729,11 +768,173 @@ function peerLeft() {
   setTimeout(() => { $('title').textContent = t.title; $('submsg').textContent = t.peerLeft; showPanel('panel-main'); msgEl.classList.remove('hidden'); closeNet(); }, 1500);
 }
 
+// ---------------------------------------------------------------- top maçı (1v1)
+function clearBallMode() {
+  for (const m of ballMeshes) {
+    scene.remove(m);
+    if (m.geometry && m.geometry.dispose) m.geometry.dispose();
+    if (m.material && m.material.dispose) m.material.dispose();
+  }
+  ballMeshes.length = 0;
+  if (ball && ball.mesh) scene.remove(ball.mesh);
+  ball = null;
+}
+function buildBallArena() {
+  walls.length = 0; openCells = [];
+  if (wallInst) { scene.remove(wallInst); wallInst.dispose(); wallInst = null; }
+  clearBallMode();
+  const { PW, PH, BASE } = PITCH;
+  const TH = 2, H = 3;
+  const addBorder = (cx, cz, sx, sz) => {
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(sx, H, sz), wallMat);
+    mesh.position.set(cx, H / 2, cz); mesh.castShadow = mesh.receiveShadow = true;
+    scene.add(mesh); ballMeshes.push(mesh);
+    walls.push({ minX: cx - sx / 2, maxX: cx + sx / 2, minZ: cz - sz / 2, maxZ: cz + sz / 2 });
+  };
+  addBorder(0, -PH / 2, PW + TH * 2, TH);
+  addBorder(0, PH / 2, PW + TH * 2, TH);
+  addBorder(-PW / 2, 0, TH, PH);
+  addBorder(PW / 2, 0, TH, PH);
+  const mkBase = (z, color) => {
+    const p = new THREE.Mesh(new THREE.PlaneGeometry(PW, BASE),
+      new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.30, side: THREE.DoubleSide }));
+    p.rotation.x = -Math.PI / 2; p.position.set(0, 0.05, z);
+    scene.add(p); ballMeshes.push(p);
+    const line = new THREE.Mesh(new THREE.BoxGeometry(PW, 0.12, 0.35), new THREE.MeshBasicMaterial({ color }));
+    line.position.set(0, 0.1, z + (z > 0 ? -BASE / 2 : BASE / 2));
+    scene.add(line); ballMeshes.push(line);
+  };
+  mkBase(PH / 2 - BASE / 2, 0x3aa0ff);
+  mkBase(-(PH / 2 - BASE / 2), 0xff4a3a);
+}
+function makeBall() {
+  const geo = new THREE.SphereGeometry(BALL_R, 26, 18);
+  const mat = new THREE.MeshStandardMaterial({ color: 0xfff2d0, metalness: 0.2, roughness: 0.3, emissive: 0x332200, emissiveIntensity: 0.5 });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.castShadow = true;
+  mesh.add(new THREE.PointLight(0xffddaa, 10, 12, 2));
+  scene.add(mesh);
+  return mesh;
+}
+function resetBallPositions() {
+  const zc = PITCH.PH / 2 - 6;
+  const mine = duel.you === 1 ? { x: 0, z: zc, a: 0 } : { x: 0, z: -zc, a: Math.PI };
+  const theirs = duel.you === 1 ? { x: 0, z: -zc, a: Math.PI } : { x: 0, z: zc, a: 0 };
+  player.x = mine.x; player.z = mine.z; player.a = mine.a;
+  player.mesh.position.set(player.x, 0, player.z); player.mesh.rotation.y = player.a;
+  duel.tx = theirs.x; duel.tz = theirs.z; duel.ta = theirs.a;
+  duel.x = theirs.x; duel.z = theirs.z; duel.a = theirs.a;
+  duel.remoteMesh.position.set(duel.x, 0, duel.z); duel.remoteMesh.rotation.y = duel.a;
+  if (ball) { ball.x = 0; ball.z = 0; ball.vx = 0; ball.vz = 0; ball.tx = 0; ball.tz = 0; ball.scored = false; ball.mesh.position.set(0, BALL_R, 0); }
+}
+function beginBall(you) {
+  mode = 'ball'; state = 'play';
+  isAuthority = (you === 1);
+  buildBallArena();
+  msgEl.classList.add('hidden');
+  $('topbar').style.visibility = 'visible';
+  $('healthwrap').style.visibility = 'hidden';
+  clearEnemies(); clearBullets();
+  setPlayerTank();
+  const code = duel && duel.code;
+  duel = { you, code, over: false, sendT: 0, tx: 0, tz: 0, ta: 0, x: 0, z: 0, a: 0,
+           remoteAlive: true, remoteMesh: buildTank({ color: 0xa03428, scale: 1 }) };
+  scene.add(duel.remoteMesh);
+  ball = { x: 0, z: 0, vx: 0, vz: 0, tx: 0, tz: 0, g1: 0, g2: 0, over: false, sendT: 0, mesh: makeBall() };
+  resetBallPositions();
+  player.alive = true; player.mesh.visible = true;
+  updateHUD();
+  banner(T().ballBtn);
+  const st = player.stat;
+  netSend({ t: 'skin', color: st.color, scale: st.scale });
+  audio();
+}
+function clampBall() {
+  const sp = Math.hypot(ball.vx, ball.vz);
+  if (sp > BALL_MAX_SPEED) { ball.vx = ball.vx / sp * BALL_MAX_SPEED; ball.vz = ball.vz / sp * BALL_MAX_SPEED; }
+}
+function pushBallByTank(tx, tz) {
+  const dx = ball.x - tx, dz = ball.z - tz, d = Math.hypot(dx, dz), rad = BALL_R + TANK_R;
+  if (d < rad && d > 0.01) {
+    const nx = dx / d, nz = dz / d;
+    ball.x = tx + nx * rad; ball.z = tz + nz * rad;
+    ball.vx = ball.vx * 0.4 + nx * 9; ball.vz = ball.vz * 0.4 + nz * 9;
+    clampBall();
+  }
+}
+function updateBall(dt) {
+  if (ball.over || ball.scored) return;
+  ball.x += ball.vx * dt; ball.z += ball.vz * dt;
+  const fr = Math.pow(0.45, dt);
+  ball.vx *= fr; ball.vz *= fr;
+  for (const w of walls) {
+    const cx = Math.max(w.minX, Math.min(ball.x, w.maxX));
+    const cz = Math.max(w.minZ, Math.min(ball.z, w.maxZ));
+    const dx = ball.x - cx, dz = ball.z - cz, d2 = dx * dx + dz * dz;
+    if (d2 < BALL_R * BALL_R) {
+      const d = Math.sqrt(d2) || 0.001, nx = dx / d, nz = dz / d;
+      ball.x = cx + nx * BALL_R; ball.z = cz + nz * BALL_R;
+      const dot = ball.vx * nx + ball.vz * nz;
+      ball.vx -= 1.6 * dot * nx; ball.vz -= 1.6 * dot * nz;
+    }
+  }
+  pushBallByTank(player.x, player.z);
+  if (duel) pushBallByTank(duel.x, duel.z);
+  ball.mesh.position.set(ball.x, BALL_R, ball.z);
+  ball.mesh.rotation.x += ball.vz * dt * 0.6;
+  ball.mesh.rotation.z -= ball.vx * dt * 0.6;
+  if (!ball.scored) {
+    if (ball.z > PITCH.baseZ1) doGoal(2);
+    else if (ball.z < PITCH.baseZ2) doGoal(1);
+  }
+  ball.sendT -= dt;
+  if (ball.sendT <= 0) {
+    ball.sendT = 0.045;
+    netSend({ t: 'ball', x: ball.x, z: ball.z, rx: ball.mesh.rotation.x, rz: ball.mesh.rotation.z });
+  }
+}
+function doGoal(scorer) {
+  if (ball.over || ball.scored) return;
+  ball.scored = true; ball.vx = 0; ball.vz = 0;
+  if (scorer === 1) ball.g1++; else ball.g2++;
+  const done = ball.g1 >= BALL_TARGET || ball.g2 >= BALL_TARGET;
+  if (done) ball.over = true;
+  netSend({ t: 'goal', g1: ball.g1, g2: ball.g2, scorer, done });
+  applyGoal(ball.g1, ball.g2, scorer);
+  if (done) endBall();
+  else setTimeout(() => { if (ball && !ball.over) resetBallPositions(); }, 900);
+}
+function applyGoal(g1, g2, scorer) {
+  if (!ball) return;
+  ball.g1 = g1; ball.g2 = g2;
+  updateHUD();
+  banner(scorer === duel.you ? T().golYou : T().golOpp);
+  explode(ball.x, 1.2, ball.z, true);
+  if (!isAuthority) { ball.vx = 0; ball.vz = 0; setTimeout(() => { if (ball && !ball.over) resetBallPositions(); }, 900); }
+}
+function endBall() {
+  const t = T();
+  const winner = ball.g1 > ball.g2 ? 1 : 2;
+  const won = winner === duel.you;
+  ball.over = true;
+  banner(won ? t.youWin : t.youLose);
+  const a = duel.you === 1 ? ball.g1 : ball.g2;
+  const b = duel.you === 1 ? ball.g2 : ball.g1;
+  setTimeout(() => {
+    $('title').textContent = won ? t.youWin : t.youLose;
+    $('submsg').textContent = t.duelOverSub(a, b);
+    showPanel('panel-main'); msgEl.classList.remove('hidden');
+    $('topbar').style.visibility = 'hidden';
+    closeNet(); clearBallMode(); buildArena(0);
+  }, 1900);
+}
+
 // ---------------------------------------------------------------- menü olayları
 $('lang-tr').addEventListener('click', () => { lang = 'tr'; applyLang(); if ($('panel-garage').classList.contains('show')) renderGarage(); if ($('panel-maps').classList.contains('show')) renderMaps(); });
 $('lang-en').addEventListener('click', () => { lang = 'en'; applyLang(); if ($('panel-garage').classList.contains('show')) renderGarage(); if ($('panel-maps').classList.contains('show')) renderMaps(); });
 $('btn-single').addEventListener('click', () => { $('title').textContent = T().chooseMap; $('submsg').textContent = T().bestWave(profile.bestWave); renderMaps(); showPanel('panel-maps'); });
-$('btn-duel').addEventListener('click', () => { duelStatusEl.textContent = ''; showPanel('panel-duel'); });
+$('btn-duel').addEventListener('click', () => { pendingMode = 'duel'; duelStatusEl.textContent = ''; $('title').textContent = T().duel; $('submsg').textContent = T().duelSub(KILL_TARGET); showPanel('panel-duel'); });
+$('btn-ball').addEventListener('click', () => { pendingMode = 'ball'; duelStatusEl.textContent = ''; $('title').textContent = T().ballBtn; $('submsg').textContent = T().ballSub(BALL_TARGET); showPanel('panel-duel'); });
 $('btn-garage').addEventListener('click', () => { $('title').textContent = T().garage; $('submsg').textContent = '🪙 ' + profile.coins; renderGarage(); showPanel('panel-garage'); });
 $('btn-back-maps').addEventListener('click', openMenu);
 $('btn-back-garage').addEventListener('click', openMenu);
@@ -870,6 +1071,15 @@ function tick() {
       duel.sendT -= dt;
       if (duel.sendT <= 0) { duel.sendT = 0.05; netSend({ t: 'state', x: player.x, z: player.z, a: player.a, alive: player.alive }); }
     }
+    if (mode === 'ball' && ball) {
+      if (isAuthority) updateBall(dt);
+      else {
+        const k = 1 - Math.exp(-14 * dt);
+        ball.x += (ball.tx - ball.x) * k;
+        ball.z += (ball.tz - ball.z) * k;
+        ball.mesh.position.set(ball.x, BALL_R, ball.z);
+      }
+    }
 
     for (let i = bullets.length - 1; i >= 0; i--) {
       const b = bullets[i];
@@ -885,6 +1095,17 @@ function tick() {
         } else { explode(b.mesh.position.x, 1.0, b.mesh.position.z, false); dead = true; }
       } else { b.mesh.position.x = nx; b.mesh.position.z = nz; }
 
+      if (!dead && mode === 'ball' && ball) {
+        const dbx = b.mesh.position.x - ball.x, dbz = b.mesh.position.z - ball.z;
+        if (dbx * dbx + dbz * dbz < (BALL_R + 0.35) * (BALL_R + 0.35)) {
+          if (isAuthority) {
+            const len = Math.hypot(b.vx, b.vz) || 1;
+            ball.vx += b.vx / len * BULLET_IMPULSE; ball.vz += b.vz / len * BULLET_IMPULSE;
+            clampBall();
+          }
+          explode(b.mesh.position.x, 1.0, b.mesh.position.z, false); dead = true;
+        }
+      }
       if (!dead && b.fromPlayer) {
         if (mode === 'solo') {
           for (const e of enemies) {
@@ -894,10 +1115,10 @@ function tick() {
               updateHUD(); dead = true; break;
             }
           }
-        } else if (duel && duel.remoteAlive && Math.hypot(b.mesh.position.x - duel.x, b.mesh.position.z - duel.z) < 1.5) {
+        } else if (mode === 'duel' && duel && duel.remoteAlive && Math.hypot(b.mesh.position.x - duel.x, b.mesh.position.z - duel.z) < 1.5) {
           explode(b.mesh.position.x, 1.0, b.mesh.position.z, false); dead = true;
         }
-      } else if (!dead && !b.fromPlayer && player.alive && player.inv <= 0) {
+      } else if (!dead && !b.fromPlayer && player.alive && player.inv <= 0 && mode !== 'ball') {
         if (Math.hypot(b.mesh.position.x - player.x, b.mesh.position.z - player.z) < 1.5) {
           dead = true;
           if (mode === 'duel') duelPlayerDie();
