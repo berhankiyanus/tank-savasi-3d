@@ -1,0 +1,5 @@
+node_modules/
+korku/
+.DS_Store
+.claude/
+*.log
