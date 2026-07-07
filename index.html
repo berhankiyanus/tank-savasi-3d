@@ -15,29 +15,34 @@
          text-shadow: 0 2px 6px rgba(0,0,0,.8); user-select: none; pointer-events: none; }
   #topbar { top: 14px; left: 0; right: 0; display: flex; justify-content: space-between;
             padding: 0 22px; font-size: 20px; font-weight: bold; letter-spacing: 1px; }
-  #healthwrap { display: flex; gap: 5px; align-items: center; }
-  .hp { width: 26px; height: 14px; background: #2aff5d; border: 1px solid rgba(0,0,0,.5);
+  #healthwrap { display: flex; gap: 5px; align-items: center; flex-wrap: wrap; max-width: 40%; }
+  .hp { width: 24px; height: 14px; background: #2aff5d; border: 1px solid rgba(0,0,0,.5);
         border-radius: 3px; box-shadow: 0 0 8px rgba(42,255,93,.6); }
   .hp.off { background: rgba(255,255,255,.15); box-shadow: none; }
   #msg { top: 0; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column;
          align-items: center; justify-content: center; text-align: center;
-         background: rgba(0,0,0,.55); transition: opacity .4s; pointer-events: auto; }
-  #msg h1 { font-size: 60px; margin: 0 0 10px; letter-spacing: 6px; color: #ffd76a;
+         background: rgba(0,0,0,.6); transition: opacity .4s; pointer-events: auto;
+         overflow-y: auto; padding: 20px 0; box-sizing: border-box; }
+  #msg h1 { font-size: 56px; margin: 0 0 6px; letter-spacing: 6px; color: #ffd76a;
             text-shadow: 0 0 30px rgba(255,160,40,.8), 0 4px 0 #7a4a00; }
-  #msg h2 { font-size: 24px; margin: 6px 0; color: #fff; font-weight: normal; }
-  #msg .keys { font-size: 16px; color: #b8e6ff; line-height: 1.9; margin-top: 10px; }
+  #msg h2 { font-size: 22px; margin: 4px 0; color: #fff; font-weight: normal; }
+  #msg .keys { font-size: 15px; color: #b8e6ff; line-height: 1.8; margin-top: 8px; }
   .mbtn { font-family: "Courier New", monospace; font-weight: bold; letter-spacing: 2px;
-          font-size: 20px; color: #fff; background: linear-gradient(180deg, #3f7d2f, #244d1a);
-          border: 2px solid #7dff9b; border-radius: 10px; padding: 14px 30px; margin: 8px;
+          font-size: 19px; color: #fff; background: linear-gradient(180deg, #3f7d2f, #244d1a);
+          border: 2px solid #7dff9b; border-radius: 10px; padding: 13px 26px; margin: 7px;
           cursor: pointer; text-shadow: 0 1px 3px rgba(0,0,0,.6);
           box-shadow: 0 4px 14px rgba(0,0,0,.5), 0 0 14px rgba(125,255,155,.25); }
   .mbtn:active { transform: scale(.95); }
   .mbtn.alt { background: linear-gradient(180deg, #8a4a1f, #5a2c0e); border-color: #ffd76a;
               box-shadow: 0 4px 14px rgba(0,0,0,.5), 0 0 14px rgba(255,215,106,.25); }
-  .mbtn.small { font-size: 15px; padding: 8px 14px; margin: 4px; }
+  .mbtn.gold { background: linear-gradient(180deg, #b8892a, #6e4e11); border-color: #ffdd55; }
+  .mbtn.small { font-size: 14px; padding: 8px 14px; margin: 4px; }
   .mbtn.on { outline: 3px solid #fff; }
-  #menubtns { margin-top: 22px; display: flex; flex-wrap: wrap; justify-content: center; }
-  #duelui { display: none; margin-top: 14px; align-items: center; flex-direction: column; }
+  .mbtn:disabled { opacity: .4; cursor: not-allowed; filter: grayscale(.6); }
+  #menubtns { margin-top: 18px; display: flex; flex-wrap: wrap; justify-content: center; }
+  .panel { display: none; flex-direction: column; align-items: center; width: 100%;
+           max-width: 760px; }
+  .panel.show { display: flex; }
   #duelui .or { color: #888; margin: 6px 0; }
   #joincode { font-family: "Courier New", monospace; font-size: 24px; font-weight: bold;
               width: 110px; text-align: center; letter-spacing: 6px; text-transform: uppercase;
@@ -45,18 +50,35 @@
               border-radius: 10px; padding: 12px 8px; outline: none; }
   #duelstatus { margin-top: 14px; font-size: 20px; color: #7dff9b; min-height: 28px; }
   #duelstatus .code { font-size: 34px; letter-spacing: 8px; color: #ffd76a; font-weight: bold; }
-  #langsw { position: absolute; top: calc(18px + env(safe-area-inset-top)); right: 18px; }
+  #langsw { position: absolute; top: calc(16px + env(safe-area-inset-top)); right: 18px; }
+  #coinbar { position: absolute; top: calc(16px + env(safe-area-inset-top)); left: 18px;
+             font-size: 22px; font-weight: bold; color: #ffdd55; letter-spacing: 1px; }
   #errbox { bottom: 8px; left: 8px; right: 8px; background: rgba(160,20,20,.92); color: #fff;
             font-size: 13px; padding: 10px; border-radius: 8px; z-index: 99; display: none;
             word-break: break-all; }
-  #msg .blink { margin-top: 10px; font-size: 15px; color: #7dff9b; animation: bl 1s steps(2) infinite; }
-  @keyframes bl { 50% { opacity: 0; } }
   #flash { inset: 0; box-shadow: inset 0 0 120px 40px rgba(255,30,30,.9); opacity: 0; }
   #wavebanner { top: 26%; left: 0; right: 0; text-align: center; font-size: 42px; font-weight: bold;
                 color: #ffd76a; letter-spacing: 5px; opacity: 0; text-shadow: 0 0 24px rgba(255,170,40,.9); }
   .hidden { opacity: 0 !important; pointer-events: none !important; }
 
-  /* --- dokunmatik kontroller --- */
+  /* kartlar (garaj + harita) */
+  #cardwrap { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin: 12px 8px; }
+  .card { width: 210px; background: linear-gradient(180deg, rgba(40,50,30,.9), rgba(20,28,16,.92));
+          border: 2px solid #4a6b3a; border-radius: 12px; padding: 12px; text-align: center; }
+  .card.sel { border-color: #ffd76a; box-shadow: 0 0 18px rgba(255,215,106,.4); }
+  .card.locked { opacity: .55; filter: grayscale(.5); }
+  .card .cname { font-size: 19px; font-weight: bold; letter-spacing: 1px; }
+  .card .cswatch { width: 100%; height: 46px; border-radius: 8px; margin: 8px 0;
+                   border: 1px solid rgba(0,0,0,.4); }
+  .card .cstat { font-size: 12px; color: #cfe6bf; text-align: left; margin: 3px 0; line-height: 1.5; }
+  .bar { display: inline-block; height: 8px; background: #7dff9b; border-radius: 4px;
+         vertical-align: middle; margin-left: 5px; }
+  .bar.bg { background: rgba(255,255,255,.15); width: 70px; position: relative; }
+  .bar.bg > i { position: absolute; left: 0; top: 0; bottom: 0; background: #7dff9b; border-radius: 4px; }
+  .card .cprice { font-size: 16px; font-weight: bold; color: #ffdd55; margin: 6px 0; }
+
+  #msg .blink { margin-top: 10px; font-size: 15px; color: #7dff9b; }
+
   #touchui { position: fixed; inset: 0; z-index: 20; display: none; pointer-events: none; }
   body.touch #touchui { display: block; }
   #stick { position: absolute; left: calc(22px + env(safe-area-inset-left)); bottom: calc(26px + env(safe-area-inset-bottom));
@@ -77,13 +99,15 @@
   #firebtn:active { transform: scale(.92); }
 
   @media (max-width: 640px) {
-    #msg h1 { font-size: 34px; letter-spacing: 3px; }
-    #msg h2 { font-size: 16px; padding: 0 16px; }
-    #msg .keys { font-size: 13px; }
-    .mbtn { font-size: 17px; padding: 12px 20px; }
-    #topbar { font-size: 14px; padding: 0 12px; top: calc(10px + env(safe-area-inset-top)); }
-    .hp { width: 18px; height: 11px; }
-    #wavebanner { font-size: 30px; }
+    #msg h1 { font-size: 30px; letter-spacing: 3px; }
+    #msg h2 { font-size: 15px; padding: 0 14px; }
+    #msg .keys { font-size: 12px; }
+    .mbtn { font-size: 16px; padding: 11px 18px; }
+    #topbar { font-size: 13px; padding: 0 12px; top: calc(10px + env(safe-area-inset-top)); }
+    .hp { width: 15px; height: 10px; }
+    #wavebanner { font-size: 28px; }
+    .card { width: 150px; }
+    #coinbar, #langsw { font-size: 16px; }
   }
 </style>
 </head>
@@ -104,6 +128,7 @@
 </div>
 
 <div id="msg" class="hud">
+  <div id="coinbar">🪙 <span id="coins">0</span></div>
   <div id="langsw">
     <button class="mbtn small" id="lang-tr">TR</button>
     <button class="mbtn small" id="lang-en">EN</button>
@@ -111,11 +136,30 @@
   <h1 id="title">TANK SAVAŞI 3D</h1>
   <h2 id="submsg">Duvarların arkasına saklanan düşman tankları yok et!</h2>
   <div class="keys" id="keys"></div>
-  <div id="menubtns">
-    <button class="mbtn" id="btn-single">TEK OYUNCU</button>
-    <button class="mbtn alt" id="btn-duel">ARKADAŞLA DÜELLO</button>
+
+  <!-- ana menü -->
+  <div id="panel-main" class="panel show">
+    <div id="menubtns">
+      <button class="mbtn" id="btn-single">TEK OYUNCU</button>
+      <button class="mbtn alt" id="btn-duel">ARKADAŞLA DÜELLO</button>
+      <button class="mbtn gold" id="btn-garage">GARAJ</button>
+    </div>
   </div>
-  <div id="duelui">
+
+  <!-- harita seçimi -->
+  <div id="panel-maps" class="panel">
+    <div id="cardwrap-maps" class="card-list"></div>
+    <button class="mbtn small" id="btn-back-maps">‹ GERİ</button>
+  </div>
+
+  <!-- garaj -->
+  <div id="panel-garage" class="panel">
+    <div id="cardwrap-garage" class="card-list"></div>
+    <button class="mbtn small" id="btn-back-garage">‹ GERİ</button>
+  </div>
+
+  <!-- düello -->
+  <div id="panel-duel" class="panel">
     <button class="mbtn" id="btn-create">ODA KUR</button>
     <div class="or">— / —</div>
     <div id="joinrow">
@@ -123,6 +167,7 @@
       <button class="mbtn" id="btn-join">KATIL</button>
     </div>
     <div id="duelstatus"></div>
+    <button class="mbtn small" id="btn-back-duel">‹ GERİ</button>
   </div>
 </div>
 
@@ -139,7 +184,7 @@
     b.textContent = 'HATA / ERROR: ' + m;
   };
   setTimeout(function () {
-    if (!window.__gameLoaded) window.__showErr('Oyun yüklenemedi — tarayıcı çok eski olabilir / Game failed to load — browser may be too old.');
+    if (!window.__gameLoaded) window.__showErr('Oyun yüklenemedi — tarayıcı çok eski olabilir / Game failed to load.');
   }, 15000);
 </script>
 <script type="module" src="main.js"></script>
