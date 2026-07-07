@@ -100,6 +100,14 @@ const MAPS = [
     '#############','#...........#','#.#####.....#','#.....#####.#','#.#####.....#',
     '#.....#####.#','#.#####.....#','#.....#####.#','#.#####.....#','#.....#####.#',
     '#.......###.#','#...........#','#############' ] },
+  { name: { tr: 'Stadyum', en: 'Stadium' }, req: 2, theme: 'grass', grid: [
+    '#############','#...........#','#..#.....#..#','#...........#','#....#.#....#',
+    '#.##.....##.#','#...........#','#.##.....##.#','#....#.#....#','#...........#',
+    '#..#.....#..#','#...........#','#############' ] },
+  { name: { tr: 'Çapraz', en: 'Cross' }, req: 12, grid: [
+    '#############','#...........#','#.#.......#.#','#..#.....#..#','#...#...#...#',
+    '#....#.#....#','#.....#.....#','#....#.#....#','#...#...#...#','#..#.....#..#',
+    '#.#.......#.#','#...........#','#############' ] },
 ];
 const mapUnlocked = i => profile.bestWave >= MAPS[i].req;
 
@@ -183,6 +191,13 @@ const groundMat = new THREE.MeshStandardMaterial({
   aoMap: tex('assets/textures/ground_ao.jpg', false, 12),
 });
 groundMat.aoMap.channel = 0;
+const grassMat = new THREE.MeshStandardMaterial({
+  map: tex('assets/textures/grass_diff.jpg', true, 16),
+  normalMap: tex('assets/textures/grass_nor.jpg', false, 16),
+  roughnessMap: tex('assets/textures/grass_rough.jpg', false, 16),
+  aoMap: tex('assets/textures/grass_ao.jpg', false, 16),
+});
+grassMat.aoMap.channel = 0;
 const ground = new THREE.Mesh(new THREE.PlaneGeometry(220, 220), groundMat);
 ground.rotation.x = -Math.PI / 2;
 ground.receiveShadow = true;
@@ -203,6 +218,7 @@ let wallInst = null;
 const wallGeo = new THREE.BoxGeometry(CELL, WALL_H, CELL);
 
 function buildArena(mapIdx) {
+  ground.material = MAPS[mapIdx].theme === 'grass' ? grassMat : groundMat;
   MAP = MAPS[mapIdx].grid;
   ROWS = MAP.length; COLS = MAP[0].length;
   walls.length = 0; openCells = [];
@@ -349,11 +365,37 @@ function sfxPower() {
 }
 
 // ---------------------------------------------------------------- efektler
+// SABİT ışık havuzu: ışıklar sahnede hep durur (kullanılmıyorken şiddet 0),
+// asla eklenip çıkarılmaz -> Three.js shader'ları yeniden derlemez -> takılma olmaz.
+const FLASH_POOL = [];
+for (let i = 0; i < 6; i++) {
+  const l = new THREE.PointLight(0xffffff, 0, 12, 2);
+  l.position.set(0, -50, 0);
+  scene.add(l);
+  FLASH_POOL.push({ light: l, life: 0, max: 1, base: 0 });
+}
+function popFlash(x, y, z, color, intensity, dist, dur) {
+  let slot = null;
+  for (const s of FLASH_POOL) { if (s.life <= 0) { slot = s; break; } }
+  if (!slot) { slot = FLASH_POOL[0]; for (const s of FLASH_POOL) if (s.life < slot.life) slot = s; }
+  slot.light.color.setHex(color);
+  slot.light.position.set(x, y, z);
+  slot.light.distance = dist;
+  slot.light.intensity = intensity;
+  slot.base = intensity; slot.life = dur; slot.max = dur;
+}
+function updateFlashes(dt) {
+  for (const s of FLASH_POOL) {
+    if (s.life > 0) { s.life -= dt; s.light.intensity = Math.max(0, s.base * (s.life / s.max)); }
+    else if (s.light.intensity !== 0) s.light.intensity = 0;
+  }
+}
+
 const particles = [];
 const partGeo = new THREE.BoxGeometry(0.22, 0.22, 0.22);
 let shake = 0;
 function explode(x, y, z, big = false) {
-  const n = big ? 26 : 14;
+  const n = big ? 18 : 10;
   for (let i = 0; i < n; i++) {
     const hot = Math.random() < 0.6;
     const mat = new THREE.MeshBasicMaterial({
@@ -367,15 +409,12 @@ function explode(x, y, z, big = false) {
     p.scale.setScalar((big ? 1.4 : 1) * (0.6 + Math.random()));
     scene.add(p); particles.push(p);
   }
-  const ring = new THREE.Mesh(new THREE.RingGeometry(0.3, 0.55, 32),
+  const ring = new THREE.Mesh(new THREE.RingGeometry(0.3, 0.55, 24),
     new THREE.MeshBasicMaterial({ color: 0xffc060, transparent: true, side: THREE.DoubleSide }));
   ring.rotation.x = -Math.PI / 2; ring.position.set(x, 0.15, z);
   ring.userData = { ring: true, life: 0.5, vy: 0, vx: 0, vz: 0 };
   scene.add(ring); particles.push(ring);
-  const l = new THREE.PointLight(0xffa040, big ? 60 : 25, big ? 22 : 12, 2);
-  l.position.set(x, y + 0.5, z);
-  l.userData = { light: true, life: 0.25, vx: 0, vy: 0, vz: 0 };
-  scene.add(l); particles.push(l);
+  popFlash(x, y + 0.5, z, 0xffa040, big ? 55 : 24, big ? 22 : 12, big ? 0.32 : 0.22);
   shake += big ? 0.5 : 0.2;
   sfxBoom(big);
 }
@@ -388,7 +427,6 @@ function updateParticles(dt) {
       particles.splice(i, 1); continue;
     }
     if (p.userData.ring) { p.scale.addScalar(dt * 14); p.material.opacity = p.userData.life * 2; }
-    else if (p.userData.light) { p.intensity *= 0.82; }
     else {
       p.userData.vy -= 14 * dt;
       p.position.x += p.userData.vx * dt;
@@ -400,10 +438,7 @@ function updateParticles(dt) {
   }
 }
 function muzzleFlash(x, y, z) {
-  const l = new THREE.PointLight(0xffc070, 30, 9, 2);
-  l.position.set(x, y, z);
-  l.userData = { light: true, life: 0.08, vx: 0, vy: 0, vz: 0 };
-  scene.add(l); particles.push(l);
+  popFlash(x, y, z, 0xffc070, 26, 9, 0.09);
 }
 
 // ---------------------------------------------------------------- oyun durumu
@@ -445,8 +480,9 @@ let ball = null;
 const ballMeshes = [];
 let isAuthority = false;
 let pendingMode = 'duel';
-let netYou = null, netMode = null, netBegun = false;
+let netYou = null, netMode = null, netBegun = false, netMapIdx = null;
 let matchOverMode = null, myReady = false, peerReady = false;
+let duelMap = 0;
 
 function fire(owner, angOff = 0) {
   const isPlayer = owner === player;
@@ -455,7 +491,6 @@ function fire(owner, angOff = 0) {
   const bx = owner.x + fwdX(a) * 2.6;
   const bz = owner.z + fwdZ(a) * 2.6;
   mesh.position.set(bx, 1.13, bz);
-  mesh.add(new THREE.PointLight(isPlayer ? 0xffd070 : 0xff6040, 6, 7, 2));
   scene.add(mesh);
   let sp;
   if (isPlayer) sp = player.stat.bspeed;
@@ -500,20 +535,42 @@ function makePowerup(def) {
   const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: iconTexture(def.type, def.color), depthTest: false, transparent: true }));
   spr.scale.set(1.15, 1.15, 1.15);
   grp.add(spr);
-  grp.add(new THREE.PointLight(def.color, 9, 9, 2));
   return grp;
 }
 const powerups = [];
-let powerupT = 6;
-function spawnPowerup() {
-  const def = POWERUPS[Math.floor(Math.random() * POWERUPS.length)];
-  const cell = randOpenCell(player.x, player.z, 10);
+let powerupT = 6, puIdCounter = 0;
+function addPowerup(type, x, z, id) {
+  const def = POWERUPS.find(p => p.type === type) || POWERUPS[0];
   const mesh = makePowerup(def);
-  mesh.position.set(cell.x, 1.25, cell.z);
+  mesh.position.set(x, 1.25, z);
   scene.add(mesh);
-  powerups.push({ type: def.type, dur: def.dur, x: cell.x, z: cell.z, mesh, bob: Math.random() * 6 });
+  powerups.push({ type, dur: def.dur, x, z, mesh, bob: Math.random() * 6, id });
 }
 function clearPowerups() { for (const p of powerups) scene.remove(p.mesh); powerups.length = 0; }
+function updatePowerups(dt) {
+  // üretim: tek oyunculuda hep, düelloda sadece otorite (P1) yapar ve rakibe bildirir
+  if (mode === 'solo' || (mode === 'duel' && isAuthority)) {
+    powerupT -= dt;
+    if (powerupT <= 0 && powerups.length < 3) {
+      const def = POWERUPS[Math.floor(Math.random() * POWERUPS.length)];
+      const cell = randOpenCell(player.x, player.z, 10);
+      const id = ++puIdCounter;
+      addPowerup(def.type, cell.x, cell.z, id);
+      if (mode === 'duel') netSend({ t: 'pu_spawn', id, type: def.type, x: cell.x, z: cell.z });
+      powerupT = 9 + Math.random() * 6;
+    }
+  }
+  for (let i = powerups.length - 1; i >= 0; i--) {
+    const p = powerups[i];
+    p.bob += dt * 3; p.mesh.rotation.y += dt * 1.6;
+    p.mesh.position.y = 1.25 + Math.sin(p.bob) * 0.25;
+    if (player.alive && Math.hypot(player.x - p.x, player.z - p.z) < TANK_R + 1.05) {
+      applyPowerup(p.type); explode(p.x, 1.2, p.z, false);
+      if (mode === 'duel') netSend({ t: 'pu_take', id: p.id });
+      scene.remove(p.mesh); powerups.splice(i, 1);
+    }
+  }
+}
 function applyPowerup(type) {
   sfxPower();
   const t = T();
@@ -736,12 +793,12 @@ function closeNet() {
   if (ws) { ws.onclose = null; ws.close(); ws = null; }
   if (duel && duel.remoteMesh) scene.remove(duel.remoteMesh);
   duel = null;
-  netYou = null; netMode = null; netBegun = false;
+  netYou = null; netMode = null; netBegun = false; netMapIdx = null;
   matchOverMode = null; myReady = false; peerReady = false;
 }
 function netSend(obj) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(obj)); }
 function connectNet(onOpen) {
-  netYou = null; netMode = null; netBegun = false;
+  netYou = null; netMode = null; netBegun = false; netMapIdx = null;
   const proto = location.protocol === 'https:' ? 'wss://' : 'ws://';
   try { ws = new WebSocket(proto + location.host); }
   catch { duelStatusEl.textContent = T().connFail; return; }
@@ -758,15 +815,16 @@ function tryBegin() {
   if (netYou === 1) netMode = pendingMode;
   if (netYou != null && netMode != null) {
     netBegun = true;
-    if (netMode === 'ball') beginBall(netYou); else beginDuel(netYou);
+    if (netMode === 'ball') beginBall(netYou);
+    else { if (netYou === 2 && netMapIdx != null) duelMap = netMapIdx; beginDuel(netYou); }
   }
 }
 function handleNet(m) {
   const t = T();
   if (m.t === 'room') { if (duel) duel.code = m.code; duelStatusEl.innerHTML = `${t.roomLbl} <span class="code">${m.code}</span><br>${t.waiting}`; }
   else if (m.t === 'err') { duelStatusEl.textContent = t.joinFail; }
-  else if (m.t === 'start') { netYou = m.you; if (netYou === 1) netSend({ t: 'gamemode', mode: pendingMode }); tryBegin(); }
-  else if (m.t === 'gamemode') { netMode = m.mode; tryBegin(); }
+  else if (m.t === 'start') { netYou = m.you; if (netYou === 1) netSend({ t: 'gamemode', mode: pendingMode, map: duelMap }); tryBegin(); }
+  else if (m.t === 'gamemode') { netMode = m.mode; netMapIdx = (m.map != null ? m.map : 0); tryBegin(); }
   else if (!duel) { return; }
   else if (m.t === 'skin') { applyRemoteSkin(m.color, m.scale); }
   else if (m.t === 'ball') { if (ball && !isAuthority) { ball.tx = m.x; ball.tz = m.z; ball.mesh.rotation.x = m.rx; ball.mesh.rotation.z = m.rz; } }
@@ -775,7 +833,12 @@ function handleNet(m) {
     duel.tx = m.x; duel.tz = m.z; duel.ta = m.a;
     if (m.alive && !duel.remoteAlive) { duel.remoteAlive = true; duel.remoteMesh.visible = true; }
   }
-  else if (m.t === 'fire') { fire({ x: m.x, z: m.z, a: m.a, bspeed: m.bs }); }
+  else if (m.t === 'fire') {
+    if (m.trip) { fire({ x: m.x, z: m.z, a: m.a, bspeed: m.bs }, -0.17); fire({ x: m.x, z: m.z, a: m.a, bspeed: m.bs }, 0); fire({ x: m.x, z: m.z, a: m.a, bspeed: m.bs }, 0.17); }
+    else fire({ x: m.x, z: m.z, a: m.a, bspeed: m.bs });
+  }
+  else if (m.t === 'pu_spawn') { addPowerup(m.type, m.x, m.z, m.id); }
+  else if (m.t === 'pu_take') { const i = powerups.findIndex(p => p.id === m.id); if (i >= 0) { scene.remove(powerups[i].mesh); powerups.splice(i, 1); } }
   else if (m.t === 'die') {
     duel.remoteAlive = false; duel.remoteMesh.visible = false;
     explode(duel.tx, 1.2, duel.tz, true);
@@ -801,10 +864,14 @@ function applyRemoteSkin(color, scale) {
 }
 function beginDuel(you) {
   mode = 'duel'; state = 'play';
-  buildArena(0);
+  isAuthority = (you === 1);
+  buildArena(duelMap);
   msgEl.classList.add('hidden');
   $('topbar').style.visibility = 'visible';
-  clearEnemies(); clearBullets();
+  clearEnemies(); clearBullets(); clearPowerups();
+  powerupT = 6; puIdCounter = 0;
+  player.speedT = 0; player.tripleT = 0; player.shieldT = 0;
+  shieldBubble.visible = false;
   $('healthwrap').style.visibility = 'hidden';
   setPlayerTank();
   const code = duel && duel.code;
@@ -899,6 +966,7 @@ function clearBallMode() {
   ball = null;
 }
 function buildBallArena() {
+  ground.material = grassMat;
   walls.length = 0; openCells = [];
   if (wallInst) { scene.remove(wallInst); wallInst.dispose(); wallInst = null; }
   clearBallMode();
@@ -1046,8 +1114,20 @@ function endBall() {
 $('lang-tr').addEventListener('click', () => { lang = 'tr'; applyLang(); if ($('panel-garage').classList.contains('show')) renderGarage(); if ($('panel-maps').classList.contains('show')) renderMaps(); });
 $('lang-en').addEventListener('click', () => { lang = 'en'; applyLang(); if ($('panel-garage').classList.contains('show')) renderGarage(); if ($('panel-maps').classList.contains('show')) renderMaps(); });
 $('btn-single').addEventListener('click', () => { $('title').textContent = T().chooseMap; $('submsg').textContent = T().bestWave(profile.bestWave); renderMaps(); showPanel('panel-maps'); });
-$('btn-duel').addEventListener('click', () => { pendingMode = 'duel'; duelStatusEl.textContent = ''; $('title').textContent = T().duel; $('submsg').textContent = T().duelSub(KILL_TARGET); showPanel('panel-duel'); });
-$('btn-ball').addEventListener('click', () => { pendingMode = 'ball'; duelStatusEl.textContent = ''; $('title').textContent = T().ballBtn; $('submsg').textContent = T().ballSub(BALL_TARGET); showPanel('panel-duel'); });
+function renderDuelMaps() {
+  const wrap = $('duelmapsrow');
+  wrap.style.cssText = 'display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin:4px 8px 12px;max-width:640px';
+  wrap.innerHTML = '';
+  MAPS.forEach((mp, idx) => {
+    const b = document.createElement('button');
+    b.className = 'mbtn small' + (idx === duelMap ? ' on' : '');
+    b.textContent = mp.name[lang];
+    b.onclick = () => { duelMap = idx; renderDuelMaps(); };
+    wrap.appendChild(b);
+  });
+}
+$('btn-duel').addEventListener('click', () => { pendingMode = 'duel'; duelStatusEl.textContent = ''; $('title').textContent = T().duel; $('submsg').textContent = T().duelSub(KILL_TARGET); $('duelmapsrow').style.display = 'flex'; renderDuelMaps(); showPanel('panel-duel'); });
+$('btn-ball').addEventListener('click', () => { pendingMode = 'ball'; duelStatusEl.textContent = ''; $('title').textContent = T().ballBtn; $('submsg').textContent = T().ballSub(BALL_TARGET); $('duelmapsrow').style.display = 'none'; showPanel('panel-duel'); });
 $('btn-garage').addEventListener('click', () => { $('title').textContent = T().garage; $('submsg').textContent = '🪙 ' + profile.coins; renderGarage(); showPanel('panel-garage'); });
 $('btn-back-maps').addEventListener('click', openMenu);
 $('btn-back-garage').addEventListener('click', openMenu);
@@ -1179,28 +1259,17 @@ function tick() {
         if (player.tripleT > 0) { fire(player, -0.17); fire(player, 0); fire(player, 0.17); }
         else fire(player);
         player.cool = player.stat.cool;
-        if (mode === 'duel' || mode === 'ball') netSend({ t: 'fire', x: player.x, z: player.z, a: player.a, bs: player.stat.bspeed });
+        if (mode === 'duel' || mode === 'ball') netSend({ t: 'fire', x: player.x, z: player.z, a: player.a, bs: player.stat.bspeed, trip: player.tripleT > 0 });
       }
       player.mesh.position.set(player.x, 0, player.z);
       player.mesh.rotation.y = player.a;
       if (playerTurret) { recoil = Math.max(0, recoil - dt * 0.8); playerTurret.position.z = turretBaseZ + recoil; }
     }
 
+    if (mode === 'solo' || mode === 'duel') updatePowerups(dt);
+
     if (mode === 'solo') {
       for (const e of enemies) updateEnemy(e, dt);
-      // güç-yükseltmeleri: üretim
-      powerupT -= dt;
-      if (powerupT <= 0 && powerups.length < 3) { spawnPowerup(); powerupT = 9 + Math.random() * 6; }
-      // animasyon + toplama
-      for (let i = powerups.length - 1; i >= 0; i--) {
-        const p = powerups[i];
-        p.bob += dt * 3; p.mesh.rotation.y += dt * 1.6;
-        p.mesh.position.y = 1.25 + Math.sin(p.bob) * 0.25;
-        if (player.alive && Math.hypot(player.x - p.x, player.z - p.z) < TANK_R + 1.05) {
-          applyPowerup(p.type); explode(p.x, 1.2, p.z, false);
-          scene.remove(p.mesh); powerups.splice(i, 1);
-        }
-      }
     } else if (duel) {
       const k = 1 - Math.exp(-12 * dt);
       duel.x += (duel.tx - duel.x) * k;
@@ -1261,12 +1330,12 @@ function tick() {
       } else if (!dead && !b.fromPlayer && player.alive && player.inv <= 0 && mode !== 'ball') {
         if (Math.hypot(b.mesh.position.x - player.x, b.mesh.position.z - player.z) < 1.5) {
           dead = true;
-          if (mode === 'duel') duelPlayerDie();
-          else if (player.shieldT > 0) {
+          if (player.shieldT > 0) {
             player.inv = 0.3;
             explode(b.mesh.position.x, 1.0, b.mesh.position.z, false);
             sfxBounce();
           }
+          else if (mode === 'duel') duelPlayerDie();
           else {
             player.inv = 1.0; player.health--; renderHealth(); hitFlash();
             explode(b.mesh.position.x, 1.0, b.mesh.position.z, false);
@@ -1297,6 +1366,7 @@ function tick() {
   }
 
   updateParticles(dt);
+  updateFlashes(dt);
 
   // kalkan baloncuğu
   const sh = state === 'play' && player.alive && player.shieldT > 0;
