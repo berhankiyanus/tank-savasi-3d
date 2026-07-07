@@ -26,6 +26,8 @@ const L = {
     reward: '🪙', bestWave: w => `En iyi: Dalga ${w}`,
     ballBtn: '1v1 TOP MAÇI', ballSub: t => `Topu ateşle karşı base'e sok! İlk ${t} gol kazanır.`,
     golYou: 'GOL! 🎉', golOpp: 'Gol yediniz!', ballScore: 'GOL',
+    rematchBtn: 'TEKRAR OYNA', leaveBtn: 'ÇIKIŞ',
+    rematchWait: 'Rakip bekleniyor...', rematchPeerReady: 'Rakip tekrar oynamak istiyor!',
   },
   en: {
     title: 'TANK BATTLE 3D',
@@ -49,6 +51,8 @@ const L = {
     reward: '🪙', bestWave: w => `Best: Wave ${w}`,
     ballBtn: '1v1 BALL MATCH', ballSub: t => `Shoot the ball into the rival base! First to ${t} goals wins.`,
     golYou: 'GOAL! 🎉', golOpp: 'They scored!', ballScore: 'GOAL',
+    rematchBtn: 'PLAY AGAIN', leaveBtn: 'LEAVE',
+    rematchWait: 'Waiting for opponent...', rematchPeerReady: 'Opponent wants a rematch!',
   },
 };
 let lang = localStorage.getItem('tanklang') || ((navigator.language || 'tr').startsWith('tr') ? 'tr' : 'en');
@@ -430,6 +434,7 @@ const ballMeshes = [];
 let isAuthority = false;
 let pendingMode = 'duel';
 let netYou = null, netMode = null, netBegun = false;
+let matchOverMode = null, myReady = false, peerReady = false;
 
 function fire(owner) {
   const isPlayer = owner === player;
@@ -506,7 +511,7 @@ function updateHUD() {
 
 // panel yönetimi
 function showPanel(id) {
-  for (const p of ['panel-main', 'panel-maps', 'panel-garage', 'panel-duel'])
+  for (const p of ['panel-main', 'panel-maps', 'panel-garage', 'panel-duel', 'panel-rematch'])
     $(p).classList.toggle('show', p === id);
 }
 function openMenu() {
@@ -540,6 +545,8 @@ function applyLang() {
   $('btn-back-maps').textContent = t.back;
   $('btn-back-garage').textContent = t.back;
   $('btn-back-duel').textContent = t.back;
+  $('btn-rematch').textContent = t.rematchBtn;
+  $('btn-leave').textContent = t.leaveBtn;
   $('lang-tr').classList.toggle('on', lang === 'tr');
   $('lang-en').classList.toggle('on', lang === 'en');
   if (state === 'menu' && $('panel-main').classList.contains('show')) $('submsg').textContent = t.sub;
@@ -655,6 +662,7 @@ function closeNet() {
   if (duel && duel.remoteMesh) scene.remove(duel.remoteMesh);
   duel = null;
   netYou = null; netMode = null; netBegun = false;
+  matchOverMode = null; myReady = false; peerReady = false;
 }
 function netSend(obj) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(obj)); }
 function connectNet(onOpen) {
@@ -664,7 +672,10 @@ function connectNet(onOpen) {
   catch { duelStatusEl.textContent = T().connFail; return; }
   ws.onopen = onOpen;
   ws.onerror = () => { duelStatusEl.textContent = T().connFail; };
-  ws.onclose = () => { if (mode === 'duel' && state === 'play') peerLeft(); };
+  ws.onclose = () => {
+    if (state === 'play' && (mode === 'duel' || mode === 'ball')) peerLeft();
+    else if (matchOverMode) onPeerGone();
+  };
   ws.onmessage = ev => { let m; try { m = JSON.parse(ev.data); } catch { return; } handleNet(m); };
 }
 function tryBegin() {
@@ -697,7 +708,12 @@ function handleNet(m) {
     if (duel.myKills >= KILL_TARGET) { netSend({ t: 'win' }); duelEnd(true); }
   }
   else if (m.t === 'win') { duelEnd(false); }
-  else if (m.t === 'peerleft') { peerLeft(); }
+  else if (m.t === 'rematch') {
+    peerReady = true;
+    if (matchOverMode && !myReady) $('rematchstatus').textContent = T().rematchPeerReady;
+    tryRematch();
+  }
+  else if (m.t === 'peerleft') { if (matchOverMode) onPeerGone(); else peerLeft(); }
 }
 function applyRemoteSkin(color, scale) {
   if (!duel) return;
@@ -753,19 +769,47 @@ function duelEnd(won) {
   duel.over = true;
   const t = T(), a = duel.myKills, b = duel.myDeaths;
   banner(won ? t.youWin : t.youLose);
-  setTimeout(() => {
-    $('title').textContent = won ? t.youWin : t.youLose;
-    $('submsg').textContent = t.duelOverSub(a, b);
-    showPanel('panel-main'); msgEl.classList.remove('hidden');
-    closeNet();
-  }, 1800);
+  setTimeout(() => showRematch('duel', won ? t.youWin : t.youLose, t.duelOverSub(a, b)), 1800);
 }
 function peerLeft() {
   if (!duel || duel.over) return;
   duel.over = true;
   const t = T();
   banner(t.peerLeft);
-  setTimeout(() => { $('title').textContent = t.title; $('submsg').textContent = t.peerLeft; showPanel('panel-main'); msgEl.classList.remove('hidden'); closeNet(); }, 1500);
+  setTimeout(() => {
+    $('title').textContent = t.title; $('submsg').textContent = t.peerLeft;
+    showPanel('panel-main'); msgEl.classList.remove('hidden'); $('topbar').style.visibility = 'hidden';
+    closeNet(); clearBallMode(); buildArena(0);
+  }, 1500);
+}
+
+// maç sonu: aynı odada tekrar oynama ekranı
+function showRematch(m, title, sub) {
+  if (!ws || ws.readyState !== 1) { closeNet(); clearBallMode(); buildArena(0); openMenu(); return; }
+  matchOverMode = m; myReady = false; peerReady = false;
+  state = 'over';
+  $('title').textContent = title;
+  $('submsg').textContent = sub;
+  $('rematchstatus').textContent = '';
+  $('btn-rematch').disabled = false;
+  showPanel('panel-rematch');
+  msgEl.classList.remove('hidden');
+  $('topbar').style.visibility = 'hidden';
+}
+function tryRematch() {
+  if (myReady && peerReady && matchOverMode && duel) {
+    const m = matchOverMode, you = duel.you;
+    matchOverMode = null; myReady = false; peerReady = false;
+    if (m === 'ball') beginBall(you); else beginDuel(you);
+  }
+}
+function onPeerGone() {
+  if (!matchOverMode) return;
+  matchOverMode = null;
+  const t = T();
+  $('title').textContent = t.title; $('submsg').textContent = t.peerLeft;
+  showPanel('panel-main'); msgEl.classList.remove('hidden'); $('topbar').style.visibility = 'hidden';
+  closeNet(); clearBallMode(); buildArena(0);
 }
 
 // ---------------------------------------------------------------- top maçı (1v1)
@@ -920,13 +964,7 @@ function endBall() {
   banner(won ? t.youWin : t.youLose);
   const a = duel.you === 1 ? ball.g1 : ball.g2;
   const b = duel.you === 1 ? ball.g2 : ball.g1;
-  setTimeout(() => {
-    $('title').textContent = won ? t.youWin : t.youLose;
-    $('submsg').textContent = t.duelOverSub(a, b);
-    showPanel('panel-main'); msgEl.classList.remove('hidden');
-    $('topbar').style.visibility = 'hidden';
-    closeNet(); clearBallMode(); buildArena(0);
-  }, 1900);
+  setTimeout(() => showRematch('ball', won ? t.youWin : t.youLose, t.duelOverSub(a, b)), 1900);
 }
 
 // ---------------------------------------------------------------- menü olayları
@@ -939,6 +977,15 @@ $('btn-garage').addEventListener('click', () => { $('title').textContent = T().g
 $('btn-back-maps').addEventListener('click', openMenu);
 $('btn-back-garage').addEventListener('click', openMenu);
 $('btn-back-duel').addEventListener('click', () => { closeNet(); openMenu(); });
+$('btn-rematch').addEventListener('click', () => {
+  if (myReady || !matchOverMode) return;
+  myReady = true;
+  $('btn-rematch').disabled = true;
+  $('rematchstatus').textContent = T().rematchWait;
+  netSend({ t: 'rematch' });
+  tryRematch();
+});
+$('btn-leave').addEventListener('click', () => { closeNet(); clearBallMode(); buildArena(0); openMenu(); });
 $('btn-create').addEventListener('click', () => { duel = { code: null }; duelStatusEl.textContent = '...'; connectNet(() => netSend({ t: 'create' })); });
 $('btn-join').addEventListener('click', () => {
   const code = $('joincode').value.trim().toUpperCase();

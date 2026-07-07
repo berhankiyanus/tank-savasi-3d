@@ -49,6 +49,7 @@
               background: rgba(255,255,255,.1); color: #ffd76a; border: 2px solid #ffd76a;
               border-radius: 10px; padding: 12px 8px; outline: none; }
   #duelstatus { margin-top: 14px; font-size: 20px; color: #7dff9b; min-height: 28px; }
+  #rematchstatus { margin-top: 14px; font-size: 19px; color: #7dff9b; min-height: 26px; }
   #duelstatus .code { font-size: 34px; letter-spacing: 8px; color: #ffd76a; font-weight: bold; }
   #langsw { position: absolute; top: calc(16px + env(safe-area-inset-top)); right: 18px; }
   #coinbar { position: absolute; top: calc(16px + env(safe-area-inset-top)); left: 18px;
@@ -169,6 +170,15 @@
     </div>
     <div id="duelstatus"></div>
     <button class="mbtn small" id="btn-back-duel">‹ GERİ</button>
+  </div>
+
+  <!-- tekrar oyna (maç sonu, aynı oda) -->
+  <div id="panel-rematch" class="panel">
+    <div id="menubtns">
+      <button class="mbtn" id="btn-rematch">TEKRAR OYNA</button>
+      <button class="mbtn alt" id="btn-leave">ÇIKIŞ</button>
+    </div>
+    <div id="rematchstatus"></div>
   </div>
 </div>
 
