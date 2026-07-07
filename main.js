@@ -441,7 +441,7 @@ function fire(owner) {
   scene.add(mesh);
   let sp;
   if (isPlayer) sp = player.stat.bspeed;
-  else if (mode === 'duel') sp = owner.bspeed || 24;
+  else if (mode === 'duel' || mode === 'ball') sp = owner.bspeed || 24;
   else sp = ENEMY_BSPEED;
   bullets.push({ mesh, fromPlayer: isPlayer, vx: fwdX(owner.a) * sp, vz: fwdZ(owner.a) * sp, life: 2.6, bounces: 1 });
   muzzleFlash(bx, 1.3, bz);
@@ -1052,7 +1052,7 @@ function tick() {
       }
       if ((keys.Space || touchCtl.fire) && player.cool <= 0) {
         fire(player); player.cool = player.stat.cool;
-        if (mode === 'duel') netSend({ t: 'fire', x: player.x, z: player.z, a: player.a, bs: player.stat.bspeed });
+        if (mode === 'duel' || mode === 'ball') netSend({ t: 'fire', x: player.x, z: player.z, a: player.a, bs: player.stat.bspeed });
       }
       player.mesh.position.set(player.x, 0, player.z);
       player.mesh.rotation.y = player.a;
