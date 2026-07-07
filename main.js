@@ -28,6 +28,7 @@ const L = {
     golYou: 'GOL! 🎉', golOpp: 'Gol yediniz!', ballScore: 'GOL',
     rematchBtn: 'TEKRAR OYNA', leaveBtn: 'ÇIKIŞ',
     rematchWait: 'Rakip bekleniyor...', rematchPeerReady: 'Rakip tekrar oynamak istiyor!',
+    puSpeed: 'HIZ! ⚡', puTriple: "3'LÜ ATIŞ!", puShield: 'KALKAN! 🛡',
   },
   en: {
     title: 'TANK BATTLE 3D',
@@ -53,6 +54,7 @@ const L = {
     golYou: 'GOAL! 🎉', golOpp: 'They scored!', ballScore: 'GOAL',
     rematchBtn: 'PLAY AGAIN', leaveBtn: 'LEAVE',
     rematchWait: 'Waiting for opponent...', rematchPeerReady: 'Opponent wants a rematch!',
+    puSpeed: 'SPEED! ⚡', puTriple: 'TRIPLE SHOT!', puShield: 'SHIELD! 🛡',
   },
 };
 let lang = localStorage.getItem('tanklang') || ((navigator.language || 'tr').startsWith('tr') ? 'tr' : 'en');
@@ -336,6 +338,15 @@ function sfxCoin() {
   g.gain.setValueAtTime(0.08, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
   o.connect(g).connect(ac.destination); o.start(t); o.stop(t + 0.2);
 }
+function sfxPower() {
+  const ac = audio(), t = ac.currentTime;
+  const o = ac.createOscillator(), g = ac.createGain();
+  o.type = 'triangle';
+  o.frequency.setValueAtTime(440, t);
+  o.frequency.exponentialRampToValueAtTime(1200, t + 0.18);
+  g.gain.setValueAtTime(0.11, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.32);
+  o.connect(g).connect(ac.destination); o.start(t); o.stop(t + 0.34);
+}
 
 // ---------------------------------------------------------------- efektler
 const particles = [];
@@ -405,6 +416,7 @@ const player = {
   mesh: null, a: 0, x: 0, z: 0,
   health: 5, maxHealth: 5, cool: 0, alive: true, speed: 0, inv: 0,
   stat: tankById(profile.selected),
+  speedT: 0, tripleT: 0, shieldT: 0,
 };
 let playerTurret = null, turretBaseZ = 0;
 
@@ -436,11 +448,12 @@ let pendingMode = 'duel';
 let netYou = null, netMode = null, netBegun = false;
 let matchOverMode = null, myReady = false, peerReady = false;
 
-function fire(owner) {
+function fire(owner, angOff = 0) {
   const isPlayer = owner === player;
+  const a = owner.a + angOff;
   const mesh = new THREE.Mesh(bulletGeo, isPlayer ? playerBulletMat : enemyBulletMat);
-  const bx = owner.x + fwdX(owner.a) * 2.6;
-  const bz = owner.z + fwdZ(owner.a) * 2.6;
+  const bx = owner.x + fwdX(a) * 2.6;
+  const bz = owner.z + fwdZ(a) * 2.6;
   mesh.position.set(bx, 1.13, bz);
   mesh.add(new THREE.PointLight(isPlayer ? 0xffd070 : 0xff6040, 6, 7, 2));
   scene.add(mesh);
@@ -448,13 +461,70 @@ function fire(owner) {
   if (isPlayer) sp = player.stat.bspeed;
   else if (mode === 'duel' || mode === 'ball') sp = owner.bspeed || 24;
   else sp = ENEMY_BSPEED;
-  bullets.push({ mesh, fromPlayer: isPlayer, vx: fwdX(owner.a) * sp, vz: fwdZ(owner.a) * sp, life: 2.6, bounces: 1 });
+  bullets.push({ mesh, fromPlayer: isPlayer, vx: fwdX(a) * sp, vz: fwdZ(a) * sp, life: 2.6, bounces: 1 });
   muzzleFlash(bx, 1.3, bz);
   sfxFire();
   if (isPlayer && playerTurret) recoil = 0.14;
 }
 function clearBullets() { for (const b of bullets) scene.remove(b.mesh); bullets.length = 0; }
 function clearEnemies() { for (const e of enemies) scene.remove(e.mesh); enemies = []; }
+
+// ---------------------------------------------------------------- güç-yükseltmeleri
+const POWERUPS = [
+  { type: 'speed', color: 0xffd11a, dur: 8 },
+  { type: 'triple', color: 0xff5a2a, dur: 10 },
+  { type: 'shield', color: 0x2ad0ff, dur: 8 },
+];
+function iconTexture(type, color) {
+  const c = document.createElement('canvas'); c.width = c.height = 128;
+  const g = c.getContext('2d');
+  g.fillStyle = '#fff'; g.strokeStyle = '#fff'; g.lineWidth = 12; g.lineJoin = 'round'; g.lineCap = 'round';
+  if (type === 'speed') {
+    g.beginPath(); g.moveTo(78, 16); g.lineTo(38, 72); g.lineTo(60, 72); g.lineTo(50, 112); g.lineTo(94, 52); g.lineTo(70, 52); g.closePath(); g.fill();
+  } else if (type === 'triple') {
+    for (const x of [38, 64, 90]) { g.beginPath(); g.arc(x, 42, 11, 0, 7); g.fill(); g.fillRect(x - 5, 42, 10, 52); }
+  } else if (type === 'shield') {
+    g.beginPath(); g.moveTo(64, 14); g.lineTo(106, 32); g.lineTo(106, 66);
+    g.quadraticCurveTo(106, 102, 64, 116); g.quadraticCurveTo(22, 102, 22, 66); g.lineTo(22, 32); g.closePath(); g.fill();
+    g.fillStyle = '#' + color.toString(16).padStart(6, '0');
+    g.beginPath(); g.moveTo(64, 30); g.lineTo(92, 42); g.lineTo(92, 66);
+    g.quadraticCurveTo(92, 90, 64, 100); g.quadraticCurveTo(36, 90, 36, 66); g.lineTo(36, 42); g.closePath(); g.fill();
+  }
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+function makePowerup(def) {
+  const grp = new THREE.Group();
+  const sphere = new THREE.Mesh(new THREE.SphereGeometry(1.05, 22, 16),
+    new THREE.MeshStandardMaterial({ color: def.color, transparent: true, opacity: 0.32, emissive: def.color, emissiveIntensity: 0.7, roughness: 0.15, metalness: 0.1, depthWrite: false }));
+  grp.add(sphere);
+  const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: iconTexture(def.type, def.color), depthTest: false, transparent: true }));
+  spr.scale.set(1.15, 1.15, 1.15);
+  grp.add(spr);
+  grp.add(new THREE.PointLight(def.color, 9, 9, 2));
+  return grp;
+}
+const powerups = [];
+let powerupT = 6;
+function spawnPowerup() {
+  const def = POWERUPS[Math.floor(Math.random() * POWERUPS.length)];
+  const cell = randOpenCell(player.x, player.z, 10);
+  const mesh = makePowerup(def);
+  mesh.position.set(cell.x, 1.25, cell.z);
+  scene.add(mesh);
+  powerups.push({ type: def.type, dur: def.dur, x: cell.x, z: cell.z, mesh, bob: Math.random() * 6 });
+}
+function clearPowerups() { for (const p of powerups) scene.remove(p.mesh); powerups.length = 0; }
+function applyPowerup(type) {
+  sfxPower();
+  const t = T();
+  if (type === 'speed') { player.speedT = 8; banner(t.puSpeed); }
+  else if (type === 'triple') { player.tripleT = 10; banner(t.puTriple); }
+  else if (type === 'shield') { player.shieldT = 8; banner(t.puShield); }
+}
+const shieldBubble = new THREE.Mesh(new THREE.SphereGeometry(2.0, 20, 16),
+  new THREE.MeshStandardMaterial({ color: 0x2ad0ff, transparent: true, opacity: 0.22, emissive: 0x2ad0ff, emissiveIntensity: 0.6, side: THREE.DoubleSide, depthWrite: false }));
+shieldBubble.visible = false;
+scene.add(shieldBubble);
 
 const ENEMY_COLORS = [0xa03428, 0xb07a30, 0x8a3a8a, 0x2f6ea0, 0x9c2f55, 0x777777];
 function spawnEnemies(n) {
@@ -517,7 +587,8 @@ function showPanel(id) {
 function openMenu() {
   state = 'menu';
   mode = 'solo';
-  clearBallMode();
+  clearBallMode(); clearPowerups();
+  shieldBubble.visible = false;
   if (!wallInst) buildArena(0);
   const t = T();
   $('title').textContent = t.title;
@@ -632,10 +703,12 @@ function startSolo(mapIdx) {
   msgEl.classList.add('hidden');
   $('topbar').style.visibility = 'visible';
   $('healthwrap').style.visibility = 'visible';
-  clearEnemies(); clearBullets();
-  wave = 1; score = 0; roundCoins = 0;
+  clearEnemies(); clearBullets(); clearPowerups();
+  wave = 1; score = 0; roundCoins = 0; powerupT = 6;
   setPlayerTank();
   player.health = player.maxHealth; player.alive = true; player.inv = 0;
+  player.speedT = 0; player.tripleT = 0; player.shieldT = 0;
+  shieldBubble.visible = false;
   const c = randOpenCell();
   player.x = c.x; player.z = c.z; player.a = 0;
   player.mesh.position.set(player.x, 0, player.z);
@@ -647,6 +720,8 @@ function startSolo(mapIdx) {
 }
 function gameOver() {
   state = 'over';
+  clearPowerups();
+  shieldBubble.visible = false;
   const t = T();
   $('title').textContent = t.over;
   $('submsg').textContent = t.overSub(score, wave, roundCoins);
@@ -1075,11 +1150,14 @@ function tick() {
   if (state === 'play') {
     if (player.alive) {
       player.cool -= dt; player.inv -= dt;
+      if (player.speedT > 0) player.speedT -= dt;
+      if (player.tripleT > 0) player.tripleT -= dt;
+      if (player.shieldT > 0) player.shieldT -= dt;
       let turn = (keys.KeyA || keys.ArrowLeft ? 1 : 0) - (keys.KeyD || keys.ArrowRight ? 1 : 0) + touchCtl.turn;
       let move = (keys.KeyW || keys.ArrowUp ? 1 : 0) - (keys.KeyS || keys.ArrowDown ? 1 : 0) + touchCtl.move;
       turn = Math.max(-1, Math.min(1, turn)); move = Math.max(-1, Math.min(1, move));
       player.a += turn * player.stat.turn * dt;
-      player.speed = move * player.stat.speed;
+      player.speed = move * player.stat.speed * (player.speedT > 0 ? 1.6 : 1);
       player.x += fwdX(player.a) * player.speed * dt;
       player.z += fwdZ(player.a) * player.speed * dt;
       const pos = { x: player.x, z: player.z };
@@ -1098,7 +1176,9 @@ function tick() {
         }
       }
       if ((keys.Space || touchCtl.fire) && player.cool <= 0) {
-        fire(player); player.cool = player.stat.cool;
+        if (player.tripleT > 0) { fire(player, -0.17); fire(player, 0); fire(player, 0.17); }
+        else fire(player);
+        player.cool = player.stat.cool;
         if (mode === 'duel' || mode === 'ball') netSend({ t: 'fire', x: player.x, z: player.z, a: player.a, bs: player.stat.bspeed });
       }
       player.mesh.position.set(player.x, 0, player.z);
@@ -1108,6 +1188,19 @@ function tick() {
 
     if (mode === 'solo') {
       for (const e of enemies) updateEnemy(e, dt);
+      // güç-yükseltmeleri: üretim
+      powerupT -= dt;
+      if (powerupT <= 0 && powerups.length < 3) { spawnPowerup(); powerupT = 9 + Math.random() * 6; }
+      // animasyon + toplama
+      for (let i = powerups.length - 1; i >= 0; i--) {
+        const p = powerups[i];
+        p.bob += dt * 3; p.mesh.rotation.y += dt * 1.6;
+        p.mesh.position.y = 1.25 + Math.sin(p.bob) * 0.25;
+        if (player.alive && Math.hypot(player.x - p.x, player.z - p.z) < TANK_R + 1.05) {
+          applyPowerup(p.type); explode(p.x, 1.2, p.z, false);
+          scene.remove(p.mesh); powerups.splice(i, 1);
+        }
+      }
     } else if (duel) {
       const k = 1 - Math.exp(-12 * dt);
       duel.x += (duel.tx - duel.x) * k;
@@ -1169,6 +1262,11 @@ function tick() {
         if (Math.hypot(b.mesh.position.x - player.x, b.mesh.position.z - player.z) < 1.5) {
           dead = true;
           if (mode === 'duel') duelPlayerDie();
+          else if (player.shieldT > 0) {
+            player.inv = 0.3;
+            explode(b.mesh.position.x, 1.0, b.mesh.position.z, false);
+            sfxBounce();
+          }
           else {
             player.inv = 1.0; player.health--; renderHealth(); hitFlash();
             explode(b.mesh.position.x, 1.0, b.mesh.position.z, false);
@@ -1199,6 +1297,15 @@ function tick() {
   }
 
   updateParticles(dt);
+
+  // kalkan baloncuğu
+  const sh = state === 'play' && player.alive && player.shieldT > 0;
+  shieldBubble.visible = sh;
+  if (sh) {
+    shieldBubble.position.set(player.x, 1.0, player.z);
+    const pulse = 0.18 + Math.abs(Math.sin(clock.elapsedTime * 5)) * 0.12;
+    shieldBubble.material.opacity = player.shieldT < 2 ? pulse * (0.4 + 0.6 * Math.abs(Math.sin(clock.elapsedTime * 12))) : pulse;
+  }
 
   const portrait = camera.aspect < 1;
   const camBack = portrait ? 10 : 11.5;
