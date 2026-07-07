@@ -96,15 +96,27 @@ const MAPS = [
     '#############','#...........#','#.##.....##.#','#..#.....#..#','#...........#',
     '#.....#.....#','#....#.#....#','#.....#.....#','#...........#','#..#.....#..#',
     '#.##.....##.#','#...........#','#############' ] },
-  { name: { tr: 'Kar', en: 'Snow' }, req: 5, theme: 'snow', grid: [
+  { name: { tr: 'Kar', en: 'Snow' }, req: 4, theme: 'snow', grid: [
     '#############','#...........#','#.#.#...#.#.#','#...........#','#..#.....#..#',
     '#....###....#','#...........#','#....###....#','#..#.....#..#','#...........#',
     '#.#.#...#.#.#','#...........#','#############' ] },
-  { name: { tr: 'Açık Alan', en: 'Open Field' }, req: 7, grid: [
+  { name: { tr: 'Gece', en: 'Night' }, req: 5, theme: 'night', grid: [
+    '#############','#...........#','#.###...###.#','#...........#','#.#..###..#.#',
+    '#...........#','#..#.....#..#','#...........#','#.#..###..#.#','#...........#',
+    '#.###...###.#','#...........#','#############' ] },
+  { name: { tr: 'Lav', en: 'Lava' }, req: 6, theme: 'lava', grid: [
+    '#############','#...........#','#..##...##..#','#...........#','#....###....#',
+    '#.#.......#.#','#...........#','#.#.......#.#','#....###....#','#...........#',
+    '#..##...##..#','#...........#','#############' ] },
+  { name: { tr: 'Uzay', en: 'Space' }, req: 7, theme: 'space', grid: [
+    '#############','#...........#','#.#.#.#.#.#.#','#...........#','#..#.....#..#',
+    '#...#...#...#','#...........#','#...#...#...#','#..#.....#..#','#...........#',
+    '#.#.#.#.#.#.#','#...........#','#############' ] },
+  { name: { tr: 'Açık Alan', en: 'Open Field' }, req: 9, grid: [
     '#############','#...........#','#...##.##...#','#...........#','#.##.....##.#',
     '#...........#','#....###....#','#...........#','#.##.....##.#','#...........#',
     '#...##.##...#','#...........#','#############' ] },
-  { name: { tr: 'Zikzak', en: 'Zigzag' }, req: 9, grid: [
+  { name: { tr: 'Zikzak', en: 'Zigzag' }, req: 11, grid: [
     '#############','#...........#','#.#####.....#','#.....#####.#','#.#####.....#',
     '#.....#####.#','#.#####.....#','#.....#####.#','#.#####.....#','#.....#####.#',
     '#.......###.#','#...........#','#############' ] },
@@ -213,6 +225,26 @@ const wallMat = new THREE.MeshStandardMaterial({
 wallMat.aoMap.channel = 0;
 
 // ---------------------------------------------------------------- temalar (zemin/duvar/atmosfer/dekor)
+// temaya göre değişen mermi/namlu renkleri
+const playerBulletMat = new THREE.MeshBasicMaterial({ color: 0xffe08a });
+const enemyBulletMat = new THREE.MeshBasicMaterial({ color: 0xff7a5a });
+let flashColor = 0xffc070;
+// yıldız alanı (gece/uzay temaları için)
+const starGeo = new THREE.BufferGeometry();
+{
+  const N = 600, p = new Float32Array(N * 3);
+  for (let i = 0; i < N; i++) {
+    const a = Math.random() * Math.PI * 2, ph = Math.acos(2 * Math.random() - 1), R = 170;
+    p[i * 3] = R * Math.sin(ph) * Math.cos(a);
+    p[i * 3 + 1] = Math.abs(R * Math.cos(ph)) * 0.9 + 15;
+    p[i * 3 + 2] = R * Math.sin(ph) * Math.sin(a);
+  }
+  starGeo.setAttribute('position', new THREE.BufferAttribute(p, 3));
+}
+const stars = new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0xffffff, size: 1.2, sizeAttenuation: true, fog: false }));
+stars.visible = false;
+scene.add(stars);
+
 const sandMat = new THREE.MeshStandardMaterial({
   map: tex('assets/textures/sand_diff.jpg', true, 14),
   normalMap: tex('assets/textures/sand_nor.jpg', false, 14),
@@ -242,6 +274,15 @@ const iceWallMat = new THREE.MeshStandardMaterial({
   normalMap: tex('assets/textures/wall_nor.jpg'),
   color: 0xbcdcea, roughness: 0.3, metalness: 0.3,
 });
+// gece: koyu tonlu zemin/duvar
+const nightGroundMat = groundMat.clone(); nightGroundMat.color.setHex(0x8288a0);
+const nightWallMat = wallMat.clone(); nightWallMat.color.setHex(0x9098ac);
+// lav: koyu kızıl + akkor (emissive) parıltı
+const lavaGroundMat = groundMat.clone(); lavaGroundMat.color.setHex(0x8a3a24); lavaGroundMat.emissive.setHex(0x5a1400); lavaGroundMat.emissiveIntensity = 0.75;
+const lavaWallMat = wallMat.clone(); lavaWallMat.color.setHex(0x5a342a); lavaWallMat.emissive.setHex(0x3a0e00); lavaWallMat.emissiveIntensity = 0.5;
+// uzay: metalik koyu paneller
+const spaceGroundMat = groundMat.clone(); spaceGroundMat.color.setHex(0x424a60); spaceGroundMat.metalness = 0.6; spaceGroundMat.roughness = 0.45;
+const spaceWallMat = wallMat.clone(); spaceWallMat.color.setHex(0x5a6478); spaceWallMat.metalness = 0.7; spaceWallMat.roughness = 0.4; spaceWallMat.emissive.setHex(0x101830); spaceWallMat.emissiveIntensity = 0.5;
 
 // dekoratif obje malzeme + geometrileri (paylaşımlı, bir kez oluşturulur)
 const dMat = {
@@ -312,13 +353,28 @@ function buildDecor(type) {
   if (type === 'stadium') ring(18, makeTree);
   else if (type === 'desert') ring(15, () => Math.random() < 0.5 ? makeCactus() : makeRock());
   else if (type === 'snow') ring(20, () => Math.random() < 0.6 ? makePine() : makeRock());
+  else if (type === 'night') ring(14, makeTree);
+  else if (type === 'lava') ring(16, makeRock);
+  else if (type === 'space') {
+    for (let i = 0; i < 16; i++) {
+      const ang = (i / 16) * Math.PI * 2 + Math.random() * 0.5, r = 34 + Math.random() * 22;
+      const m = makeRock(); m.scale.multiplyScalar(1.3 + Math.random());
+      m.position.set(Math.cos(ang) * r, 3 + Math.random() * 12, Math.sin(ang) * r);
+      m.traverse(o => { if (o.isMesh) { o.castShadow = false; o.receiveShadow = false; } });
+      decorGroup.add(m);
+    }
+  }
   scene.add(decorGroup);
 }
+const B_DAY = [0xffe08a, 0xff7a5a, 0xffc070]; // varsayılan mermi/mermi2/namlu renkleri
 const THEMES = {
-  default: { ground: groundMat, wall: wallMat, fog: [0xc9b795, 70, 160], sun: [0xfff1d6, 3.2], hemi: [0xbfd7ff, 0x6b5a3e, 0.5], decor: null },
-  stadium: { ground: grassMat, wall: hedgeMat, fog: [0xbfe4ff, 85, 190], sun: [0xffffff, 3.4], hemi: [0xcfe8ff, 0x5a7a3a, 0.7], decor: 'stadium' },
-  desert: { ground: sandMat, wall: sandWallMat, fog: [0xe6cf9a, 55, 150], sun: [0xffe6b0, 3.7], hemi: [0xffe8c0, 0x9c7a48, 0.6], decor: 'desert' },
-  snow: { ground: snowMat, wall: iceWallMat, fog: [0xdce8f2, 60, 170], sun: [0xe2ecff, 2.7], hemi: [0xcfe0ff, 0x8a99aa, 0.75], decor: 'snow' },
+  default: { ground: groundMat, wall: wallMat, fog: [0xc9b795, 70, 160], sun: [0xfff1d6, 3.2], hemi: [0xbfd7ff, 0x6b5a3e, 0.5], decor: null, bullet: B_DAY },
+  stadium: { ground: grassMat, wall: hedgeMat, fog: [0xbfe4ff, 85, 190], sun: [0xffffff, 3.4], hemi: [0xcfe8ff, 0x5a7a3a, 0.7], decor: 'stadium', bullet: B_DAY },
+  desert: { ground: sandMat, wall: sandWallMat, fog: [0xe6cf9a, 55, 150], sun: [0xffe6b0, 3.7], hemi: [0xffe8c0, 0x9c7a48, 0.6], decor: 'desert', bullet: B_DAY },
+  snow: { ground: snowMat, wall: iceWallMat, fog: [0xdce8f2, 60, 170], sun: [0xe2ecff, 2.7], hemi: [0xcfe0ff, 0x8a99aa, 0.75], decor: 'snow', bullet: [0xbfe8ff, 0x9fbcff, 0xcfeeff] },
+  night: { ground: nightGroundMat, wall: nightWallMat, fog: [0x0a0e1a, 42, 135], sun: [0x9fb4ff, 1.1], hemi: [0x2a3350, 0x101522, 0.5], decor: 'night', bg: 0x0a0e1a, env: false, stars: true, bullet: [0xaef0ff, 0xff7ad0, 0xaef0ff] },
+  lava: { ground: lavaGroundMat, wall: lavaWallMat, fog: [0x2a0a04, 40, 120], sun: [0xff7a2e, 2.2], hemi: [0x5a1e10, 0x2a0a04, 0.7], decor: 'lava', bg: 0x1a0805, env: false, bullet: [0xff8a2a, 0xffd23a, 0xff7a1e] },
+  space: { ground: spaceGroundMat, wall: spaceWallMat, fog: [0x05060f, 70, 220], sun: [0xcfe0ff, 2.4], hemi: [0x3a2a5a, 0x101020, 0.5], decor: 'space', bg: 0x05060f, env: false, stars: true, bullet: [0x6be7ff, 0xc07bff, 0x8be8ff] },
 };
 function applyTheme(name) {
   const th = THEMES[name] || THEMES.default;
@@ -326,6 +382,10 @@ function applyTheme(name) {
   scene.fog.color.setHex(th.fog[0]); scene.fog.near = th.fog[1]; scene.fog.far = th.fog[2];
   sun.color.setHex(th.sun[0]); sun.intensity = th.sun[1];
   hemi.color.setHex(th.hemi[0]); hemi.groundColor.setHex(th.hemi[1]); hemi.intensity = th.hemi[2];
+  if (th.bg != null) { scene.background = new THREE.Color(th.bg); scene.environment = th.env === false ? null : envTex; }
+  else { scene.background = envTex; scene.environment = envTex; }
+  stars.visible = !!th.stars;
+  playerBulletMat.color.setHex(th.bullet[0]); enemyBulletMat.color.setHex(th.bullet[1]); flashColor = th.bullet[2];
   buildDecor(th.decor);
   return th.wall;
 }
@@ -557,14 +617,12 @@ function updateParticles(dt) {
   }
 }
 function muzzleFlash(x, y, z) {
-  popFlash(x, y, z, 0xffc070, 26, 9, 0.09);
+  popFlash(x, y, z, flashColor, 26, 9, 0.09);
 }
 
 // ---------------------------------------------------------------- oyun durumu
 const bullets = [];
 const bulletGeo = new THREE.SphereGeometry(0.14, 10, 10);
-const playerBulletMat = new THREE.MeshBasicMaterial({ color: 0xffe08a });
-const enemyBulletMat = new THREE.MeshBasicMaterial({ color: 0xff7a5a });
 
 const player = {
   mesh: null, a: 0, x: 0, z: 0,
