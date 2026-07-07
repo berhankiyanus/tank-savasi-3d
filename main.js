@@ -88,22 +88,22 @@ const MAPS = [
     '#############','#...........#','#.##..#..##.#','#.#...#...#.#','#....###....#',
     '#..#.....#..#','#.#..###..#.#','#..#.....#..#','#....###....#','#.#...#...#.#',
     '#.##..#..##.#','#...........#','#############' ] },
-  { name: { tr: 'Stadyum', en: 'Stadium' }, req: 2, theme: 'grass', grid: [
-    '#############','#...........#','#..#.....#..#','#...........#','#....#.#....#',
-    '#.##.....##.#','#...........#','#.##.....##.#','#....#.#....#','#...........#',
-    '#..#.....#..#','#...........#','#############' ] },
-  { name: { tr: 'Açık Alan', en: 'Open Field' }, req: 3, grid: [
+  { name: { tr: 'Stadyum', en: 'Stadium' }, req: 2, theme: 'stadium', grid: [
+    '#############','#...........#','#...........#','#....#.#....#','#...........#',
+    '#.#.......#.#','#...........#','#.#.......#.#','#...........#','#....#.#....#',
+    '#...........#','#...........#','#############' ] },
+  { name: { tr: 'Çöl', en: 'Desert' }, req: 3, theme: 'desert', grid: [
+    '#############','#...........#','#.##.....##.#','#..#.....#..#','#...........#',
+    '#.....#.....#','#....#.#....#','#.....#.....#','#...........#','#..#.....#..#',
+    '#.##.....##.#','#...........#','#############' ] },
+  { name: { tr: 'Kar', en: 'Snow' }, req: 5, theme: 'snow', grid: [
+    '#############','#...........#','#.#.#...#.#.#','#...........#','#..#.....#..#',
+    '#....###....#','#...........#','#....###....#','#..#.....#..#','#...........#',
+    '#.#.#...#.#.#','#...........#','#############' ] },
+  { name: { tr: 'Açık Alan', en: 'Open Field' }, req: 7, grid: [
     '#############','#...........#','#...##.##...#','#...........#','#.##.....##.#',
     '#...........#','#....###....#','#...........#','#.##.....##.#','#...........#',
     '#...##.##...#','#...........#','#############' ] },
-  { name: { tr: 'Sütunlar', en: 'Pillars' }, req: 5, grid: [
-    '#############','#...........#','#.#.#.#.#.#.#','#...........#','#.#.#.#.#.#.#',
-    '#...........#','#.#.#.#.#.#.#','#...........#','#.#.#.#.#.#.#','#...........#',
-    '#.#.#.#.#.#.#','#...........#','#############' ] },
-  { name: { tr: 'Çapraz', en: 'Cross' }, req: 7, grid: [
-    '#############','#...........#','#.#.......#.#','#..#.....#..#','#...#...#...#',
-    '#....#.#....#','#.....#.....#','#....#.#....#','#...#...#...#','#..#.....#..#',
-    '#.#.......#.#','#...........#','#############' ] },
   { name: { tr: 'Zikzak', en: 'Zigzag' }, req: 9, grid: [
     '#############','#...........#','#.#####.....#','#.....#####.#','#.#####.....#',
     '#.....#####.#','#.#####.....#','#.....#####.#','#.#####.....#','#.....#####.#',
@@ -157,7 +157,8 @@ sun.shadow.camera.top = 42; sun.shadow.camera.bottom = -42;
 sun.shadow.camera.far = 140;
 sun.shadow.bias = -0.0006;
 scene.add(sun);
-scene.add(new THREE.HemisphereLight(0xbfd7ff, 0x6b5a3e, 0.5));
+const hemi = new THREE.HemisphereLight(0xbfd7ff, 0x6b5a3e, 0.5);
+scene.add(hemi);
 
 addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight;
@@ -211,6 +212,124 @@ const wallMat = new THREE.MeshStandardMaterial({
 });
 wallMat.aoMap.channel = 0;
 
+// ---------------------------------------------------------------- temalar (zemin/duvar/atmosfer/dekor)
+const sandMat = new THREE.MeshStandardMaterial({
+  map: tex('assets/textures/sand_diff.jpg', true, 14),
+  normalMap: tex('assets/textures/sand_nor.jpg', false, 14),
+  roughnessMap: tex('assets/textures/sand_rough.jpg', false, 14),
+  aoMap: tex('assets/textures/sand_ao.jpg', false, 14),
+});
+sandMat.aoMap.channel = 0;
+const snowMat = new THREE.MeshStandardMaterial({
+  map: tex('assets/textures/snow_diff.jpg', true, 14),
+  normalMap: tex('assets/textures/snow_nor.jpg', false, 14),
+  roughnessMap: tex('assets/textures/snow_rough.jpg', false, 14),
+  aoMap: tex('assets/textures/snow_ao.jpg', false, 14),
+});
+snowMat.aoMap.channel = 0;
+const hedgeMat = new THREE.MeshStandardMaterial({
+  map: tex('assets/textures/grass_diff.jpg', true, 2),
+  normalMap: tex('assets/textures/grass_nor.jpg', false, 2),
+  color: 0x8fbf6a, roughness: 0.95,
+});
+const sandWallMat = new THREE.MeshStandardMaterial({
+  map: tex('assets/textures/wall_diff.jpg', true),
+  normalMap: tex('assets/textures/wall_nor.jpg'),
+  color: 0xd8b483, roughness: 0.95,
+});
+const iceWallMat = new THREE.MeshStandardMaterial({
+  map: tex('assets/textures/wall_diff.jpg', true),
+  normalMap: tex('assets/textures/wall_nor.jpg'),
+  color: 0xbcdcea, roughness: 0.3, metalness: 0.3,
+});
+
+// dekoratif obje malzeme + geometrileri (paylaşımlı, bir kez oluşturulur)
+const dMat = {
+  trunk: new THREE.MeshStandardMaterial({ color: 0x6b4a2b, roughness: 0.9 }),
+  leaf: new THREE.MeshStandardMaterial({ color: 0x2f7d32, roughness: 0.85 }),
+  pine: new THREE.MeshStandardMaterial({ color: 0x2b6b3a, roughness: 0.85 }),
+  cactus: new THREE.MeshStandardMaterial({ color: 0x3f8a4a, roughness: 0.7 }),
+  rock: new THREE.MeshStandardMaterial({ color: 0x8f8f8f, roughness: 0.95 }),
+  white: new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5 }),
+  snowcap: new THREE.MeshStandardMaterial({ color: 0xeef4ff, roughness: 0.7 }),
+};
+const dGeo = {
+  trunk: new THREE.CylinderGeometry(0.25, 0.32, 2.2, 7),
+  blob: new THREE.IcosahedronGeometry(1.5, 0),
+  cone: new THREE.ConeGeometry(1.5, 2.4, 8),
+  rock: new THREE.IcosahedronGeometry(1.1, 0),
+  cbody: new THREE.CylinderGeometry(0.45, 0.55, 3, 8),
+  carm: new THREE.CylinderGeometry(0.28, 0.3, 1.4, 7),
+};
+function makeTree() {
+  const g = new THREE.Group();
+  const t = new THREE.Mesh(dGeo.trunk, dMat.trunk); t.position.y = 1.1; g.add(t);
+  const f = new THREE.Mesh(dGeo.blob, dMat.leaf); f.position.y = 3.0; f.scale.set(1, 1.2, 1); g.add(f);
+  const f2 = new THREE.Mesh(dGeo.blob, dMat.leaf); f2.position.set(0.6, 2.4, 0.3); f2.scale.setScalar(0.7); g.add(f2);
+  g.scale.setScalar(0.8 + Math.random() * 0.7);
+  return g;
+}
+function makePine() {
+  const g = new THREE.Group();
+  const t = new THREE.Mesh(dGeo.trunk, dMat.trunk); t.position.y = 0.9; t.scale.set(0.7, 0.8, 0.7); g.add(t);
+  for (let i = 0; i < 3; i++) {
+    const c = new THREE.Mesh(dGeo.cone, dMat.pine); c.position.y = 2.0 + i * 1.1; c.scale.setScalar(1 - i * 0.24); g.add(c);
+    const s = new THREE.Mesh(dGeo.cone, dMat.snowcap); s.position.y = 2.28 + i * 1.1; s.scale.setScalar((1 - i * 0.24) * 0.5); g.add(s);
+  }
+  g.scale.setScalar(0.9 + Math.random() * 0.6);
+  return g;
+}
+function makeCactus() {
+  const g = new THREE.Group();
+  const b = new THREE.Mesh(dGeo.cbody, dMat.cactus); b.position.y = 1.5; g.add(b);
+  const a1 = new THREE.Mesh(dGeo.carm, dMat.cactus); a1.position.set(0.55, 1.8, 0); a1.rotation.z = -0.9; g.add(a1);
+  const a2 = new THREE.Mesh(dGeo.carm, dMat.cactus); a2.position.set(-0.55, 2.1, 0); a2.rotation.z = 0.9; g.add(a2);
+  g.scale.setScalar(0.8 + Math.random() * 0.6);
+  return g;
+}
+function makeRock() {
+  const r = new THREE.Mesh(dGeo.rock, dMat.rock);
+  r.scale.set(1 + Math.random(), 0.7 + Math.random() * 0.6, 1 + Math.random());
+  r.position.y = 0.4; r.rotation.set(Math.random(), Math.random(), Math.random());
+  return r;
+}
+let decorGroup = null;
+function buildDecor(type) {
+  if (decorGroup) { scene.remove(decorGroup); decorGroup = null; }
+  if (!type) return;
+  decorGroup = new THREE.Group();
+  const ring = (n, make) => {
+    for (let i = 0; i < n; i++) {
+      const ang = (i / n) * Math.PI * 2 + Math.random() * 0.4;
+      const r = 34 + Math.random() * 20;
+      const m = make();
+      m.position.set(Math.cos(ang) * r, 0, Math.sin(ang) * r);
+      m.rotation.y = Math.random() * 6;
+      m.traverse(o => { if (o.isMesh) { o.castShadow = false; o.receiveShadow = false; } });
+      decorGroup.add(m);
+    }
+  };
+  if (type === 'stadium') ring(18, makeTree);
+  else if (type === 'desert') ring(15, () => Math.random() < 0.5 ? makeCactus() : makeRock());
+  else if (type === 'snow') ring(20, () => Math.random() < 0.6 ? makePine() : makeRock());
+  scene.add(decorGroup);
+}
+const THEMES = {
+  default: { ground: groundMat, wall: wallMat, fog: [0xc9b795, 70, 160], sun: [0xfff1d6, 3.2], hemi: [0xbfd7ff, 0x6b5a3e, 0.5], decor: null },
+  stadium: { ground: grassMat, wall: hedgeMat, fog: [0xbfe4ff, 85, 190], sun: [0xffffff, 3.4], hemi: [0xcfe8ff, 0x5a7a3a, 0.7], decor: 'stadium' },
+  desert: { ground: sandMat, wall: sandWallMat, fog: [0xe6cf9a, 55, 150], sun: [0xffe6b0, 3.7], hemi: [0xffe8c0, 0x9c7a48, 0.6], decor: 'desert' },
+  snow: { ground: snowMat, wall: iceWallMat, fog: [0xdce8f2, 60, 170], sun: [0xe2ecff, 2.7], hemi: [0xcfe0ff, 0x8a99aa, 0.75], decor: 'snow' },
+};
+function applyTheme(name) {
+  const th = THEMES[name] || THEMES.default;
+  ground.material = th.ground;
+  scene.fog.color.setHex(th.fog[0]); scene.fog.near = th.fog[1]; scene.fog.far = th.fog[2];
+  sun.color.setHex(th.sun[0]); sun.intensity = th.sun[1];
+  hemi.color.setHex(th.hemi[0]); hemi.groundColor.setHex(th.hemi[1]); hemi.intensity = th.hemi[2];
+  buildDecor(th.decor);
+  return th.wall;
+}
+
 // ---------------------------------------------------------------- arena (harita) kurulumu
 const walls = [];
 let openCells = [];
@@ -218,14 +337,14 @@ let wallInst = null;
 const wallGeo = new THREE.BoxGeometry(CELL, WALL_H, CELL);
 
 function buildArena(mapIdx) {
-  ground.material = MAPS[mapIdx].theme === 'grass' ? grassMat : groundMat;
+  const wallMaterial = applyTheme(MAPS[mapIdx].theme);
   MAP = MAPS[mapIdx].grid;
   ROWS = MAP.length; COLS = MAP[0].length;
   walls.length = 0; openCells = [];
   if (wallInst) { scene.remove(wallInst); wallInst.dispose(); wallInst = null; }
   let count = 0;
   for (const row of MAP) for (const ch of row) if (ch === '#') count++;
-  wallInst = new THREE.InstancedMesh(wallGeo, wallMat, count);
+  wallInst = new THREE.InstancedMesh(wallGeo, wallMaterial, count);
   wallInst.castShadow = wallInst.receiveShadow = true;
   const m = new THREE.Matrix4();
   let i = 0;
@@ -966,14 +1085,14 @@ function clearBallMode() {
   ball = null;
 }
 function buildBallArena() {
-  ground.material = grassMat;
+  const wallMaterial = applyTheme('stadium');
   walls.length = 0; openCells = [];
   if (wallInst) { scene.remove(wallInst); wallInst.dispose(); wallInst = null; }
   clearBallMode();
   const { PW, PH, BASE } = PITCH;
   const TH = 2, H = 3;
   const addBorder = (cx, cz, sx, sz) => {
-    const mesh = new THREE.Mesh(new THREE.BoxGeometry(sx, H, sz), wallMat);
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(sx, H, sz), wallMaterial);
     mesh.position.set(cx, H / 2, cz); mesh.castShadow = mesh.receiveShadow = true;
     scene.add(mesh); ballMeshes.push(mesh);
     walls.push({ minX: cx - sx / 2, maxX: cx + sx / 2, minZ: cz - sz / 2, maxZ: cz + sz / 2 });
@@ -993,6 +1112,27 @@ function buildBallArena() {
   };
   mkBase(PH / 2 - BASE / 2, 0x3aa0ff);
   mkBase(-(PH / 2 - BASE / 2), 0xff4a3a);
+  // beyaz saha çizgileri (orta yuvarlak + orta çizgi)
+  const circle = new THREE.Mesh(new THREE.RingGeometry(4.6, 5.0, 40),
+    new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.55, side: THREE.DoubleSide }));
+  circle.rotation.x = -Math.PI / 2; circle.position.set(0, 0.06, 0);
+  scene.add(circle); ballMeshes.push(circle);
+  const midline = new THREE.Mesh(new THREE.BoxGeometry(PW, 0.02, 0.3),
+    new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5 }));
+  midline.position.set(0, 0.06, 0); scene.add(midline); ballMeshes.push(midline);
+  // beyaz kale direkleri
+  const goalW = 12, goalH = 4;
+  const postGeo = new THREE.BoxGeometry(0.32, goalH, 0.32);
+  const barGeo = new THREE.BoxGeometry(goalW + 0.32, 0.32, 0.32);
+  const mkGoal = (z) => {
+    for (const sx of [-goalW / 2, goalW / 2]) {
+      const p = new THREE.Mesh(postGeo, dMat.white); p.position.set(sx, goalH / 2, z);
+      p.castShadow = true; scene.add(p); ballMeshes.push(p);
+    }
+    const bar = new THREE.Mesh(barGeo, dMat.white); bar.position.set(0, goalH, z);
+    scene.add(bar); ballMeshes.push(bar);
+  };
+  mkGoal(PH / 2 - 0.7); mkGoal(-(PH / 2 - 0.7));
 }
 function makeBall() {
   const geo = new THREE.SphereGeometry(BALL_R, 26, 18);
