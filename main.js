@@ -1647,11 +1647,15 @@ function gameOver() {
 
 // ---------------------------------------------------------------- düello
 let ws = null, duel = null;
+function clearDuelMeshes() {
+  if (!duel) return;
+  if (duel.remoteMesh) scene.remove(duel.remoteMesh);
+  if (duel.remoteShield) scene.remove(duel.remoteShield);
+  if (duel.nameLabel) scene.remove(duel.nameLabel);
+}
 function closeNet() {
   if (ws) { ws.onclose = null; ws.close(); ws = null; }
-  if (duel && duel.remoteMesh) scene.remove(duel.remoteMesh);
-  if (duel && duel.remoteShield) scene.remove(duel.remoteShield);
-  if (duel && duel.nameLabel) scene.remove(duel.nameLabel);
+  clearDuelMeshes();
   duel = null;
   netYou = null; netMode = null; netBegun = false; netMapIdx = null;
   matchOverMode = null; myReady = false; peerReady = false;
@@ -1750,6 +1754,7 @@ function beginDuel(you) {
   $('healthwrap').style.visibility = 'hidden';
   setPlayerTank();
   const code = duel && duel.code;
+  clearDuelMeshes(); // rematch: önceki maçın rakip mesh'lerini sil (yoksa üst üste birikir)
   const SX = cellX(4), SZ = cellZ(11);
   duel = { you, code, myKills: 0, myDeaths: 0, over: false, sendT: 0,
            tx: 0, tz: 0, ta: 0, remoteAlive: true, remoteMesh: buildTank({ color: 0xa03428, scale: 1 }), remoteShield: makeShieldBubble() };
@@ -1926,6 +1931,7 @@ function beginBall(you) {
   clearEnemies(); clearBullets();
   setPlayerTank();
   const code = duel && duel.code;
+  clearDuelMeshes(); // rematch: önceki maçın rakip mesh'lerini sil (yoksa üst üste birikir)
   duel = { you, code, over: false, sendT: 0, tx: 0, tz: 0, ta: 0, x: 0, z: 0, a: 0,
            remoteAlive: true, remoteMesh: buildTank({ color: 0xa03428, scale: 1 }) };
   scene.add(duel.remoteMesh);
