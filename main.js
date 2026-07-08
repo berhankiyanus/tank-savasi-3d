@@ -560,8 +560,12 @@ function sfxBounce() {
   g.gain.setValueAtTime(0.07, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.09);
   o.connect(g).connect(ac.destination); o.start(t); o.stop(t + 0.1);
 }
+let lastBoom = 0;
 function sfxBoom(big = false) {
   if (settings.muted) return;
+  const now = performance.now();
+  if (!big && now - lastBoom < 55) return; // küçük patlama seslerini kısıtla (üst üste binmesin)
+  lastBoom = now;
   const ac = audio(), t = ac.currentTime;
   const n = ac.createBufferSource(), g = ac.createGain(), f = ac.createBiquadFilter();
   n.buffer = noiseBuf(ac, big ? 0.9 : 0.5);
@@ -622,7 +626,8 @@ const particles = [];
 const partGeo = new THREE.BoxGeometry(0.22, 0.22, 0.22);
 let shake = 0;
 function explode(x, y, z, big = false) {
-  const n = big ? 18 : 10;
+  const heavy = particles.length > 130; // çok parçacık varsa yenilerini üretme (aşırı yüklenmeyi önler)
+  const n = heavy ? 0 : (big ? 18 : 8);
   for (let i = 0; i < n; i++) {
     const hot = Math.random() < 0.6;
     const mat = new THREE.MeshBasicMaterial({
@@ -636,13 +641,15 @@ function explode(x, y, z, big = false) {
     p.scale.setScalar((big ? 1.4 : 1) * (0.6 + Math.random()));
     scene.add(p); particles.push(p);
   }
-  const ring = new THREE.Mesh(new THREE.RingGeometry(0.3, 0.55, 24),
-    new THREE.MeshBasicMaterial({ color: 0xffc060, transparent: true, side: THREE.DoubleSide }));
-  ring.rotation.x = -Math.PI / 2; ring.position.set(x, 0.15, z);
-  ring.userData = { ring: true, life: 0.5, vy: 0, vx: 0, vz: 0 };
-  scene.add(ring); particles.push(ring);
+  if (!heavy) {
+    const ring = new THREE.Mesh(new THREE.RingGeometry(0.3, 0.55, 24),
+      new THREE.MeshBasicMaterial({ color: 0xffc060, transparent: true, side: THREE.DoubleSide }));
+    ring.rotation.x = -Math.PI / 2; ring.position.set(x, 0.15, z);
+    ring.userData = { ring: true, life: 0.5, vy: 0, vx: 0, vz: 0 };
+    scene.add(ring); particles.push(ring);
+  }
   popFlash(x, y + 0.5, z, 0xffa040, big ? 55 : 24, big ? 22 : 12, big ? 0.32 : 0.22);
-  shake += big ? 0.5 : 0.2;
+  if (big) shake = Math.min(1.2, shake + 0.5); // sadece tank patlamaları ekranı sarssın
   sfxBoom(big);
 }
 function updateParticles(dt) {
