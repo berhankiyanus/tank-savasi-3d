@@ -29,6 +29,8 @@ const L = {
     rematchBtn: 'TEKRAR OYNA', leaveBtn: 'ÇIKIŞ',
     rematchWait: 'Rakip bekleniyor...', rematchPeerReady: 'Rakip tekrar oynamak istiyor!',
     puSpeed: 'HIZ! ⚡', puTriple: "3'LÜ ATIŞ!", puShield: 'KALKAN! 🛡',
+    setTitle: 'AYARLAR', setSound: 'Ses', setQuality: 'Kalite', onW: 'AÇIK', offW: 'KAPALI',
+    qHigh: 'YÜKSEK', qLow: 'DÜŞÜK', resumeW: 'DEVAM ET', toMenuW: 'ANA MENÜ', closeW: 'KAPAT', pausedW: 'DURAKLADI',
   },
   en: {
     title: 'TANK BATTLE 3D',
@@ -55,6 +57,8 @@ const L = {
     rematchBtn: 'PLAY AGAIN', leaveBtn: 'LEAVE',
     rematchWait: 'Waiting for opponent...', rematchPeerReady: 'Opponent wants a rematch!',
     puSpeed: 'SPEED! ⚡', puTriple: 'TRIPLE SHOT!', puShield: 'SHIELD! 🛡',
+    setTitle: 'SETTINGS', setSound: 'Sound', setQuality: 'Quality', onW: 'ON', offW: 'OFF',
+    qHigh: 'HIGH', qLow: 'LOW', resumeW: 'RESUME', toMenuW: 'MAIN MENU', closeW: 'CLOSE', pausedW: 'PAUSED',
   },
 };
 let lang = localStorage.getItem('tanklang') || ((navigator.language || 'tr').startsWith('tr') ? 'tr' : 'en');
@@ -71,6 +75,13 @@ try {
 } catch { profile = Object.assign({}, DEFAULT_PROFILE); }
 function saveProfile() { localStorage.setItem('tankprofile', JSON.stringify(profile)); }
 function addCoins(n) { profile.coins += n; saveProfile(); updateCoinBar(); }
+
+// ayarlar (ses / kalite)
+let settings;
+try { settings = Object.assign({ muted: false, quality: 'high' }, JSON.parse(localStorage.getItem('tanksettings') || '{}')); }
+catch { settings = { muted: false, quality: 'high' }; }
+function saveSettings() { localStorage.setItem('tanksettings', JSON.stringify(settings)); }
+let paused = false;
 
 // ---------------------------------------------------------------- tanklar
 const TANKS = [
@@ -166,10 +177,19 @@ const cellZ = r => (r - (ROWS - 1) / 2) * CELL;
 const IS_TOUCH = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 const canvas = document.getElementById('game');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-renderer.setPixelRatio(Math.min(devicePixelRatio, IS_TOUCH ? 1.7 : 2));
 renderer.setSize(innerWidth, innerHeight);
-renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.shadowMap.enabled = settings.quality !== 'low';
+renderer.setPixelRatio(settings.quality === 'low' ? 1 : Math.min(devicePixelRatio, IS_TOUCH ? 1.7 : 2));
+function applyQuality() {
+  const low = settings.quality === 'low';
+  renderer.setPixelRatio(low ? 1 : Math.min(devicePixelRatio, IS_TOUCH ? 1.7 : 2));
+  renderer.shadowMap.enabled = !low;
+  renderer.shadowMap.needsUpdate = true;
+  scene.traverse(o => {
+    if (o.material) { (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => { m.needsUpdate = true; }); }
+  });
+}
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.05;
 
@@ -515,6 +535,7 @@ function noiseBuf(ac, dur) {
   return b;
 }
 function sfxFire() {
+  if (settings.muted) return;
   const ac = audio(), t = ac.currentTime;
   const o = ac.createOscillator(), g = ac.createGain();
   o.type = 'square'; o.frequency.setValueAtTime(240, t);
@@ -527,6 +548,7 @@ function sfxFire() {
   n.connect(f).connect(ng).connect(ac.destination); n.start(t);
 }
 function sfxBounce() {
+  if (settings.muted) return;
   const ac = audio(), t = ac.currentTime;
   const o = ac.createOscillator(), g = ac.createGain();
   o.type = 'triangle'; o.frequency.setValueAtTime(900, t);
@@ -535,6 +557,7 @@ function sfxBounce() {
   o.connect(g).connect(ac.destination); o.start(t); o.stop(t + 0.1);
 }
 function sfxBoom(big = false) {
+  if (settings.muted) return;
   const ac = audio(), t = ac.currentTime;
   const n = ac.createBufferSource(), g = ac.createGain(), f = ac.createBiquadFilter();
   n.buffer = noiseBuf(ac, big ? 0.9 : 0.5);
@@ -545,6 +568,7 @@ function sfxBoom(big = false) {
   n.connect(f).connect(g).connect(ac.destination); n.start(t);
 }
 function sfxCoin() {
+  if (settings.muted) return;
   const ac = audio(), t = ac.currentTime;
   const o = ac.createOscillator(), g = ac.createGain();
   o.type = 'sine'; o.frequency.setValueAtTime(880, t);
@@ -553,6 +577,7 @@ function sfxCoin() {
   o.connect(g).connect(ac.destination); o.start(t); o.stop(t + 0.2);
 }
 function sfxPower() {
+  if (settings.muted) return;
   const ac = audio(), t = ac.currentTime;
   const o = ac.createOscillator(), g = ac.createGain();
   o.type = 'triangle';
@@ -1397,6 +1422,32 @@ $('btn-rematch').addEventListener('click', () => {
   tryRematch();
 });
 $('btn-leave').addEventListener('click', () => { closeNet(); clearBallMode(); buildArena(0); openMenu(); });
+
+// ---------------------------------------------------------------- ayarlar
+function updateSettingsLabels() {
+  const t = T();
+  $('set-title').textContent = paused ? t.pausedW : t.setTitle;
+  $('set-sound').textContent = `${t.setSound}: ${settings.muted ? t.offW : t.onW}`;
+  $('set-quality').textContent = `${t.setQuality}: ${settings.quality === 'low' ? t.qLow : t.qHigh}`;
+  $('set-resume').textContent = t.resumeW;
+  $('set-quit').textContent = t.toMenuW;
+  $('set-close').textContent = t.closeW;
+}
+function openSettings() {
+  const inGame = state === 'play';
+  if (inGame && mode === 'solo') paused = true;
+  $('set-ingame').style.display = inGame ? 'flex' : 'none';
+  updateSettingsLabels();
+  $('settings').classList.remove('hidden');
+}
+function closeSettings() { paused = false; $('settings').classList.add('hidden'); }
+$('btn-settings').addEventListener('click', openSettings);
+$('btn-settings-menu').addEventListener('click', openSettings);
+$('set-sound').addEventListener('click', () => { settings.muted = !settings.muted; saveSettings(); updateSettingsLabels(); if (!settings.muted) sfxCoin(); });
+$('set-quality').addEventListener('click', () => { settings.quality = settings.quality === 'low' ? 'high' : 'low'; saveSettings(); applyQuality(); updateSettingsLabels(); });
+$('set-resume').addEventListener('click', closeSettings);
+$('set-close').addEventListener('click', closeSettings);
+$('set-quit').addEventListener('click', () => { paused = false; $('settings').classList.add('hidden'); closeNet(); clearBallMode(); buildArena(0); openMenu(); });
 $('btn-create').addEventListener('click', () => { duel = { code: null }; duelStatusEl.textContent = '...'; connectNet(() => netSend({ t: 'create' })); });
 $('btn-join').addEventListener('click', () => {
   const code = $('joincode').value.trim().toUpperCase();
@@ -1409,6 +1460,10 @@ $('btn-join').addEventListener('click', () => {
 addEventListener('keydown', e => {
   if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
   if (e.target && e.target.tagName === 'INPUT') { keys[e.code] = false; return; }
+  if (e.code === 'Escape' || e.code === 'KeyP') {
+    if ($('settings').classList.contains('hidden')) openSettings(); else closeSettings();
+    return;
+  }
   keys[e.code] = true;
 });
 addEventListener('keyup', e => { keys[e.code] = false; });
@@ -1483,7 +1538,7 @@ function tick() {
   requestAnimationFrame(tick);
   const dt = Math.min(clock.getDelta(), 0.05);
 
-  if (state === 'play') {
+  if (state === 'play' && !paused) {
     if (player.alive) {
       player.cool -= dt; player.inv -= dt;
       if (player.speedT > 0) player.speedT -= dt;
