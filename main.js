@@ -842,10 +842,10 @@ function applyPowerup(type) {
   else if (type === 'triple') { player.tripleT = 10; banner(t.puTriple); }
   else if (type === 'shield') { player.shieldT = 8; banner(t.puShield); }
 }
-const shieldBubble = new THREE.Mesh(new THREE.SphereGeometry(2.0, 20, 16),
-  new THREE.MeshStandardMaterial({ color: 0x2ad0ff, transparent: true, opacity: 0.22, emissive: 0x2ad0ff, emissiveIntensity: 0.6, side: THREE.DoubleSide, depthWrite: false }));
-shieldBubble.visible = false;
-scene.add(shieldBubble);
+const shieldGeo = new THREE.SphereGeometry(2.0, 20, 16);
+const shieldMat = new THREE.MeshStandardMaterial({ color: 0x2ad0ff, transparent: true, opacity: 0.22, emissive: 0x2ad0ff, emissiveIntensity: 0.6, side: THREE.DoubleSide, depthWrite: false });
+function makeShieldBubble() { const m = new THREE.Mesh(shieldGeo, shieldMat); m.visible = false; scene.add(m); return m; }
+const shieldBubble = makeShieldBubble();
 
 // düşman tipleri: normal / keşif (hızlı-zayıf) / ağır (yavaş-zırhlı) / nişancı (uzaktan) / boss
 const ENEMY_TYPES = {
@@ -1175,6 +1175,7 @@ let ws = null, duel = null;
 function closeNet() {
   if (ws) { ws.onclose = null; ws.close(); ws = null; }
   if (duel && duel.remoteMesh) scene.remove(duel.remoteMesh);
+  if (duel && duel.remoteShield) scene.remove(duel.remoteShield);
   duel = null;
   netYou = null; netMode = null; netBegun = false; netMapIdx = null;
   matchOverMode = null; myReady = false; peerReady = false;
@@ -1221,7 +1222,7 @@ function handleNet(m) {
   else if (m.t === 'ball') { if (ball && !isAuthority) { ball.tx = m.x; ball.tz = m.z; ball.mesh.rotation.x = m.rx; ball.mesh.rotation.z = m.rz; } }
   else if (m.t === 'goal') { if (ball) { applyGoal(m.g1, m.g2, m.scorer); if (m.done) { ball.over = true; endBall(); } } }
   else if (m.t === 'state') {
-    duel.tx = m.x; duel.tz = m.z; duel.ta = m.a;
+    duel.tx = m.x; duel.tz = m.z; duel.ta = m.a; duel.shieldOn = m.sh;
     if (m.alive && !duel.remoteAlive) { duel.remoteAlive = true; duel.remoteMesh.visible = true; }
   }
   else if (m.t === 'fire') {
@@ -1269,7 +1270,7 @@ function beginDuel(you) {
   const code = duel && duel.code;
   const SX = cellX(4), SZ = cellZ(11);
   duel = { you, code, myKills: 0, myDeaths: 0, over: false, sendT: 0,
-           tx: 0, tz: 0, ta: 0, remoteAlive: true, remoteMesh: buildTank({ color: 0xa03428, scale: 1 }) };
+           tx: 0, tz: 0, ta: 0, remoteAlive: true, remoteMesh: buildTank({ color: 0xa03428, scale: 1 }), remoteShield: makeShieldBubble() };
   scene.add(duel.remoteMesh);
   if (you === 1) { player.x = SX; player.z = SZ; player.a = 0; duel.tx = -SX; duel.tz = -SZ; duel.ta = Math.PI; }
   else { player.x = -SX; player.z = -SZ; player.a = Math.PI; duel.tx = SX; duel.tz = SZ; duel.ta = 0; }
@@ -1529,7 +1530,7 @@ function endBall() {
 
 // ---------------------------------------------------------------- kooperatif
 function clearCoop() {
-  if (coop) for (const rm of coop.remotes.values()) scene.remove(rm.mesh);
+  if (coop) for (const rm of coop.remotes.values()) { scene.remove(rm.mesh); if (rm.shield) scene.remove(rm.shield); }
   for (const ce of coopEnemies.values()) scene.remove(ce);
   coopEnemies.clear();
   clearEnemies(); clearPowerups();
@@ -1564,7 +1565,7 @@ function beginCoop(you, players, mapIdx) {
   for (const pid of players) if (pid !== you) {
     const rmMesh = buildTank({ color: PLAYER_COLORS[pid] || 0x888888, scale: 1 });
     scene.add(rmMesh);
-    coop.remotes.set(pid, { mesh: rmMesh, x: 0, z: 0, tx: 0, tz: 0, a: 0, ta: 0, alive: true, hp: player.maxHealth, inv: 0 });
+    coop.remotes.set(pid, { mesh: rmMesh, shield: makeShieldBubble(), x: 0, z: 0, tx: 0, tz: 0, a: 0, ta: 0, alive: true, hp: player.maxHealth, inv: 0, shieldOn: false });
   }
   placeCoopSpawns();
   wave = 1; score = 0; roundCoins = 0; powerupT = 6; puIdCounter = 0; enemyIdC = 0;
@@ -1628,7 +1629,7 @@ function coopGameOver() {
 function coopPeerLeft(who) {
   if (!coop) return;
   const rm = coop.remotes.get(who);
-  if (rm) { scene.remove(rm.mesh); coop.remotes.delete(who); }
+  if (rm) { scene.remove(rm.mesh); if (rm.shield) scene.remove(rm.shield); coop.remotes.delete(who); }
   coop.players = coop.players.filter(p => p !== who);
   banner(T().peerLeft);
   if (who === coop.hostPid && !isAuthority) setTimeout(() => { if (mode === 'coop') coopGameOver(); }, 900);
@@ -1638,7 +1639,7 @@ function handleCoopNet(m) {
   if (!coop) return;
   if (m.t === 'state') {
     const rm = coop.remotes.get(m.from);
-    if (rm) { rm.tx = m.x; rm.tz = m.z; rm.ta = m.a; if (!isAuthority) rm.alive = m.alive; rm.mesh.visible = rm.alive; }
+    if (rm) { rm.tx = m.x; rm.tz = m.z; rm.ta = m.a; rm.shieldOn = m.sh; if (!isAuthority) rm.alive = m.alive; rm.mesh.visible = rm.alive; }
   } else if (m.t === 'fire') {
     if (m.trip) { fire({ x: m.x, z: m.z, a: m.a, bspeed: m.bs }, -0.17, true); fire({ x: m.x, z: m.z, a: m.a, bspeed: m.bs }, 0, true); fire({ x: m.x, z: m.z, a: m.a, bspeed: m.bs }, 0.17, true); }
     else fire({ x: m.x, z: m.z, a: m.a, bspeed: m.bs }, 0, true);
@@ -1672,7 +1673,7 @@ function handleCoopNet(m) {
 }
 function updateCoop(dt) {
   coop.sendT -= dt;
-  if (coop.sendT <= 0) { coop.sendT = 0.05; netSend({ t: 'state', x: player.x, z: player.z, a: player.a, alive: player.alive }); }
+  if (coop.sendT <= 0) { coop.sendT = 0.05; netSend({ t: 'state', x: player.x, z: player.z, a: player.a, alive: player.alive, sh: player.shieldT > 0 }); }
   const k = 1 - Math.exp(-12 * dt);
   for (const rm of coop.remotes.values()) {
     rm.x += (rm.tx - rm.x) * k; rm.z += (rm.tz - rm.z) * k; rm.a += angNorm(rm.ta - rm.a) * k;
@@ -1936,7 +1937,7 @@ function tick() {
       duel.remoteMesh.position.set(duel.x, 0, duel.z);
       duel.remoteMesh.rotation.y = duel.a;
       duel.sendT -= dt;
-      if (duel.sendT <= 0) { duel.sendT = 0.05; netSend({ t: 'state', x: player.x, z: player.z, a: player.a, alive: player.alive }); }
+      if (duel.sendT <= 0) { duel.sendT = 0.05; netSend({ t: 'state', x: player.x, z: player.z, a: player.a, alive: player.alive, sh: player.shieldT > 0 }); }
     }
     if (mode === 'ball' && ball) {
       if (isAuthority) updateBall(dt);
@@ -2064,13 +2065,22 @@ function tick() {
   drawMinimap();
   updateEngine();
 
-  // kalkan baloncuğu
-  const sh = state === 'play' && player.alive && player.shieldT > 0;
-  shieldBubble.visible = sh;
-  if (sh) {
-    shieldBubble.position.set(player.x, 1.0, player.z);
-    const pulse = 0.18 + Math.abs(Math.sin(clock.elapsedTime * 5)) * 0.12;
-    shieldBubble.material.opacity = player.shieldT < 2 ? pulse * (0.4 + 0.6 * Math.abs(Math.sin(clock.elapsedTime * 12))) : pulse;
+  // kalkan baloncukları (yerel + uzak oyuncular)
+  shieldMat.opacity = 0.18 + Math.abs(Math.sin(clock.elapsedTime * 5)) * 0.12;
+  const showLocal = state === 'play' && player.alive && player.shieldT > 0;
+  shieldBubble.visible = showLocal;
+  if (showLocal) shieldBubble.position.set(player.x, 1.0, player.z);
+  if (mode === 'duel' && duel && duel.remoteShield) {
+    const on = state === 'play' && duel.remoteAlive && duel.shieldOn;
+    duel.remoteShield.visible = on;
+    if (on) duel.remoteShield.position.set(duel.x, 1.0, duel.z);
+  }
+  if (mode === 'coop' && coop) for (const rm of coop.remotes.values()) {
+    if (rm.shield) {
+      const on = state === 'play' && rm.alive && rm.shieldOn;
+      rm.shield.visible = on;
+      if (on) rm.shield.position.set(rm.x, 1.0, rm.z);
+    }
   }
 
   const portrait = camera.aspect < 1;
