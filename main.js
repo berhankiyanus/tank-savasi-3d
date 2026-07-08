@@ -274,6 +274,8 @@ wallMat.aoMap.channel = 0;
 // temaya göre değişen mermi/namlu renkleri
 const playerBulletMat = new THREE.MeshBasicMaterial({ color: 0xffe08a });
 const enemyBulletMat = new THREE.MeshBasicMaterial({ color: 0xff7a5a });
+const playerTailMat = new THREE.MeshBasicMaterial({ color: 0xffe08a, transparent: true, opacity: 0.32, depthWrite: false });
+const enemyTailMat = new THREE.MeshBasicMaterial({ color: 0xff7a5a, transparent: true, opacity: 0.32, depthWrite: false });
 let flashColor = 0xffc070;
 // yıldız alanı (gece/uzay temaları için)
 const starGeo = new THREE.BufferGeometry();
@@ -432,6 +434,7 @@ function applyTheme(name) {
   else { scene.background = envTex; scene.environment = envTex; }
   stars.visible = !!th.stars;
   playerBulletMat.color.setHex(th.bullet[0]); enemyBulletMat.color.setHex(th.bullet[1]); flashColor = th.bullet[2];
+  playerTailMat.color.setHex(th.bullet[0]); enemyTailMat.color.setHex(th.bullet[1]);
   buildDecor(th.decor);
   return th.wall;
 }
@@ -687,6 +690,12 @@ function updateParticles(dt) {
       particles.splice(i, 1); continue;
     }
     if (p.userData.ring) { p.scale.addScalar(dt * 14); p.material.opacity = p.userData.life * 2; }
+    else if (p.userData.dust) {
+      p.position.y += p.userData.vy * dt; p.userData.vy *= 0.95;
+      p.scale.addScalar(dt * 1.6);
+      p.material.opacity = Math.max(0, p.userData.life * (p.userData.op0 || 0.5));
+      p.rotation.y += dt * 1.5;
+    }
     else {
       p.userData.vy -= 14 * dt;
       p.position.x += p.userData.vx * dt;
@@ -700,10 +709,52 @@ function updateParticles(dt) {
 function muzzleFlash(x, y, z) {
   popFlash(x, y, z, flashColor, 26, 9, 0.09);
 }
+// yükselen skor yazıları
+const floaters = [];
+const floaterTexCache = {};
+function floaterTexture(text, color) {
+  const key = text + '|' + color;
+  if (floaterTexCache[key]) return floaterTexCache[key];
+  const cv = document.createElement('canvas'); cv.width = 160; cv.height = 72;
+  const g = cv.getContext('2d');
+  g.font = 'bold 46px "Courier New", monospace'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.lineWidth = 7; g.strokeStyle = 'rgba(0,0,0,0.85)'; g.strokeText(text, 80, 38);
+  g.fillStyle = color; g.fillText(text, 80, 38);
+  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace;
+  floaterTexCache[key] = t; return t;
+}
+function popFloater(x, y, z, text, color = '#ffe86a') {
+  if (floaters.length > 18) return;
+  const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: floaterTexture(text, color), transparent: true, depthTest: false }));
+  spr.scale.set(3.4, 1.5, 1); spr.position.set(x, y, z);
+  spr.userData = { life: 1.0 };
+  scene.add(spr); floaters.push(spr);
+}
+function updateFloaters(dt) {
+  for (let i = floaters.length - 1; i >= 0; i--) {
+    const f = floaters[i]; f.userData.life -= dt;
+    if (f.userData.life <= 0) { scene.remove(f); f.material.dispose(); floaters.splice(i, 1); continue; }
+    f.position.y += dt * 2.6;
+    f.material.opacity = Math.min(1, f.userData.life * 1.6);
+  }
+}
+// toz / duman (dust bayraklı parçacıklar updateParticles içinde yükselir + genişler)
+function spawnPuff(x, y, z, color, op, vy, life) {
+  if (particles.length > 120) return;
+  const p = new THREE.Mesh(partGeo, new THREE.MeshBasicMaterial({ color, transparent: true, opacity: op }));
+  p.position.set(x + (Math.random() - 0.5) * 0.7, y, z + (Math.random() - 0.5) * 0.7);
+  p.scale.setScalar(0.6 + Math.random() * 0.6);
+  p.userData = { dust: true, vy, life, op0: op };
+  scene.add(p); particles.push(p);
+}
+function spawnDust(x, z) { spawnPuff(x, 0.3, z, 0xcab89a, 0.4, 0.6 + Math.random() * 0.4, 0.6); }
+function spawnSmoke(x, z) { spawnPuff(x, 1.1, z, 0x2a2a2a, 0.55, 1.3 + Math.random() * 0.6, 0.9); }
+let dustT = 0, smokeT = 0;
 
 // ---------------------------------------------------------------- oyun durumu
 const bullets = [];
 const bulletGeo = new THREE.SphereGeometry(0.14, 10, 10);
+const bulletTailGeo = new THREE.BoxGeometry(0.09, 0.09, 1.3);
 
 const player = {
   mesh: null, a: 0, x: 0, z: 0,
@@ -755,6 +806,9 @@ function fire(owner, angOff = 0, playerShot = null) {
   const bx = owner.x + fwdX(a) * 2.6;
   const bz = owner.z + fwdZ(a) * 2.6;
   mesh.position.set(bx, 1.13, bz);
+  mesh.rotation.y = a;
+  const tail = new THREE.Mesh(bulletTailGeo, isPlayer ? playerTailMat : enemyTailMat);
+  tail.position.z = 0.75; mesh.add(tail);
   scene.add(mesh);
   let sp;
   if (isPlayer) sp = player.stat.bspeed;
@@ -879,7 +933,7 @@ function spawnEnemies(types) {
     const d = ENEMY_TYPES[type] || ENEMY_TYPES.normal;
     const cell = randOpenCell(player.x, player.z, type === 'boss' ? 22 : 18);
     const e = {
-      id: ++enemyIdC, type, color: d.color, hp: d.hp, maxHp: d.hp,
+      id: ++enemyIdC, type, color: d.color, hp: d.hp, maxHp: d.hp, baseScale: d.scale, hitT: 0,
       speed: d.speed, turn: d.turn, bspeed: d.bspeed, keep: d.keep, sight: d.sight,
       triple: !!d.triple, coins: d.coins, score: d.score,
       mesh: buildTank({ color: d.color, scale: d.scale, glow: d.glow }),
@@ -1870,6 +1924,7 @@ function updateEnemy(e, dt, tgt) {
   const pos = { x: e.x, z: e.z };
   circleVsWalls(pos, TANK_R);
   e.x = pos.x; e.z = pos.z;
+  if (e.hitT > 0) { e.hitT -= dt; e.mesh.scale.setScalar((e.baseScale || 1) * (1 + Math.max(0, e.hitT) * 1.8)); }
   e.mesh.position.set(e.x, 0, e.z);
   e.mesh.rotation.y = e.a;
 }
@@ -1918,7 +1973,10 @@ function tick() {
         player.cool = player.stat.cool;
         if (mode === 'duel' || mode === 'ball' || mode === 'coop') netSend({ t: 'fire', x: player.x, z: player.z, a: player.a, bs: player.stat.bspeed, trip: player.tripleT > 0 });
       }
-      player.mesh.position.set(player.x, 0, player.z);
+      if (Math.abs(player.speed) > 3) { dustT -= dt; if (dustT <= 0) { dustT = 0.06; spawnDust(player.x - fwdX(player.a) * 1.3, player.z - fwdZ(player.a) * 1.3); } }
+      if (player.maxHealth > 2 && player.health <= 2) { smokeT -= dt; if (smokeT <= 0) { smokeT = 0.16; spawnSmoke(player.x, player.z); } }
+      const bob = Math.abs(Math.sin(clock.elapsedTime * 16)) * 0.05 * Math.min(1, Math.abs(player.speed) / 6);
+      player.mesh.position.set(player.x, bob, player.z);
       player.mesh.rotation.y = player.a;
       if (playerTurret) { recoil = Math.max(0, recoil - dt * 0.8); playerTurret.position.z = turretBaseZ + recoil; }
     }
@@ -1962,6 +2020,7 @@ function tick() {
           b.bounces--; sfxBounce();
         } else { explode(b.mesh.position.x, 1.0, b.mesh.position.z, false); dead = true; }
       } else { b.mesh.position.x = nx; b.mesh.position.z = nz; }
+      if (!dead) b.mesh.rotation.y = Math.atan2(-b.vx, -b.vz);
 
       if (!dead && mode === 'ball' && ball) {
         const dbx = b.mesh.position.x - ball.x, dbz = b.mesh.position.z - ball.z;
@@ -1983,9 +2042,10 @@ function tick() {
                 e.hp--;
                 if (e.hp <= 0) {
                   e.alive = false; explode(e.x, 1.0, e.z, true); scene.remove(e.mesh);
+                  popFloater(e.x, 2.2, e.z, '+' + e.score, e.type === 'boss' ? '#ff7a3a' : '#ffe86a');
                   netSend({ t: 'ekill', id: e.id });
                   score += e.score; roundCoins += e.coins; profile.kills++; addCoins(e.coins); updateHUD();
-                } else { explode(b.mesh.position.x, 1.0, b.mesh.position.z, false); }
+                } else { e.hitT = 0.14; explode(b.mesh.position.x, 1.0, b.mesh.position.z, false); }
                 dead = true; break;
               }
             }
@@ -2010,8 +2070,9 @@ function tick() {
               e.hp--;
               if (e.hp <= 0) {
                 e.alive = false; explode(e.x, 1.0, e.z, true); scene.remove(e.mesh);
+                popFloater(e.x, 2.2, e.z, '+' + e.score, e.type === 'boss' ? '#ff7a3a' : '#ffe86a');
                 score += e.score; roundCoins += e.coins; profile.kills++; addCoins(e.coins); updateHUD();
-              } else { explode(b.mesh.position.x, 1.0, b.mesh.position.z, false); }
+              } else { e.hitT = 0.14; explode(b.mesh.position.x, 1.0, b.mesh.position.z, false); }
               dead = true; break;
             }
           }
@@ -2058,6 +2119,7 @@ function tick() {
 
   updateParticles(dt);
   updateFlashes(dt);
+  updateFloaters(dt);
 
   const bossE = (state === 'play' && (mode === 'solo' || (mode === 'coop' && isAuthority))) ? enemies.find(e => e.type === 'boss' && e.alive) : null;
   updateBossBar(bossE);
