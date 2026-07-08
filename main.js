@@ -178,6 +178,7 @@ PITCH.baseZ2 = -(PITCH.PH / 2 - PITCH.BASE); // kuzey base sınırı (-15)
 
 const cellX = c => (c - (COLS - 1) / 2) * CELL;
 const cellZ = r => (r - (ROWS - 1) / 2) * CELL;
+let arenaHalf = 30; // mini harita için arena yarı-boyutu
 
 // ---------------------------------------------------------------- sahne
 const IS_TOUCH = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
@@ -445,6 +446,7 @@ function buildArena(mapIdx) {
   const wallMaterial = applyTheme(MAPS[mapIdx].theme);
   MAP = MAPS[mapIdx].grid;
   ROWS = MAP.length; COLS = MAP[0].length;
+  arenaHalf = (Math.max(ROWS, COLS) / 2) * CELL;
   walls.length = 0; openCells = [];
   if (wallInst) { scene.remove(wallInst); wallInst.dispose(); wallInst = null; }
   let count = 0;
@@ -585,6 +587,28 @@ function sfxCoin() {
   o.frequency.setValueAtTime(1320, t + 0.06);
   g.gain.setValueAtTime(0.08, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
   o.connect(g).connect(ac.destination); o.start(t); o.stop(t + 0.2);
+}
+// motor sesi (sürüşe göre uğultu)
+let engineOsc = null, engineGain = null, engineFreq = null;
+function startEngine() {
+  const ac = audio();
+  if (engineOsc) return;
+  engineOsc = ac.createOscillator();
+  const filter = ac.createBiquadFilter();
+  engineGain = ac.createGain();
+  engineOsc.type = 'sawtooth'; engineOsc.frequency.value = 55;
+  filter.type = 'lowpass'; filter.frequency.value = 380;
+  engineGain.gain.value = 0;
+  engineOsc.connect(filter).connect(engineGain).connect(ac.destination);
+  engineOsc.start();
+  engineFreq = engineOsc.frequency;
+}
+function updateEngine() {
+  if (!engineGain || !AC) return;
+  const spd = Math.min(1, Math.abs(player.speed) / 10);
+  const on = state === 'play' && !paused && player.alive && !settings.muted;
+  engineGain.gain.setTargetAtTime(on ? 0.012 + spd * 0.05 : 0, AC.currentTime, 0.1);
+  engineFreq.setTargetAtTime(52 + spd * 48, AC.currentTime, 0.1);
 }
 function sfxPower() {
   if (settings.muted) return;
@@ -886,6 +910,43 @@ function updateBossBar(boss) {
     $('bosshp').style.width = Math.max(0, (boss.hp / boss.maxHp) * 100) + '%';
   } else if (el.style.display !== 'none') el.style.display = 'none';
 }
+let buffSig = '';
+function updateBuffs() {
+  const items = [];
+  if (player.speedT > 0) items.push(`⚡${Math.ceil(player.speedT)}`);
+  if (player.tripleT > 0) items.push(`3×${Math.ceil(player.tripleT)}`);
+  if (player.shieldT > 0) items.push(`🛡${Math.ceil(player.shieldT)}`);
+  const s = (state === 'play' ? items.join('|') : '');
+  if (s === buffSig) return;
+  buffSig = s;
+  $('buffs').innerHTML = state === 'play' ? items.map(x => `<span class="buff">${x}</span>`).join('') : '';
+}
+const miniCanvas = $('minimap'), miniCtx = miniCanvas.getContext('2d');
+function drawMinimap() {
+  if (state !== 'play') { if (miniCanvas.style.display !== 'none') miniCanvas.style.display = 'none'; return; }
+  if (miniCanvas.style.display !== 'block') miniCanvas.style.display = 'block';
+  const S = miniCanvas.width, half = arenaHalf, c = miniCtx;
+  const px = x => (x / (half * 2) + 0.5) * S, pz = z => (z / (half * 2) + 0.5) * S;
+  const dot = (x, z, r) => { c.beginPath(); c.arc(px(x), pz(z), r, 0, 7); c.fill(); };
+  c.clearRect(0, 0, S, S);
+  c.fillStyle = 'rgba(0,0,0,0.35)'; c.fillRect(0, 0, S, S);
+  c.fillStyle = 'rgba(190,160,120,0.6)';
+  for (const w of walls) c.fillRect(px(w.minX), pz(w.minZ), Math.max(1, px(w.maxX) - px(w.minX)), Math.max(1, pz(w.maxZ) - pz(w.minZ)));
+  c.fillStyle = '#ff4030';
+  if (enemies.length) { for (const e of enemies) if (e.alive) dot(e.x, e.z, e.type === 'boss' ? 4.5 : 2.5); }
+  else for (const m of coopEnemies.values()) dot(m.position.x, m.position.z, 2.5);
+  if (mode === 'ball' && ball) { c.fillStyle = '#ffffff'; dot(ball.x, ball.z, 3); }
+  if (mode === 'duel' && duel && duel.remoteAlive) { c.fillStyle = '#ff7a5a'; dot(duel.x, duel.z, 3); }
+  if (mode === 'coop' && coop) for (const [pid, rm] of coop.remotes) if (rm.alive) { c.fillStyle = '#' + (PLAYER_COLORS[pid] || 0x8888aa).toString(16).padStart(6, '0'); dot(rm.x, rm.z, 3); }
+  c.fillStyle = '#ffe86a';
+  for (const p of powerups) dot(p.x, p.z, 2);
+  if (player.alive) {
+    const ax = px(player.x), az = pz(player.z);
+    c.fillStyle = '#3aff5d'; c.beginPath(); c.arc(ax, az, 3.5, 0, 7); c.fill();
+    c.strokeStyle = '#3aff5d'; c.lineWidth = 1.5;
+    c.beginPath(); c.moveTo(ax, az); c.lineTo(ax + fwdX(player.a) * 7, az + fwdZ(player.a) * 7); c.stroke();
+  }
+}
 function renderHealth() {
   healthEl.innerHTML = '';
   for (let i = 0; i < player.maxHealth; i++) {
@@ -1095,7 +1156,7 @@ function startSolo(mapIdx) {
   spawnEnemies(waveComposition(1));
   renderHealth(); updateHUD();
   banner(`${T().wave} 1`);
-  audio();
+  audio(); startEngine();
 }
 function gameOver() {
   state = 'over';
@@ -1222,7 +1283,7 @@ function beginDuel(you) {
   banner(T().duelStart);
   const st = player.stat;
   netSend({ t: 'skin', color: st.color, scale: st.scale });
-  audio();
+  audio(); startEngine();
 }
 function duelPlayerDie() {
   player.alive = false; player.mesh.visible = false;
@@ -1299,6 +1360,7 @@ function clearBallMode() {
 }
 function buildBallArena() {
   const wallMaterial = applyTheme('stadium');
+  arenaHalf = Math.max(PITCH.PW, PITCH.PH) / 2 + 2;
   walls.length = 0; openCells = [];
   if (wallInst) { scene.remove(wallInst); wallInst.dispose(); wallInst = null; }
   clearBallMode();
@@ -1388,7 +1450,7 @@ function beginBall(you) {
   banner(T().ballBtn);
   const st = player.stat;
   netSend({ t: 'skin', color: st.color, scale: st.scale });
-  audio();
+  audio(); startEngine();
 }
 function clampBall() {
   const sp = Math.hypot(ball.vx, ball.vz);
@@ -1510,7 +1572,7 @@ function beginCoop(you, players, mapIdx) {
   renderHealth(); updateHUD();
   banner(`${T().wave} 1`);
   if (host) spawnEnemies(waveComposition(1, players.length));
-  audio();
+  audio(); startEngine();
 }
 function coopNearestPlayer(e) {
   let best = null, bd = 1e9;
@@ -1998,6 +2060,9 @@ function tick() {
 
   const bossE = (state === 'play' && (mode === 'solo' || (mode === 'coop' && isAuthority))) ? enemies.find(e => e.type === 'boss' && e.alive) : null;
   updateBossBar(bossE);
+  updateBuffs();
+  drawMinimap();
+  updateEngine();
 
   // kalkan baloncuğu
   const sh = state === 'play' && player.alive && player.shieldT > 0;

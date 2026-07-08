@@ -72,6 +72,12 @@
   #flash { inset: 0; box-shadow: inset 0 0 120px 40px rgba(255,30,30,.9); opacity: 0; }
   #wavebanner { top: 26%; left: 0; right: 0; text-align: center; font-size: 42px; font-weight: bold;
                 color: #ffd76a; letter-spacing: 5px; opacity: 0; text-shadow: 0 0 24px rgba(255,170,40,.9); }
+  #buffs { top: 50px; left: 22px; display: flex; gap: 6px; }
+  .buff { font-family: "Courier New", monospace; font-weight: bold; font-size: 15px; color: #fff;
+          background: rgba(20,30,15,.7); border: 1px solid #7dff9b; border-radius: 7px; padding: 3px 8px;
+          box-shadow: 0 0 8px rgba(125,255,155,.35); }
+  #minimap { top: 52px; right: 10px; width: 118px; height: 118px; border-radius: 8px;
+             border: 2px solid rgba(255,255,255,.35); background: rgba(0,0,0,.25); display: none; }
   #bossbar { top: 58px; left: 0; right: 0; display: none; flex-direction: column; align-items: center; }
   #bosslabel { color: #ff5a5a; font-weight: bold; letter-spacing: 4px; font-size: 15px; text-shadow: 0 0 10px rgba(255,40,40,.8); }
   #bosshpwrap { width: 60%; max-width: 420px; height: 14px; margin-top: 3px; background: rgba(0,0,0,.5);
@@ -141,6 +147,8 @@
     <button class="gear" id="btn-settings">⚙</button>
   </div>
 </div>
+<div id="buffs" class="hud"></div>
+<canvas id="minimap" class="hud" width="118" height="118"></canvas>
 <div id="wavebanner" class="hud"></div>
 <div id="bossbar" class="hud">
   <div id="bosslabel">BOSS</div>
