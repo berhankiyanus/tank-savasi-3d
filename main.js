@@ -34,6 +34,7 @@ const L = {
     coopBtn: 'KOOPERATİF', coopSub: '2-4 kişi birlikte dalgalara karşı! Oda kur veya kod ile katıl.',
     startW: 'BAŞLAT', playersW: 'oyuncu', waitHost: 'Host başlatmasını bekle...',
     bossW: 'BOSS DALGASI! ☠️', bossLbl: 'BOSS',
+    tabTanks: 'TANKLAR', tabSkins: 'KAPLAMALAR', profileTitle: 'PROFİL & BAŞARIMLAR', dailyW: 'Günlük Ödül · Gün',
   },
   en: {
     title: 'TANK BATTLE 3D',
@@ -65,19 +66,25 @@ const L = {
     coopBtn: 'CO-OP', coopSub: '2-4 players together vs waves! Create a room or join with a code.',
     startW: 'START', playersW: 'players', waitHost: 'Waiting for host to start...',
     bossW: 'BOSS WAVE! ☠️', bossLbl: 'BOSS',
+    tabTanks: 'TANKS', tabSkins: 'SKINS', profileTitle: 'PROFILE & ACHIEVEMENTS', dailyW: 'Daily Reward · Day',
   },
 };
 let lang = localStorage.getItem('tanklang') || ((navigator.language || 'tr').startsWith('tr') ? 'tr' : 'en');
 const T = () => L[lang];
 
 // ---------------------------------------------------------------- kalıcı profil
-const DEFAULT_PROFILE = { coins: 0, owned: ['recruit'], selected: 'recruit', bestWave: 1, upgrades: {}, kills: 0, wins: 0, games: 0 };
+const DEFAULT_PROFILE = { coins: 0, owned: ['recruit'], selected: 'recruit', bestWave: 1, upgrades: {}, kills: 0, wins: 0, games: 0, skins: ['default'], skin: 'default', achieved: [], lastDaily: '', streak: 0 };
 let profile;
 try {
   profile = Object.assign({}, DEFAULT_PROFILE, JSON.parse(localStorage.getItem('tankprofile') || '{}'));
   if (!Array.isArray(profile.owned) || !profile.owned.length) profile.owned = ['recruit'];
   if (!profile.upgrades || typeof profile.upgrades !== 'object') profile.upgrades = {};
   profile.kills = profile.kills || 0; profile.wins = profile.wins || 0; profile.games = profile.games || 0;
+  if (!Array.isArray(profile.skins) || !profile.skins.length) profile.skins = ['default'];
+  if (!profile.skin) profile.skin = 'default';
+  if (!Array.isArray(profile.achieved)) profile.achieved = [];
+  profile.streak = profile.streak || 0;
+  if (typeof profile.lastDaily !== 'string') profile.lastDaily = '';
 } catch { profile = Object.assign({}, DEFAULT_PROFILE); }
 function saveProfile() { localStorage.setItem('tankprofile', JSON.stringify(profile)); }
 function addCoins(n) { profile.coins += n; saveProfile(); updateCoinBar(); }
@@ -108,6 +115,32 @@ const UPGRADES = [
 ];
 const UP_MAX = 5;
 const upCost = lvl => 60 * (lvl + 1);
+// kozmetik kaplamalar (oyuncunun kendi tankına uygulanır)
+const SKINS = [
+  { id: 'default', name: { tr: 'Varsayılan', en: 'Default' }, price: 0 },
+  { id: 'camo', name: { tr: 'Kamuflaj', en: 'Camo' }, price: 120, color: 0x4b5320, rough: 0.9 },
+  { id: 'crimson', name: { tr: 'Kızıl', en: 'Crimson' }, price: 150, color: 0xb01818 },
+  { id: 'ocean', name: { tr: 'Okyanus', en: 'Ocean' }, price: 150, color: 0x1b6fa8 },
+  { id: 'gold', name: { tr: 'Altın', en: 'Gold' }, price: 400, color: 0xffcc33, metal: 0.85, rough: 0.25 },
+  { id: 'chrome', name: { tr: 'Krom', en: 'Chrome' }, price: 500, color: 0xcfd6e0, metal: 0.95, rough: 0.12 },
+  { id: 'neon', name: { tr: 'Neon', en: 'Neon' }, price: 450, color: 0x18e0ff, glow: 0.6 },
+  { id: 'inferno', name: { tr: 'Ateş', en: 'Inferno' }, price: 450, color: 0xff5a1e, glow: 0.6 },
+  { id: 'phantom', name: { tr: 'Hayalet', en: 'Phantom' }, price: 600, color: 0xa040ff, glow: 0.5, metal: 0.4 },
+  { id: 'toxic', name: { tr: 'Zehir', en: 'Toxic' }, price: 500, color: 0x8aff2a, glow: 0.5 },
+];
+const skinById = id => SKINS.find(s => s.id === id) || SKINS[0];
+// başarımlar (koşul sağlanınca coin ödülü)
+const ACHIEVEMENTS = [
+  { id: 'kill50', name: { tr: 'Acemi Avcı', en: 'Rookie' }, desc: { tr: '50 düşman yok et', en: 'Destroy 50 enemies' }, stat: 'kills', goal: 50, reward: 100 },
+  { id: 'kill250', name: { tr: 'Usta Avcı', en: 'Veteran' }, desc: { tr: '250 düşman yok et', en: 'Destroy 250 enemies' }, stat: 'kills', goal: 250, reward: 300 },
+  { id: 'kill1000', name: { tr: 'Efsane', en: 'Legend' }, desc: { tr: '1000 düşman yok et', en: 'Destroy 1000 enemies' }, stat: 'kills', goal: 1000, reward: 800 },
+  { id: 'wave5', name: { tr: 'Dayanıklı', en: 'Survivor' }, desc: { tr: 'Dalga 5\'e ulaş', en: 'Reach wave 5' }, stat: 'bestWave', goal: 5, reward: 150 },
+  { id: 'wave10', name: { tr: 'Kale', en: 'Fortress' }, desc: { tr: 'Dalga 10\'a ulaş', en: 'Reach wave 10' }, stat: 'bestWave', goal: 10, reward: 400 },
+  { id: 'wave15', name: { tr: 'Aşılmaz', en: 'Unstoppable' }, desc: { tr: 'Dalga 15\'e ulaş', en: 'Reach wave 15' }, stat: 'bestWave', goal: 15, reward: 700 },
+  { id: 'win3', name: { tr: 'Rakip', en: 'Challenger' }, desc: { tr: '3 maç kazan', en: 'Win 3 matches' }, stat: 'wins', goal: 3, reward: 200 },
+  { id: 'win15', name: { tr: 'Şampiyon', en: 'Champion' }, desc: { tr: '15 maç kazan', en: 'Win 15 matches' }, stat: 'wins', goal: 15, reward: 600 },
+  { id: 'games25', name: { tr: 'Bağımlı', en: 'Hooked' }, desc: { tr: '25 maç oyna', en: 'Play 25 matches' }, stat: 'games', goal: 25, reward: 300 },
+];
 function effTank(id) {
   const b = tankById(id);
   const u = (profile.upgrades && profile.upgrades[id]) || {};
@@ -764,10 +797,25 @@ const player = {
 };
 let playerTurret = null, turretBaseZ = 0;
 
+function applySkin(mesh, skinId) {
+  const s = skinById(skinId);
+  if (s.id === 'default') return; // tankın kendi rengi kalsın
+  mesh.traverse(o => {
+    if (o.isMesh && o.material && o.material.name === 'TankPaint') {
+      o.material = o.material.clone();
+      o.material.color.setHex(s.color);
+      o.material.metalness = s.metal != null ? s.metal : 0.15;
+      o.material.roughness = s.rough != null ? s.rough : 0.55;
+      if (s.glow) { o.material.emissive.setHex(s.color); o.material.emissiveIntensity = s.glow; }
+      else o.material.emissiveIntensity = 0;
+    }
+  });
+}
 function setPlayerTank() {
   const def = effTank(profile.selected);
   if (player.mesh) scene.remove(player.mesh);
   player.mesh = buildTank(def);
+  applySkin(player.mesh, profile.skin);
   player.mesh.position.set(player.x, 0, player.z);
   scene.add(player.mesh);
   playerTurret = player.mesh.getObjectByName('TankTurret');
@@ -954,7 +1002,31 @@ const duelStatusEl = $('duelstatus'), coinsEl = $('coins');
 
 function updateCoinBar() { coinsEl.textContent = profile.coins; }
 function updateStats() {
-  $('statsline').innerHTML = `🏆 D.${profile.bestWave} &nbsp;·&nbsp; ⚔️ ${profile.kills} &nbsp;·&nbsp; 🥇 ${profile.wins}`;
+  $('statsline').innerHTML = `🏆 D.${profile.bestWave} &nbsp;·&nbsp; ⚔️ ${profile.kills} &nbsp;·&nbsp; 🥇 ${profile.wins} &nbsp;·&nbsp; 🏅`;
+}
+let toastT = 0, statsCheckT = 2;
+function showToast(text, dur = 2800) {
+  const el = $('toast'); el.textContent = text; el.style.opacity = '1'; toastT = dur / 1000;
+}
+function checkAchievements() {
+  for (const a of ACHIEVEMENTS) {
+    if (profile.achieved.includes(a.id)) continue;
+    if ((profile[a.stat] || 0) >= a.goal) {
+      profile.achieved.push(a.id);
+      addCoins(a.reward);
+      showToast(`🏅 ${a.name[lang]}  +🪙${a.reward}`);
+    }
+  }
+}
+function checkDaily() {
+  const today = new Date().toDateString();
+  if (profile.lastDaily === today) return;
+  const yest = new Date(Date.now() - 864e5).toDateString();
+  profile.streak = (profile.lastDaily === yest) ? (profile.streak || 0) + 1 : 1;
+  profile.lastDaily = today;
+  const reward = 50 + Math.min(profile.streak, 7) * 25;
+  addCoins(reward);
+  showToast(`🎁 ${T().dailyW} ${profile.streak} · +🪙${reward}`, 4000);
 }
 function updateBossBar(boss) {
   const el = $('bossbar');
@@ -1037,7 +1109,7 @@ function updateHUD() {
 
 // panel yönetimi
 function showPanel(id) {
-  for (const p of ['panel-main', 'panel-maps', 'panel-garage', 'panel-duel', 'panel-coop', 'panel-rematch'])
+  for (const p of ['panel-main', 'panel-maps', 'panel-garage', 'panel-duel', 'panel-coop', 'panel-profile', 'panel-rematch'])
     $(p).classList.toggle('show', p === id);
 }
 function openMenu() {
@@ -1054,6 +1126,7 @@ function openMenu() {
   $('topbar').style.visibility = 'hidden';
   updateCoinBar();
   updateStats();
+  checkAchievements();
 }
 
 function applyLang() {
@@ -1076,8 +1149,11 @@ function applyLang() {
   $('joincode').placeholder = t.codePh;
   $('hlabel').textContent = t.health;
   $('firebtn').textContent = t.fire;
+  $('gt-tanks').textContent = t.tabTanks;
+  $('gt-skins').textContent = t.tabSkins;
   $('btn-back-maps').textContent = t.back;
   $('btn-back-garage').textContent = t.back;
+  $('btn-back-profile').textContent = t.back;
   $('btn-back-duel').textContent = t.back;
   $('btn-rematch').textContent = t.rematchBtn;
   $('btn-leave').textContent = t.leaveBtn;
@@ -1156,6 +1232,62 @@ function renderGarage() {
     }
     wrap.appendChild(card);
   }
+}
+let garageTab = 'tanks';
+function renderGarageTabs() {
+  $('gt-tanks').classList.toggle('on', garageTab === 'tanks');
+  $('gt-skins').classList.toggle('on', garageTab === 'skins');
+  if (garageTab === 'tanks') renderGarage(); else renderSkins();
+}
+function openGarage() {
+  $('title').textContent = T().garage;
+  $('submsg').textContent = '🪙 ' + profile.coins;
+  renderGarageTabs();
+  showPanel('panel-garage');
+}
+function renderSkins() {
+  const t = T();
+  const wrap = $('cardwrap-garage');
+  wrap.style.cssText = 'display:flex;flex-wrap:wrap;justify-content:center;gap:12px;margin:12px 8px';
+  wrap.innerHTML = '';
+  for (const s of SKINS) {
+    const owned = s.id === 'default' || profile.skins.includes(s.id);
+    const equipped = profile.skin === s.id;
+    const card = document.createElement('div'); card.className = 'card' + (equipped ? ' sel' : '');
+    const hex = s.color != null ? '#' + s.color.toString(16).padStart(6, '0') : '#5a6b3a';
+    const glow = s.glow ? `box-shadow:inset 0 0 26px ${hex};` : '';
+    const grad = s.metal ? `linear-gradient(135deg,rgba(255,255,255,.5),${hex},rgba(0,0,0,.4))` : `linear-gradient(135deg,${hex},#161616)`;
+    card.innerHTML = `<div class="cname">${s.name[lang]}</div><div class="cswatch" style="background:${grad};${glow}"></div>`;
+    const btn = document.createElement('button'); btn.className = 'mbtn small' + (s.glow || s.metal ? ' gold' : '');
+    if (equipped) { btn.textContent = t.selected; btn.disabled = true; }
+    else if (owned) { btn.textContent = t.owned; btn.onclick = () => { profile.skin = s.id; saveProfile(); setPlayerTank(); renderSkins(); }; }
+    else {
+      btn.innerHTML = `${t.buy} · 🪙${s.price}`;
+      btn.disabled = profile.coins < s.price;
+      btn.onclick = () => { if (profile.coins < s.price) return; profile.coins -= s.price; profile.skins.push(s.id); profile.skin = s.id; saveProfile(); sfxCoin(); setPlayerTank(); updateCoinBar(); renderSkins(); };
+    }
+    card.appendChild(btn); wrap.appendChild(card);
+  }
+}
+function renderAchievements() {
+  const wrap = $('achlist'); wrap.innerHTML = '';
+  for (const a of ACHIEVEMENTS) {
+    const done = profile.achieved.includes(a.id);
+    const cur = Math.min(profile[a.stat] || 0, a.goal);
+    const row = document.createElement('div'); row.className = 'achrow' + (done ? ' done' : '');
+    row.innerHTML = `<div class="achtop">${done ? '✅ ' : ''}${a.name[lang]} <span class="achr">🪙${a.reward}</span></div>` +
+      `<div class="achdesc">${a.desc[lang]} — ${cur}/${a.goal}</div>` +
+      `<div class="abar"><i style="width:${Math.round(cur / a.goal * 100)}%"></i></div>`;
+    wrap.appendChild(row);
+  }
+}
+function openProfile() {
+  checkAchievements();
+  const t = T();
+  $('title').textContent = t.profileTitle;
+  $('submsg').textContent = `🪙 ${profile.coins} · 🏆 D.${profile.bestWave} · ⚔️ ${profile.kills} · 🥇 ${profile.wins} · 🎮 ${profile.games}`;
+  renderAchievements();
+  showPanel('panel-profile');
 }
 
 // ---------------------------------------------------------------- harita seçimi UI
@@ -1337,7 +1469,8 @@ function beginDuel(you) {
   updateHUD();
   banner(T().duelStart);
   const st = player.stat;
-  netSend({ t: 'skin', color: st.color, scale: st.scale });
+  const skinCol = profile.skin !== 'default' ? skinById(profile.skin).color : st.color;
+  netSend({ t: 'skin', color: skinCol, scale: st.scale });
   audio(); startEngine();
 }
 function duelPlayerDie() {
@@ -1504,7 +1637,8 @@ function beginBall(you) {
   updateHUD();
   banner(T().ballBtn);
   const st = player.stat;
-  netSend({ t: 'skin', color: st.color, scale: st.scale });
+  const skinCol = profile.skin !== 'default' ? skinById(profile.skin).color : st.color;
+  netSend({ t: 'skin', color: skinCol, scale: st.scale });
   audio(); startEngine();
 }
 function clampBall() {
@@ -1771,7 +1905,11 @@ function renderDuelMaps() { renderMapPicker('duelmapsrow', renderDuelMaps); }
 function renderCoopMaps() { renderMapPicker('coopmapsrow', renderCoopMaps); }
 $('btn-duel').addEventListener('click', () => { pendingMode = 'duel'; duelStatusEl.textContent = ''; $('title').textContent = T().duel; $('submsg').textContent = T().duelSub(KILL_TARGET); $('duelmapsrow').style.display = 'flex'; renderDuelMaps(); showPanel('panel-duel'); });
 $('btn-ball').addEventListener('click', () => { pendingMode = 'ball'; duelStatusEl.textContent = ''; $('title').textContent = T().ballBtn; $('submsg').textContent = T().ballSub(BALL_TARGET); $('duelmapsrow').style.display = 'none'; showPanel('panel-duel'); });
-$('btn-garage').addEventListener('click', () => { $('title').textContent = T().garage; $('submsg').textContent = '🪙 ' + profile.coins; renderGarage(); showPanel('panel-garage'); });
+$('btn-garage').addEventListener('click', openGarage);
+$('gt-tanks').addEventListener('click', () => { garageTab = 'tanks'; renderGarageTabs(); });
+$('gt-skins').addEventListener('click', () => { garageTab = 'skins'; renderGarageTabs(); });
+$('statsline').addEventListener('click', openProfile);
+$('btn-back-profile').addEventListener('click', openMenu);
 $('btn-back-maps').addEventListener('click', openMenu);
 $('btn-back-garage').addEventListener('click', openMenu);
 $('btn-back-duel').addEventListener('click', () => { closeNet(); openMenu(); });
@@ -1933,6 +2071,7 @@ function updateEnemy(e, dt, tgt) {
 const clock = new THREE.Clock();
 applyLang();
 openMenu();
+checkDaily();
 
 function tick() {
   requestAnimationFrame(tick);
@@ -2120,6 +2259,8 @@ function tick() {
   updateParticles(dt);
   updateFlashes(dt);
   updateFloaters(dt);
+  if (toastT > 0) { toastT -= dt; if (toastT <= 0) $('toast').style.opacity = '0'; }
+  statsCheckT -= dt; if (statsCheckT <= 0) { statsCheckT = 1.2; checkAchievements(); }
 
   const bossE = (state === 'play' && (mode === 'solo' || (mode === 'coop' && isAuthority))) ? enemies.find(e => e.type === 'boss' && e.alive) : null;
   updateBossBar(bossE);

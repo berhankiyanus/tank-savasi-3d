@@ -52,7 +52,20 @@
   #rematchstatus { margin-top: 14px; font-size: 19px; color: #7dff9b; min-height: 26px; }
   #coopstatus { margin-top: 12px; font-size: 18px; color: #7dff9b; min-height: 26px; line-height: 1.5; }
   #coopstatus .code { font-size: 30px; letter-spacing: 7px; color: #ffd76a; font-weight: bold; }
-  #statsline { margin-top: 16px; font-size: 16px; color: #cfe6bf; letter-spacing: 1px; }
+  #statsline { margin-top: 16px; font-size: 16px; color: #cfe6bf; letter-spacing: 1px; cursor: pointer; pointer-events: auto; }
+  #statsline:active { transform: scale(.96); }
+  #garagetabs { display: flex; gap: 8px; margin-bottom: 4px; }
+  #achlist { display: flex; flex-direction: column; gap: 8px; width: 100%; max-width: 460px; margin: 10px 0; }
+  .achrow { background: rgba(30,40,22,.7); border: 1px solid #4a6b3a; border-radius: 10px; padding: 8px 12px; text-align: left; }
+  .achrow.done { border-color: #ffd76a; }
+  .achtop { font-size: 16px; font-weight: bold; color: #fff; display: flex; justify-content: space-between; }
+  .achr { color: #ffdd55; }
+  .achdesc { font-size: 12px; color: #b8e6ff; margin: 2px 0 5px; }
+  .abar { height: 8px; background: rgba(255,255,255,.15); border-radius: 4px; overflow: hidden; }
+  .abar > i { display: block; height: 100%; background: #7dff9b; border-radius: 4px; }
+  #toast { top: 92px; left: 0; right: 0; text-align: center; font-family: "Courier New", monospace; font-weight: bold;
+           font-size: 19px; color: #ffe08a; opacity: 0; transition: opacity .4s; z-index: 45;
+           text-shadow: 0 2px 8px rgba(0,0,0,.9); }
   .gear { font-size: 19px; background: rgba(0,0,0,.35); border: 2px solid rgba(255,255,255,.4);
           color: #fff; border-radius: 8px; width: 40px; height: 34px; cursor: pointer; pointer-events: auto; }
   .gear:active { transform: scale(.92); }
@@ -192,8 +205,18 @@
 
   <!-- garaj -->
   <div id="panel-garage" class="panel">
+    <div id="garagetabs">
+      <button class="mbtn small on" id="gt-tanks">TANKLAR</button>
+      <button class="mbtn small" id="gt-skins">KAPLAMALAR</button>
+    </div>
     <div id="cardwrap-garage" class="card-list"></div>
     <button class="mbtn small" id="btn-back-garage">‹ GERİ</button>
+  </div>
+
+  <!-- profil & başarımlar -->
+  <div id="panel-profile" class="panel">
+    <div id="achlist"></div>
+    <button class="mbtn small" id="btn-back-profile">‹ GERİ</button>
   </div>
 
   <!-- düello -->
@@ -232,6 +255,8 @@
     <div id="rematchstatus"></div>
   </div>
 </div>
+
+<div id="toast" class="hud"></div>
 
 <div id="settings" class="hud hidden">
   <div class="setbox">
