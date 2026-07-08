@@ -23,7 +23,7 @@ const L = {
     chooseMap: 'HARİTA SEÇ', garageTitle: 'GARAJ — Tank Al & Değiştir',
     buy: 'SATIN AL', owned: 'SEÇ', selected: '✓ SEÇİLİ', locked: w => `🔒 Dalga ${w}`,
     noMoney: 'Yetersiz 🪙!', sHealth: 'Can', sSpeed: 'Hız', sFire: 'Ateş',
-    reward: '🪙', bestWave: w => `En iyi: Dalga ${w}`,
+    reward: '🪙', bestWave: w => `En iyi: Dalga ${w}`, maxLevel: 'MAKS',
     ballBtn: '1v1 TOP MAÇI', ballSub: t => `Topu ateşle karşı base'e sok! İlk ${t} gol kazanır.`,
     golYou: 'GOL! 🎉', golOpp: 'Gol yediniz!', ballScore: 'GOL',
     rematchBtn: 'TEKRAR OYNA', leaveBtn: 'ÇIKIŞ',
@@ -49,7 +49,7 @@ const L = {
     chooseMap: 'CHOOSE MAP', garageTitle: 'GARAGE — Buy & Switch Tanks',
     buy: 'BUY', owned: 'SELECT', selected: '✓ SELECTED', locked: w => `🔒 Wave ${w}`,
     noMoney: 'Not enough 🪙!', sHealth: 'HP', sSpeed: 'Speed', sFire: 'Fire',
-    reward: '🪙', bestWave: w => `Best: Wave ${w}`,
+    reward: '🪙', bestWave: w => `Best: Wave ${w}`, maxLevel: 'MAX',
     ballBtn: '1v1 BALL MATCH', ballSub: t => `Shoot the ball into the rival base! First to ${t} goals wins.`,
     golYou: 'GOAL! 🎉', golOpp: 'They scored!', ballScore: 'GOAL',
     rematchBtn: 'PLAY AGAIN', leaveBtn: 'LEAVE',
@@ -61,11 +61,13 @@ let lang = localStorage.getItem('tanklang') || ((navigator.language || 'tr').sta
 const T = () => L[lang];
 
 // ---------------------------------------------------------------- kalıcı profil
-const DEFAULT_PROFILE = { coins: 0, owned: ['recruit'], selected: 'recruit', bestWave: 1 };
+const DEFAULT_PROFILE = { coins: 0, owned: ['recruit'], selected: 'recruit', bestWave: 1, upgrades: {}, kills: 0, wins: 0, games: 0 };
 let profile;
 try {
   profile = Object.assign({}, DEFAULT_PROFILE, JSON.parse(localStorage.getItem('tankprofile') || '{}'));
   if (!Array.isArray(profile.owned) || !profile.owned.length) profile.owned = ['recruit'];
+  if (!profile.upgrades || typeof profile.upgrades !== 'object') profile.upgrades = {};
+  profile.kills = profile.kills || 0; profile.wins = profile.wins || 0; profile.games = profile.games || 0;
 } catch { profile = Object.assign({}, DEFAULT_PROFILE); }
 function saveProfile() { localStorage.setItem('tankprofile', JSON.stringify(profile)); }
 function addCoins(n) { profile.coins += n; saveProfile(); updateCoinBar(); }
@@ -80,7 +82,24 @@ const TANKS = [
   { id: 'goldking', name: { tr: 'Altın Kral', en: 'Gold King'}, price: 1500, color: 0xffcc33, scale: 1.08, health: 9, speed: 9.2,  turn: 2.9, cool: 0.30, bspeed: 36, glow: true, metal: true },
 ];
 const tankById = id => TANKS.find(t => t.id === id) || TANKS[0];
-const STAT_MAX = { health: 9, speed: 10.6, fire: 1 / 0.30 };
+const STAT_MAX = { health: 14, speed: 13.6, fire: 1 / 0.16 };
+// tank yükseltmeleri
+const UPGRADES = [
+  { key: 'health', name: { tr: 'Zırh', en: 'Armor' } },
+  { key: 'speed', name: { tr: 'Hız', en: 'Speed' } },
+  { key: 'fire', name: { tr: 'Ateş', en: 'Fire' } },
+];
+const UP_MAX = 5;
+const upCost = lvl => 60 * (lvl + 1);
+function effTank(id) {
+  const b = tankById(id);
+  const u = (profile.upgrades && profile.upgrades[id]) || {};
+  return Object.assign({}, b, {
+    health: b.health + (u.health || 0),
+    speed: b.speed + (u.speed || 0) * 0.6,
+    cool: Math.max(0.16, b.cool - (u.fire || 0) * 0.03),
+  });
+}
 
 // ---------------------------------------------------------------- haritalar
 const MAPS = [
@@ -633,7 +652,7 @@ const player = {
 let playerTurret = null, turretBaseZ = 0;
 
 function setPlayerTank() {
-  const def = tankById(profile.selected);
+  const def = effTank(profile.selected);
   if (player.mesh) scene.remove(player.mesh);
   player.mesh = buildTank(def);
   player.mesh.position.set(player.x, 0, player.z);
@@ -779,6 +798,9 @@ const msgEl = $('msg'), flashEl = $('flash'), bannerEl = $('wavebanner');
 const duelStatusEl = $('duelstatus'), coinsEl = $('coins');
 
 function updateCoinBar() { coinsEl.textContent = profile.coins; }
+function updateStats() {
+  $('statsline').innerHTML = `🏆 D.${profile.bestWave} &nbsp;·&nbsp; ⚔️ ${profile.kills} &nbsp;·&nbsp; 🥇 ${profile.wins}`;
+}
 function renderHealth() {
   healthEl.innerHTML = '';
   for (let i = 0; i < player.maxHealth; i++) {
@@ -831,6 +853,7 @@ function openMenu() {
   msgEl.classList.remove('hidden');
   $('topbar').style.visibility = 'hidden';
   updateCoinBar();
+  updateStats();
 }
 
 function applyLang() {
@@ -868,33 +891,63 @@ function renderGarage() {
   wrap.className = 'card-list';
   wrap.style.cssText = 'display:flex;flex-wrap:wrap;justify-content:center;gap:12px;margin:12px 8px';
   wrap.innerHTML = '';
-  for (const def of TANKS) {
-    const owned = profile.owned.includes(def.id);
-    const sel = profile.selected === def.id;
+  for (const base of TANKS) {
+    const owned = profile.owned.includes(base.id);
+    const sel = profile.selected === base.id;
+    const def = effTank(base.id);
     const card = document.createElement('div');
     card.className = 'card' + (sel ? ' sel' : '');
-    const hex = '#' + def.color.toString(16).padStart(6, '0');
+    const hex = '#' + base.color.toString(16).padStart(6, '0');
     const fireRate = 1 / def.cool;
     card.innerHTML =
-      `<div class="cname">${def.name[lang]}</div>` +
+      `<div class="cname">${base.name[lang]}</div>` +
       `<div class="cswatch" style="background:linear-gradient(135deg,${hex},#1a1a1a)"></div>` +
       `<div class="cstat">${t.sHealth}${barHTML(def.health / STAT_MAX.health)}</div>` +
       `<div class="cstat">${t.sSpeed}${barHTML(def.speed / STAT_MAX.speed)}</div>` +
       `<div class="cstat">${t.sFire}${barHTML(fireRate / STAT_MAX.fire)}</div>`;
     const btn = document.createElement('button');
-    btn.className = 'mbtn small' + (def.glow ? ' gold' : '');
+    btn.className = 'mbtn small' + (base.glow ? ' gold' : '');
     if (sel) { btn.textContent = t.selected; btn.disabled = true; }
-    else if (owned) { btn.textContent = t.owned; btn.onclick = () => { profile.selected = def.id; saveProfile(); setPlayerTank(); renderGarage(); }; }
+    else if (owned) { btn.textContent = t.owned; btn.onclick = () => { profile.selected = base.id; saveProfile(); setPlayerTank(); renderGarage(); }; }
     else {
-      btn.innerHTML = `${t.buy} · 🪙${def.price}`;
-      btn.disabled = profile.coins < def.price;
+      btn.innerHTML = `${t.buy} · 🪙${base.price}`;
+      btn.disabled = profile.coins < base.price;
       btn.onclick = () => {
-        if (profile.coins < def.price) return;
-        profile.coins -= def.price; profile.owned.push(def.id); profile.selected = def.id;
+        if (profile.coins < base.price) return;
+        profile.coins -= base.price; profile.owned.push(base.id); profile.selected = base.id;
         saveProfile(); sfxCoin(); setPlayerTank(); updateCoinBar(); renderGarage();
       };
     }
     card.appendChild(btn);
+    // yükseltmeler (sahip olunan tanklar için)
+    if (owned) {
+      const up = document.createElement('div');
+      up.style.cssText = 'margin-top:7px;border-top:1px solid rgba(255,255,255,.15);padding-top:6px';
+      for (const u of UPGRADES) {
+        const lvl = (profile.upgrades[base.id] && profile.upgrades[base.id][u.key]) || 0;
+        const row = document.createElement('button');
+        row.className = 'mbtn small';
+        row.style.cssText = 'display:block;width:100%;margin:3px 0;font-size:11px;padding:6px 4px;letter-spacing:0';
+        const dots = '●'.repeat(lvl) + '○'.repeat(UP_MAX - lvl);
+        if (lvl >= UP_MAX) { row.textContent = `${u.name[lang]} ${dots} ${t.maxLevel}`; row.disabled = true; }
+        else {
+          const cost = upCost(lvl);
+          row.innerHTML = `${u.name[lang]} ${dots} · 🪙${cost}`;
+          row.disabled = profile.coins < cost;
+          row.onclick = () => {
+            if (profile.coins < cost) return;
+            profile.coins -= cost;
+            profile.upgrades[base.id] = profile.upgrades[base.id] || {};
+            profile.upgrades[base.id][u.key] = lvl + 1;
+            saveProfile(); sfxPower(); updateCoinBar();
+            if (profile.selected === base.id) setPlayerTank();
+            renderGarage();
+          };
+        }
+        up.appendChild(row);
+      }
+      card.appendChild(up);
+    }
     wrap.appendChild(card);
   }
 }
@@ -932,6 +985,7 @@ function renderMaps() {
 // ---------------------------------------------------------------- tek oyunculu
 function startSolo(mapIdx) {
   mode = 'solo'; state = 'play';
+  profile.games++; saveProfile();
   closeNet();
   buildArena(mapIdx);
   msgEl.classList.add('hidden');
@@ -1019,7 +1073,7 @@ function handleNet(m) {
   else if (m.t === 'die') {
     duel.remoteAlive = false; duel.remoteMesh.visible = false;
     explode(duel.tx, 1.2, duel.tz, true);
-    duel.myKills++; updateHUD();
+    duel.myKills++; profile.kills++; saveProfile(); updateHUD();
     if (duel.myKills >= KILL_TARGET) { netSend({ t: 'win' }); duelEnd(true); }
   }
   else if (m.t === 'win') { duelEnd(false); }
@@ -1042,6 +1096,7 @@ function applyRemoteSkin(color, scale) {
 function beginDuel(you) {
   mode = 'duel'; state = 'play';
   isAuthority = (you === 1);
+  profile.games++; saveProfile();
   buildArena(duelMap);
   msgEl.classList.add('hidden');
   $('topbar').style.visibility = 'visible';
@@ -1086,6 +1141,7 @@ function duelPlayerDie() {
 function duelEnd(won) {
   if (!duel || duel.over) return;
   duel.over = true;
+  if (won) { profile.wins++; saveProfile(); }
   const t = T(), a = duel.myKills, b = duel.myDeaths;
   banner(won ? t.youWin : t.youLose);
   setTimeout(() => showRematch('duel', won ? t.youWin : t.youLose, t.duelOverSub(a, b)), 1800);
@@ -1215,6 +1271,7 @@ function resetBallPositions() {
 function beginBall(you) {
   mode = 'ball'; state = 'play';
   isAuthority = (you === 1);
+  profile.games++; saveProfile();
   buildBallArena();
   msgEl.classList.add('hidden');
   $('topbar').style.visibility = 'visible';
@@ -1302,6 +1359,7 @@ function endBall() {
   const winner = ball.g1 > ball.g2 ? 1 : 2;
   const won = winner === duel.you;
   ball.over = true;
+  if (won) { profile.wins++; saveProfile(); }
   banner(won ? t.youWin : t.youLose);
   const a = duel.you === 1 ? ball.g1 : ball.g2;
   const b = duel.you === 1 ? ball.g2 : ball.g1;
@@ -1518,7 +1576,7 @@ function tick() {
           for (const e of enemies) {
             if (e.alive && Math.hypot(b.mesh.position.x - e.x, b.mesh.position.z - e.z) < 1.5) {
               e.alive = false; explode(e.x, 1.0, e.z, true); scene.remove(e.mesh);
-              score += 100; roundCoins += KILL_COINS; addCoins(KILL_COINS);
+              score += 100; roundCoins += KILL_COINS; profile.kills++; addCoins(KILL_COINS);
               updateHUD(); dead = true; break;
             }
           }
