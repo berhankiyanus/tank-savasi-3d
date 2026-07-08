@@ -33,6 +33,10 @@ const L = {
     qHigh: 'YÜKSEK', qLow: 'DÜŞÜK', resumeW: 'DEVAM ET', toMenuW: 'ANA MENÜ', closeW: 'KAPAT', pausedW: 'DURAKLADI',
     coopBtn: 'KOOPERATİF', coopSub: '2-4 kişi birlikte dalgalara karşı! Oda kur veya kod ile katıl.',
     startW: 'BAŞLAT', playersW: 'oyuncu', waitHost: 'Host başlatmasını bekle...',
+    teamBtn: '2v2 TAKIM', teamSub: '2v2 takım savaşı — tam 4 oyuncu! Oda kur (3 kişi daha) ya da kod ile katıl.',
+    teamStart: 'TAKIM SAVAŞI!', teamSubB: k => `İlk ${k} vuruşa ulaşan takım kazanır — tek atış öldürür!`,
+    teamNeed: '4 oyuncu gerekli', teamRed: 'KIRMIZI', teamBlue: 'MAVİ',
+    teamWin: 'TAKIMIN KAZANDI! 🏆', teamLose: 'TAKIMIN KAYBETTİ', teamMate: 'Takım arkadaşın', teamFell: 'düştü',
     bossW: 'BOSS DALGASI! ☠️', bossLbl: 'BOSS',
     tabTanks: 'TANKLAR', tabSkins: 'KAPLAMALAR', profileTitle: 'PROFİL & BAŞARIMLAR', dailyW: 'Günlük Ödül · Gün',
   },
@@ -65,6 +69,10 @@ const L = {
     qHigh: 'HIGH', qLow: 'LOW', resumeW: 'RESUME', toMenuW: 'MAIN MENU', closeW: 'CLOSE', pausedW: 'PAUSED',
     coopBtn: 'CO-OP', coopSub: '2-4 players together vs waves! Create a room or join with a code.',
     startW: 'START', playersW: 'players', waitHost: 'Waiting for host to start...',
+    teamBtn: '2v2 TEAM', teamSub: '2v2 team battle — exactly 4 players! Create a room (3 more) or join with a code.',
+    teamStart: 'TEAM BATTLE!', teamSubB: k => `First team to ${k} kills wins — one hit destroys!`,
+    teamNeed: '4 players required', teamRed: 'RED', teamBlue: 'BLUE',
+    teamWin: 'YOUR TEAM WINS! 🏆', teamLose: 'YOUR TEAM LOST', teamMate: 'Your teammate', teamFell: 'fell',
     bossW: 'BOSS WAVE! ☠️', bossLbl: 'BOSS',
     tabTanks: 'TANKS', tabSkins: 'SKINS', profileTitle: 'PROFILE & ACHIEVEMENTS', dailyW: 'Daily Reward · Day',
   },
@@ -1106,6 +1114,12 @@ let coopCode = null, coopYou = 1, coopIsHost = false;
 const coopEnemies = new Map();
 const PLAYER_COLORS = { 1: 0x4a8d3a, 2: 0x2f7db0, 3: 0xd08a2a, 4: 0x9c4fd0 };
 const COOP_SPAWNS = [[1, 11], [11, 11], [1, 1], [11, 1]];
+// 2v2 takım savaşı
+let team = null;
+const TEAM_TARGET = 15;
+const TEAM_COLORS = [0xd8382a, 0x2f7db0];       // 0 = kırmızı (sol), 1 = mavi (sağ)
+const TEAM_COLOR_HEX = ['#e8503a', '#3a9de0'];
+const TEAM_SPAWNS = [[[1, 11], [1, 1]], [[11, 11], [11, 1]]]; // takım0 sol kenar, takım1 sağ kenar
 
 function fire(owner, angOff = 0, playerShot = null) {
   const isPlayer = owner === player;
@@ -1120,9 +1134,12 @@ function fire(owner, angOff = 0, playerShot = null) {
   scene.add(mesh);
   let sp;
   if (isPlayer) sp = player.stat.bspeed;
-  else if (mode === 'duel' || mode === 'ball') sp = owner.bspeed || 24;
+  else if (mode === 'duel' || mode === 'ball' || mode === 'team') sp = owner.bspeed || 24;
   else sp = owner.bspeed || ENEMY_BSPEED;
-  bullets.push({ mesh, fromPlayer: isPlayer, playerShot: playerShot == null ? isPlayer : playerShot, vx: fwdX(a) * sp, vz: fwdZ(a) * sp, life: 2.6, bounces: 1 });
+  // takım modunda mermi hangi takımdan / kimden (dost ateşi + skor için)
+  const bTeam = (mode === 'team' && team) ? (isPlayer ? team.mine : owner.team) : null;
+  const bOwner = (mode === 'team' && team) ? (isPlayer ? team.you : owner.pid) : null;
+  bullets.push({ mesh, fromPlayer: isPlayer, playerShot: playerShot == null ? isPlayer : playerShot, vx: fwdX(a) * sp, vz: fwdZ(a) * sp, life: 2.6, bounces: 1, team: bTeam, owner: bOwner });
   muzzleFlash(bx, 1.3, bz);
   sfxFire();
   if (isPlayer && playerTurret) recoil = 0.14;
@@ -1175,14 +1192,14 @@ function addPowerup(type, x, z, id) {
 function clearPowerups() { for (const p of powerups) scene.remove(p.mesh); powerups.length = 0; }
 function updatePowerups(dt) {
   // üretim: tek oyunculuda hep, düelloda sadece otorite (P1) yapar ve rakibe bildirir
-  if (mode === 'solo' || ((mode === 'duel' || mode === 'coop') && isAuthority)) {
+  if (mode === 'solo' || ((mode === 'duel' || mode === 'coop' || mode === 'team') && isAuthority)) {
     powerupT -= dt;
     if (powerupT <= 0 && powerups.length < 3) {
       const def = POWERUPS[Math.floor(Math.random() * POWERUPS.length)];
       const cell = randOpenCell(player.x, player.z, 10);
       const id = ++puIdCounter;
       addPowerup(def.type, cell.x, cell.z, id);
-      if (mode === 'duel' || mode === 'coop') netSend({ t: 'pu_spawn', id, type: def.type, x: cell.x, z: cell.z });
+      if (mode === 'duel' || mode === 'coop' || mode === 'team') netSend({ t: 'pu_spawn', id, type: def.type, x: cell.x, z: cell.z });
       powerupT = 9 + Math.random() * 6;
     }
   }
@@ -1192,7 +1209,7 @@ function updatePowerups(dt) {
     p.mesh.position.y = 1.25 + Math.sin(p.bob) * 0.25;
     if (player.alive && Math.hypot(player.x - p.x, player.z - p.z) < TANK_R + 1.05) {
       applyPowerup(p.type); explode(p.x, 1.2, p.z, false);
-      if (mode === 'duel' || mode === 'coop') netSend({ t: 'pu_take', id: p.id });
+      if (mode === 'duel' || mode === 'coop' || mode === 'team') netSend({ t: 'pu_take', id: p.id });
       scene.remove(p.mesh); powerups.splice(i, 1);
     }
   }
@@ -1334,6 +1351,7 @@ function drawMinimap() {
   if (mode === 'ball' && ball) { c.fillStyle = '#ffffff'; dot(ball.x, ball.z, 3); }
   if (mode === 'duel' && duel && duel.remoteAlive) { c.fillStyle = '#ff7a5a'; dot(duel.x, duel.z, 3); }
   if (mode === 'coop' && coop) for (const [pid, rm] of coop.remotes) if (rm.alive) { c.fillStyle = '#' + (PLAYER_COLORS[pid] || 0x8888aa).toString(16).padStart(6, '0'); dot(rm.x, rm.z, 3); }
+  if (mode === 'team' && team) for (const rm of team.remotes.values()) if (rm.alive) { c.fillStyle = TEAM_COLOR_HEX[rm.team]; dot(rm.x, rm.z, 3); }
   c.fillStyle = '#ffe86a';
   for (const p of powerups) dot(p.x, p.z, 2);
   if (player.alive) {
@@ -1371,6 +1389,9 @@ function updateHUD() {
   } else if (mode === 'duel' && duel) {
     waveEl.textContent = duel.code ? `${t.roomLbl} ${duel.code}` : '';
     scoreEl.textContent = `${profile.name} ${duel.myKills} — ${duel.myDeaths} ${duel.oppName || t.opp}`;
+  } else if (mode === 'team' && team) {
+    waveEl.textContent = team.code ? `${t.roomLbl} ${team.code}` : '';
+    scoreEl.innerHTML = `<span style="color:${TEAM_COLOR_HEX[0]}">${t.teamRed} ${team.scores[0]}</span> — <span style="color:${TEAM_COLOR_HEX[1]}">${team.scores[1]} ${t.teamBlue}</span>`;
   } else {
     waveEl.textContent = `${t.wave} ${wave}`;
     scoreEl.textContent = `${t.score} ${score}`;
@@ -1385,7 +1406,7 @@ function showPanel(id) {
 function openMenu() {
   state = 'menu';
   mode = 'solo';
-  clearBallMode(); clearCoop(); clearPowerups();
+  clearBallMode(); clearCoop(); clearTeam(); clearPowerups();
   shieldBubble.visible = false;
   if (!wallInst) buildArena(0);
   const t = T();
@@ -1408,6 +1429,7 @@ function applyLang() {
   $('btn-duel').textContent = t.duel;
   $('btn-ball').textContent = t.ballBtn;
   $('btn-coop').textContent = t.coopBtn;
+  $('btn-team').textContent = t.teamBtn;
   $('btn-garage').textContent = t.garage;
   $('btn-coop-create').textContent = t.create;
   $('btn-coop-join').textContent = t.join;
@@ -1668,18 +1690,20 @@ function tryBegin() {
 }
 function handleNet(m) {
   const t = T();
+  const lobbyMode = (pendingMode === 'coop' || pendingMode === 'team');
   if (m.t === 'room') {
-    if (pendingMode === 'coop') { coopCode = m.code; coopYou = m.you; updateLobby(1, [m.you]); }
+    if (lobbyMode) { coopCode = m.code; coopYou = m.you; updateLobby(1, [m.you]); }
     else { if (duel) duel.code = m.code; duelStatusEl.innerHTML = `${t.roomLbl} <span class="code">${m.code}</span><br>${t.waiting}`; }
   }
-  else if (m.t === 'err') { (pendingMode === 'coop' ? $('coopstatus') : duelStatusEl).textContent = t.joinFail; }
+  else if (m.t === 'err') { (lobbyMode ? $('coopstatus') : duelStatusEl).textContent = t.joinFail; }
   else if (m.t === 'lobby') { updateLobby(m.count, m.players); }
   else if (m.t === 'start') {
-    if (m.coop) beginCoop(m.you, m.players, m.map || 0);
+    if (m.coop) { if (m.gm === 'team') beginTeam(m.you, m.players, m.map || 0); else beginCoop(m.you, m.players, m.map || 0); }
     else { netYou = m.you; if (netYou === 1) netSend({ t: 'gamemode', mode: pendingMode, map: duelMap }); tryBegin(); }
   }
   else if (m.t === 'gamemode') { netMode = m.mode; netMapIdx = (m.map != null ? m.map : 0); tryBegin(); }
   else if (mode === 'coop') { handleCoopNet(m); }
+  else if (mode === 'team') { handleTeamNet(m); }
   else if (!duel) { return; }
   else if (m.t === 'skin') { applyRemoteSkin(m.color, m.scale, m.name); }
   else if (m.t === 'ball') { if (ball && !isAuthority) { ball.tx = m.x; ball.tz = m.z; ball.mesh.rotation.x = m.rx; ball.mesh.rotation.z = m.rz; } }
@@ -2192,6 +2216,153 @@ function updateCoop(dt) {
   }
 }
 
+// ---------------------------------------------------------------- 2v2 takım savaşı
+function paintTank(mesh, color) {
+  mesh.traverse(o => {
+    if (o.isMesh && o.material && o.material.name === 'TankPaint') {
+      o.material = o.material.clone();
+      o.material.color.setHex(color);
+      o.material.emissiveIntensity = 0;
+    }
+  });
+}
+function clearTeam() {
+  if (team) for (const rm of team.remotes.values()) { scene.remove(rm.mesh); if (rm.shield) scene.remove(rm.shield); if (rm.nameLabel) scene.remove(rm.nameLabel); }
+  $('coophud').style.display = 'none';
+  clearEnemies(); clearPowerups();
+  team = null;
+}
+function teamSpawnOf(pid) {
+  const [c, r] = TEAM_SPAWNS[team.teamOf[pid]][team.slotOf[pid]];
+  return { x: cellX(c), z: cellZ(r) };
+}
+function placeTeamSelf(inv) {
+  const p = teamSpawnOf(team.you);
+  player.x = p.x; player.z = p.z; player.vx = 0; player.vz = 0;
+  player.a = headingTo(p.x, p.z, 0, 0);
+  player.alive = true; player.inv = inv; player.mesh.visible = true;
+  player.mesh.position.set(player.x, 0, player.z);
+  updateTeamRoster();
+}
+function beginTeam(you, players, mapIdx) {
+  mode = 'team'; state = 'play';
+  isAuthority = (you === players[0]);
+  buildArena(mapIdx);
+  msgEl.classList.add('hidden');
+  $('topbar').style.visibility = 'visible';
+  $('healthwrap').style.visibility = 'hidden';
+  clearEnemies(); clearBullets(); clearPowerups();
+  powerupT = 6; puIdCounter = 0;
+  setPlayerTank(DUEL_TANK);
+  player.speedT = 0; player.tripleT = 0; player.shieldT = 0; shieldBubble.visible = false;
+  // takım/slot atamaları: players sırasına göre çift index=takım0 (kırmızı), tek=takım1 (mavi)
+  const teamOf = {}, slotOf = {}, cnt = [0, 0];
+  players.forEach((pid, i) => { const ti = i % 2; teamOf[pid] = ti; slotOf[pid] = cnt[ti]++; });
+  const code = team && team.code;
+  clearTeam();
+  team = { you, code, players: players.slice(), hostPid: players[0], teamOf, slotOf,
+           mine: teamOf[you], scores: [0, 0], over: false, sendT: 0, remotes: new Map() };
+  player.team = team.mine; player.pid = you;
+  paintTank(player.mesh, TEAM_COLORS[team.mine]);
+  for (const pid of players) if (pid !== you) {
+    const ti = teamOf[pid];
+    const rmMesh = buildTank(DUEL_TANK); paintTank(rmMesh, TEAM_COLORS[ti]); scene.add(rmMesh);
+    const sp = teamSpawnOf(pid);
+    const rm = { mesh: rmMesh, shield: makeShieldBubble(), nameLabel: makeNameLabel('...'), name: '',
+      team: ti, x: sp.x, z: sp.z, tx: sp.x, tz: sp.z, a: 0, ta: 0, alive: true, inv: 0, shieldOn: false };
+    rm.mesh.position.set(sp.x, 0, sp.z);
+    team.remotes.set(pid, rm);
+  }
+  placeTeamSelf(1.5);
+  netSend({ t: 'pinfo', name: profile.name });
+  profile.games++; saveProfile();
+  updateHUD(); updateTeamRoster();
+  banner(T().teamStart);
+  audio(); startEngine();
+}
+function updateTeam(dt) {
+  team.sendT -= dt;
+  if (team.sendT <= 0) { team.sendT = 0.05; netSend({ t: 'state', x: player.x, z: player.z, a: player.a, alive: player.alive, sh: player.shieldT > 0 }); }
+  const k = 1 - Math.exp(-12 * dt);
+  for (const rm of team.remotes.values()) {
+    rm.x += (rm.tx - rm.x) * k; rm.z += (rm.tz - rm.z) * k; rm.a += angNorm(rm.ta - rm.a) * k;
+    rm.mesh.position.set(rm.x, 0, rm.z); rm.mesh.rotation.y = rm.a; rm.mesh.visible = rm.alive;
+    if (rm.nameLabel) { rm.nameLabel.visible = rm.alive; if (rm.alive) rm.nameLabel.position.set(rm.x, 3.4, rm.z); }
+    if (rm.inv > 0) rm.inv -= dt;
+  }
+}
+function teamNameOf(pid) {
+  if (pid === team.you) return profile.name;
+  const rm = team.remotes.get(pid);
+  return rm ? (rm.name || ('Oyuncu' + pid)) : '?';
+}
+function onTeamKill(byPid, diedPid) {
+  const kt = team.teamOf[byPid];
+  if (kt != null) team.scores[kt]++;
+  const rm = team.remotes.get(diedPid);
+  if (rm && rm.alive) { rm.alive = false; rm.mesh.visible = false; explode(rm.x, 1.2, rm.z, true); }
+  const dt = team.teamOf[diedPid];
+  const col = dt != null ? TEAM_COLOR_HEX[dt] : '#fff';
+  killFeed(`<b>${teamNameOf(byPid)}</b> ⚔️ <span style="color:${col}">${teamNameOf(diedPid)}</span>`);
+  updateHUD(); updateTeamRoster();
+  if (!team.over && kt != null && team.scores[kt] >= TEAM_TARGET) { team.over = true; teamEnd(kt === team.mine); }
+}
+function teamPlayerDie(byPid) {
+  player.alive = false; player.mesh.visible = false;
+  explode(player.x, 1.2, player.z, true); hitFlash();
+  netSend({ t: 'tdie', me: team.you, by: byPid });
+  onTeamKill(byPid, team.you);
+  setTimeout(() => { if (team && !team.over && mode === 'team') placeTeamSelf(2.0); }, 2000);
+}
+function teamEnd(won) {
+  if (won) { profile.wins++; saveProfile(); }
+  const t = T();
+  banner(won ? t.teamWin : t.teamLose);
+  if (won) stingWin(); else stingLose();
+  const sub = `<span style="color:${TEAM_COLOR_HEX[0]}">${t.teamRed} ${team.scores[0]}</span> — <span style="color:${TEAM_COLOR_HEX[1]}">${team.scores[1]} ${t.teamBlue}</span>`;
+  setTimeout(() => teamToMenu(won ? t.teamWin : t.teamLose, sub), 1900);
+}
+function teamToMenu(title, sub) {
+  state = 'over';
+  $('title').textContent = title; $('submsg').innerHTML = sub;
+  showPanel('panel-main'); msgEl.classList.remove('hidden'); $('topbar').style.visibility = 'hidden';
+  closeNet(); clearTeam();
+  updateCoinBar(); updateStats();
+}
+function teamPeerLeft() {
+  if (!team || team.over) return;
+  team.over = true;
+  const t = T();
+  banner(t.peerLeft);
+  setTimeout(() => teamToMenu(t.title, t.peerLeft), 1400);
+}
+function updateTeamRoster() {
+  const el = $('coophud');
+  if (mode !== 'team' || !team || state !== 'play') { if (el.style.display !== 'none') { el.style.display = 'none'; el.innerHTML = ''; } return; }
+  el.style.display = 'block';
+  const rows = [{ name: profile.name, alive: player.alive, team: team.mine, pid: team.you }];
+  for (const [pid, rm] of team.remotes) rows.push({ name: rm.name || ('Oyuncu' + pid), alive: rm.alive, team: rm.team, pid });
+  rows.sort((a, b) => a.team - b.team || a.pid - b.pid);
+  el.innerHTML = rows.map(r => `<div class="crow" style="color:${TEAM_COLOR_HEX[r.team]}">${r.alive ? '🟢' : '⚫'} ${r.name}${r.pid === team.you ? ' •' : ''}</div>`).join('');
+}
+function handleTeamNet(m) {
+  if (!team) return;
+  if (m.t === 'pinfo') {
+    const rm = team.remotes.get(m.from);
+    if (rm) { rm.name = m.name || ('Oyuncu' + m.from); setLabelText(rm.nameLabel, rm.name); updateTeamRoster(); }
+  } else if (m.t === 'state') {
+    const rm = team.remotes.get(m.from);
+    if (rm) { const was = rm.alive; rm.tx = m.x; rm.tz = m.z; rm.ta = m.a; rm.shieldOn = m.sh; rm.alive = m.alive; if (was !== m.alive) { rm.mesh.visible = m.alive; updateTeamRoster(); } }
+  } else if (m.t === 'fire') {
+    const o = { x: m.x, z: m.z, a: m.a, bspeed: m.bs, team: team.teamOf[m.from], pid: m.from };
+    if (m.trip) { fire(o, -0.17, true); fire(o, 0, true); fire(o, 0.17, true); }
+    else fire(o, 0, true);
+  } else if (m.t === 'tdie') { onTeamKill(m.by, m.me); }
+  else if (m.t === 'pu_spawn') { addPowerup(m.type, m.x, m.z, m.id); }
+  else if (m.t === 'pu_take') { const i = powerups.findIndex(p => p.id === m.id); if (i >= 0) { scene.remove(powerups[i].mesh); powerups.splice(i, 1); } }
+  else if (m.t === 'peerleft') { teamPeerLeft(); }
+}
+
 // ---------------------------------------------------------------- menü olayları
 $('lang-tr').addEventListener('click', () => { lang = 'tr'; applyLang(); if ($('panel-garage').classList.contains('show')) renderGarage(); if ($('panel-maps').classList.contains('show')) renderMaps(); });
 $('lang-en').addEventListener('click', () => { lang = 'en'; applyLang(); if ($('panel-garage').classList.contains('show')) renderGarage(); if ($('panel-maps').classList.contains('show')) renderMaps(); });
@@ -2231,9 +2402,12 @@ $('btn-back-duel').addEventListener('click', () => { closeNet(); openMenu(); });
 function updateLobby(count, players) {
   const t = T();
   const code = coopCode || '';
+  const isTeam = pendingMode === 'team';
+  const need = isTeam ? 4 : 2;
   $('coopstatus').innerHTML = `${t.roomLbl} <span class="code">${code}</span><br>${count}/4 ${t.playersW}` +
+    (isTeam && count < 4 ? `<br>${t.teamNeed}` : '') +
     (coopIsHost ? '' : `<br>${t.waitHost}`);
-  $('btn-coop-start').style.display = (coopIsHost && count >= 2) ? 'inline-block' : 'none';
+  $('btn-coop-start').style.display = (coopIsHost && count >= need) ? 'inline-block' : 'none';
 }
 $('btn-coop').addEventListener('click', () => {
   pendingMode = 'coop'; coopCode = null; coopIsHost = false;
@@ -2241,19 +2415,25 @@ $('btn-coop').addEventListener('click', () => {
   $('coopstatus').textContent = ''; $('btn-coop-start').style.display = 'none';
   renderCoopMaps(); showPanel('panel-coop');
 });
+$('btn-team').addEventListener('click', () => {
+  pendingMode = 'team'; coopCode = null; coopIsHost = false;
+  $('title').textContent = T().teamBtn; $('submsg').textContent = T().teamSub;
+  $('coopstatus').textContent = ''; $('btn-coop-start').style.display = 'none';
+  renderCoopMaps(); showPanel('panel-coop');
+});
 $('btn-coop-create').addEventListener('click', () => {
-  pendingMode = 'coop'; coopIsHost = true;
+  coopIsHost = true;
   $('coopstatus').textContent = '...';
   connectNet(() => netSend({ t: 'create', cap: 4 }));
 });
 $('btn-coop-join').addEventListener('click', () => {
   const code = $('coopcode').value.trim().toUpperCase();
   if (code.length !== 4) { $('coopstatus').textContent = T().joinFail; return; }
-  pendingMode = 'coop'; coopIsHost = false; coopCode = code;
+  coopIsHost = false; coopCode = code;
   $('coopstatus').textContent = '...';
   connectNet(() => netSend({ t: 'join', code }));
 });
-$('btn-coop-start').addEventListener('click', () => { netSend({ t: 'startgame', map: duelMap }); });
+$('btn-coop-start').addEventListener('click', () => { netSend({ t: 'startgame', map: duelMap, gm: pendingMode }); });
 $('btn-back-coop').addEventListener('click', () => { closeNet(); openMenu(); });
 $('btn-rematch').addEventListener('click', () => {
   if (myReady || !matchOverMode) return;
@@ -2291,7 +2471,7 @@ $('set-music').addEventListener('click', () => { settings.music = !settings.musi
 $('set-quality').addEventListener('click', () => { settings.quality = settings.quality === 'low' ? 'high' : 'low'; saveSettings(); applyQuality(); updateSettingsLabels(); });
 $('set-resume').addEventListener('click', closeSettings);
 $('set-close').addEventListener('click', closeSettings);
-$('set-quit').addEventListener('click', () => { paused = false; $('settings').classList.add('hidden'); closeNet(); clearBallMode(); clearCoop(); buildArena(0); openMenu(); });
+$('set-quit').addEventListener('click', () => { paused = false; $('settings').classList.add('hidden'); closeNet(); clearBallMode(); clearCoop(); clearTeam(); buildArena(0); openMenu(); });
 $('btn-create').addEventListener('click', () => { duel = { code: null }; duelStatusEl.textContent = '...'; connectNet(() => netSend({ t: 'create' })); });
 $('btn-join').addEventListener('click', () => {
   const code = $('joincode').value.trim().toUpperCase();
@@ -2428,6 +2608,7 @@ function tick() {
       let others;
       if (mode === 'duel') others = (duel && duel.remoteAlive ? [{ x: duel.x, z: duel.z, solid: false }] : []);
       else if (mode === 'coop') others = [...coop.remotes.values()].filter(r => r.alive).map(r => ({ x: r.x, z: r.z, solid: false })).concat(isAuthority ? enemies : []);
+      else if (mode === 'team') others = [...team.remotes.values()].filter(r => r.alive).map(r => ({ x: r.x, z: r.z, solid: false }));
       else others = enemies;
       for (const e of others) {
         const dx = player.x - e.x, dz = player.z - e.z, d = Math.hypot(dx, dz);
@@ -2441,7 +2622,7 @@ function tick() {
         if (player.tripleT > 0) { fire(player, -0.17); fire(player, 0); fire(player, 0.17); }
         else fire(player);
         player.cool = player.stat.cool;
-        if (mode === 'duel' || mode === 'ball' || mode === 'coop') netSend({ t: 'fire', x: player.x, z: player.z, a: player.a, bs: player.stat.bspeed, trip: player.tripleT > 0 });
+        if (mode === 'duel' || mode === 'ball' || mode === 'coop' || mode === 'team') netSend({ t: 'fire', x: player.x, z: player.z, a: player.a, bs: player.stat.bspeed, trip: player.tripleT > 0 });
       }
       if (Math.abs(player.speed) > 3) { dustT -= dt; if (dustT <= 0) { dustT = 0.06; spawnDust(player.x - fwdX(player.a) * 1.3, player.z - fwdZ(player.a) * 1.3); } }
       if (player.maxHealth > 2 && player.health <= 2) { smokeT -= dt; if (smokeT <= 0) { smokeT = 0.16; spawnSmoke(player.x, player.z); } }
@@ -2455,6 +2636,7 @@ function tick() {
     updateHazards(dt);
 
     if (mode === 'coop' && coop) updateCoop(dt);
+    if (mode === 'team' && team) updateTeam(dt);
 
     if (mode === 'solo') {
       for (const e of enemies) updateEnemy(e, dt);
@@ -2545,7 +2727,21 @@ function tick() {
           }
         }
       }
-      if (!dead && mode !== 'coop' && b.fromPlayer) {
+      if (!dead && mode === 'team' && team) {
+        const bx = b.mesh.position.x, bz = b.mesh.position.z;
+        // düşman takımın mermisi bana → öl (kendi ölümüm otoriteli)
+        if (b.team != null && b.team !== team.mine && player.alive && player.inv <= 0 &&
+            Math.hypot(bx - player.x, bz - player.z) < 1.75) {
+          dead = true;
+          if (player.shieldT > 0) { player.inv = 0.3; explode(bx, 1.0, bz, false); sfxBounce(); }
+          else teamPlayerDie(b.owner);
+        }
+        // uzak rakip tanklara görsel isabet (ölüm onların cihazında karar verilir)
+        if (!dead) for (const rm of team.remotes.values()) {
+          if (rm.alive && rm.team !== b.team && Math.hypot(bx - rm.x, bz - rm.z) < 1.75) { explode(bx, 1.0, bz, false); dead = true; break; }
+        }
+      }
+      if (!dead && mode !== 'coop' && mode !== 'team' && b.fromPlayer) {
         if (mode === 'solo') {
           for (const e of enemies) {
             const hr = 1.4 * (e.type === 'boss' ? 1.7 : 1);
@@ -2562,7 +2758,7 @@ function tick() {
         } else if (mode === 'duel' && duel && duel.remoteAlive && Math.hypot(b.mesh.position.x - duel.x, b.mesh.position.z - duel.z) < 1.75) {
           explode(b.mesh.position.x, 1.0, b.mesh.position.z, false); dead = true;
         }
-      } else if (!dead && mode !== 'coop' && !b.fromPlayer && player.alive && player.inv <= 0 && mode !== 'ball') {
+      } else if (!dead && mode !== 'coop' && mode !== 'team' && !b.fromPlayer && player.alive && player.inv <= 0 && mode !== 'ball') {
         if (Math.hypot(b.mesh.position.x - player.x, b.mesh.position.z - player.z) < (mode === 'duel' ? 1.75 : 1.5)) {
           dead = true;
           if (player.shieldT > 0) {

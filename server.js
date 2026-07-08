@@ -78,8 +78,8 @@ wss.on('connection', ws => {
       const room = roomOf(ws);
       if (!room || room.started || room.list.length < 2 || room.list[0].ws !== ws) return;
       room.started = true;
-      const map = m.map || 0, plist = pids(room);
-      for (const e of room.list) e.ws.send(JSON.stringify({ t: 'start', you: e.pid, players: plist, coop: true, map }));
+      const map = m.map || 0, plist = pids(room), gm = m.gm || 'coop';
+      for (const e of room.list) e.ws.send(JSON.stringify({ t: 'start', you: e.pid, players: plist, coop: true, map, gm }));
     } else {
       const room = roomOf(ws);
       if (!room) return;
