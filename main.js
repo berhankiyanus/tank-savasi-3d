@@ -1088,8 +1088,11 @@ function applySkin(mesh, skinId) {
     }
   });
 }
-function setPlayerTank() {
-  const def = effTank(profile.selected);
+// 1v1'de (düello + top maçı) herkes bu standart tankı kullanır → adil + tutarlı vuruş algılama.
+// (Garaj seçimi/yükseltmeler sadece tek oyunculu + kooperatifte geçerli. İleride "rekabetçi" mod seçime açılabilir.)
+const DUEL_TANK = { ...TANKS[0] };
+function setPlayerTank(overrideDef) {
+  const def = overrideDef || effTank(profile.selected);
   if (player.mesh) scene.remove(player.mesh);
   player.mesh = buildTank(def);
   applySkin(player.mesh, profile.skin);
@@ -1752,7 +1755,7 @@ function beginDuel(you) {
   player.speedT = 0; player.tripleT = 0; player.shieldT = 0;
   shieldBubble.visible = false;
   $('healthwrap').style.visibility = 'hidden';
-  setPlayerTank();
+  setPlayerTank(DUEL_TANK);
   const code = duel && duel.code;
   clearDuelMeshes(); // rematch: önceki maçın rakip mesh'lerini sil (yoksa üst üste birikir)
   const SX = cellX(4), SZ = cellZ(11);
@@ -1929,7 +1932,7 @@ function beginBall(you) {
   $('topbar').style.visibility = 'visible';
   $('healthwrap').style.visibility = 'hidden';
   clearEnemies(); clearBullets();
-  setPlayerTank();
+  setPlayerTank(DUEL_TANK);
   const code = duel && duel.code;
   clearDuelMeshes(); // rematch: önceki maçın rakip mesh'lerini sil (yoksa üst üste birikir)
   duel = { you, code, over: false, sendT: 0, tx: 0, tz: 0, ta: 0, x: 0, z: 0, a: 0,
@@ -2579,11 +2582,11 @@ function tick() {
               dead = true; break;
             }
           }
-        } else if (mode === 'duel' && duel && duel.remoteAlive && Math.hypot(b.mesh.position.x - duel.x, b.mesh.position.z - duel.z) < 1.5) {
+        } else if (mode === 'duel' && duel && duel.remoteAlive && Math.hypot(b.mesh.position.x - duel.x, b.mesh.position.z - duel.z) < 1.75) {
           explode(b.mesh.position.x, 1.0, b.mesh.position.z, false); dead = true;
         }
       } else if (!dead && mode !== 'coop' && !b.fromPlayer && player.alive && player.inv <= 0 && mode !== 'ball') {
-        if (Math.hypot(b.mesh.position.x - player.x, b.mesh.position.z - player.z) < 1.5) {
+        if (Math.hypot(b.mesh.position.x - player.x, b.mesh.position.z - player.z) < (mode === 'duel' ? 1.75 : 1.5)) {
           dead = true;
           if (player.shieldT > 0) {
             player.inv = 0.3;
