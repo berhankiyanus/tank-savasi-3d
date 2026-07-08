@@ -73,7 +73,7 @@ let lang = localStorage.getItem('tanklang') || ((navigator.language || 'tr').sta
 const T = () => L[lang];
 
 // ---------------------------------------------------------------- kalıcı profil
-const DEFAULT_PROFILE = { coins: 0, owned: ['recruit'], selected: 'recruit', bestWave: 1, upgrades: {}, kills: 0, wins: 0, games: 0, skins: ['default'], skin: 'default', achieved: [], lastDaily: '', streak: 0 };
+const DEFAULT_PROFILE = { coins: 0, owned: ['recruit'], selected: 'recruit', bestWave: 1, upgrades: {}, kills: 0, wins: 0, games: 0, skins: ['default'], skin: 'default', achieved: [], lastDaily: '', streak: 0, name: '' };
 let profile;
 try {
   profile = Object.assign({}, DEFAULT_PROFILE, JSON.parse(localStorage.getItem('tankprofile') || '{}'));
@@ -85,6 +85,7 @@ try {
   if (!Array.isArray(profile.achieved)) profile.achieved = [];
   profile.streak = profile.streak || 0;
   if (typeof profile.lastDaily !== 'string') profile.lastDaily = '';
+  if (!profile.name) profile.name = 'Oyuncu' + Math.floor(Math.random() * 900 + 100);
 } catch { profile = Object.assign({}, DEFAULT_PROFILE); }
 function saveProfile() { localStorage.setItem('tankprofile', JSON.stringify(profile)); }
 function addCoins(n) { profile.coins += n; saveProfile(); updateCoinBar(); }
@@ -783,6 +784,32 @@ function spawnPuff(x, y, z, color, op, vy, life) {
 function spawnDust(x, z) { spawnPuff(x, 0.3, z, 0xcab89a, 0.4, 0.6 + Math.random() * 0.4, 0.6); }
 function spawnSmoke(x, z) { spawnPuff(x, 1.1, z, 0x2a2a2a, 0.55, 1.3 + Math.random() * 0.6, 0.9); }
 let dustT = 0, smokeT = 0;
+// tank üstü isim etiketleri
+const nameTexCache = {};
+function nameTexture(text) {
+  if (nameTexCache[text]) return nameTexCache[text];
+  const cv = document.createElement('canvas'); cv.width = 256; cv.height = 64;
+  const g = cv.getContext('2d');
+  g.font = 'bold 34px "Courier New", monospace'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.lineWidth = 6; g.strokeStyle = 'rgba(0,0,0,0.9)'; g.strokeText(text, 128, 34);
+  g.fillStyle = '#ffffff'; g.fillText(text, 128, 34);
+  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace;
+  nameTexCache[text] = t; return t;
+}
+function makeNameLabel(text) {
+  const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: nameTexture(text || '...'), transparent: true, depthTest: false }));
+  spr.scale.set(4.2, 1.05, 1); spr.visible = false;
+  scene.add(spr); return spr;
+}
+function setLabelText(label, text) { if (label) { label.material.map = nameTexture(text || '...'); label.material.needsUpdate = true; } }
+// kill feed / olay akışı
+function killFeed(html) {
+  const el = $('killfeed');
+  const row = document.createElement('div'); row.className = 'kfrow'; row.innerHTML = html;
+  el.appendChild(row);
+  while (el.children.length > 4) el.removeChild(el.firstChild);
+  setTimeout(() => { row.style.opacity = '0'; setTimeout(() => row.remove(), 500); }, 3500);
+}
 
 // ---------------------------------------------------------------- oyun durumu
 const bullets = [];
@@ -1036,6 +1063,15 @@ function updateBossBar(boss) {
     $('bosshp').style.width = Math.max(0, (boss.hp / boss.maxHp) * 100) + '%';
   } else if (el.style.display !== 'none') el.style.display = 'none';
 }
+function updateCoopRoster() {
+  const el = $('coophud');
+  if (mode !== 'coop' || !coop || state !== 'play') { if (el.style.display !== 'none') { el.style.display = 'none'; el.innerHTML = ''; } return; }
+  el.style.display = 'block';
+  const rows = [{ name: profile.name, alive: player.alive, pid: coop.you }];
+  for (const [pid, rm] of coop.remotes) rows.push({ name: rm.name || ('Oyuncu' + pid), alive: rm.alive, pid });
+  rows.sort((a, b) => a.pid - b.pid);
+  el.innerHTML = rows.map(r => `<div class="crow">${r.alive ? '🟢' : '⚫'} ${r.name}</div>`).join('');
+}
 let buffSig = '';
 function updateBuffs() {
   const items = [];
@@ -1100,7 +1136,7 @@ function updateHUD() {
     scoreEl.textContent = `${t.you} ${me} — ${op} ${t.opp}`;
   } else if (mode === 'duel' && duel) {
     waveEl.textContent = duel.code ? `${t.roomLbl} ${duel.code}` : '';
-    scoreEl.textContent = `${t.you} ${duel.myKills} — ${duel.myDeaths} ${t.opp}`;
+    scoreEl.textContent = `${profile.name} ${duel.myKills} — ${duel.myDeaths} ${duel.oppName || t.opp}`;
   } else {
     waveEl.textContent = `${t.wave} ${wave}`;
     scoreEl.textContent = `${t.score} ${score}`;
@@ -1362,6 +1398,7 @@ function closeNet() {
   if (ws) { ws.onclose = null; ws.close(); ws = null; }
   if (duel && duel.remoteMesh) scene.remove(duel.remoteMesh);
   if (duel && duel.remoteShield) scene.remove(duel.remoteShield);
+  if (duel && duel.nameLabel) scene.remove(duel.nameLabel);
   duel = null;
   netYou = null; netMode = null; netBegun = false; netMapIdx = null;
   matchOverMode = null; myReady = false; peerReady = false;
@@ -1404,7 +1441,7 @@ function handleNet(m) {
   else if (m.t === 'gamemode') { netMode = m.mode; netMapIdx = (m.map != null ? m.map : 0); tryBegin(); }
   else if (mode === 'coop') { handleCoopNet(m); }
   else if (!duel) { return; }
-  else if (m.t === 'skin') { applyRemoteSkin(m.color, m.scale); }
+  else if (m.t === 'skin') { applyRemoteSkin(m.color, m.scale, m.name); }
   else if (m.t === 'ball') { if (ball && !isAuthority) { ball.tx = m.x; ball.tz = m.z; ball.mesh.rotation.x = m.rx; ball.mesh.rotation.z = m.rz; } }
   else if (m.t === 'goal') { if (ball) { applyGoal(m.g1, m.g2, m.scorer); if (m.done) { ball.over = true; endBall(); } } }
   else if (m.t === 'state') {
@@ -1421,6 +1458,7 @@ function handleNet(m) {
     duel.remoteAlive = false; duel.remoteMesh.visible = false;
     explode(duel.tx, 1.2, duel.tz, true);
     duel.myKills++; profile.kills++; saveProfile(); updateHUD();
+    killFeed(`<b>${profile.name}</b> ⚔️ ${duel.oppName || '?'}`);
     if (duel.myKills >= KILL_TARGET) { netSend({ t: 'win' }); duelEnd(true); }
   }
   else if (m.t === 'win') { duelEnd(false); }
@@ -1431,7 +1469,7 @@ function handleNet(m) {
   }
   else if (m.t === 'peerleft') { if (matchOverMode) onPeerGone(); else peerLeft(); }
 }
-function applyRemoteSkin(color, scale) {
+function applyRemoteSkin(color, scale, name) {
   if (!duel) return;
   scene.remove(duel.remoteMesh);
   duel.remoteMesh = buildTank({ color, scale: scale || 1 });
@@ -1439,6 +1477,11 @@ function applyRemoteSkin(color, scale) {
   duel.remoteMesh.rotation.y = duel.a;
   duel.remoteMesh.visible = duel.remoteAlive;
   scene.add(duel.remoteMesh);
+  if (name) {
+    duel.oppName = name;
+    if (!duel.nameLabel) duel.nameLabel = makeNameLabel(name); else setLabelText(duel.nameLabel, name);
+    updateHUD();
+  }
 }
 function beginDuel(you) {
   mode = 'duel'; state = 'play';
@@ -1470,13 +1513,14 @@ function beginDuel(you) {
   banner(T().duelStart);
   const st = player.stat;
   const skinCol = profile.skin !== 'default' ? skinById(profile.skin).color : st.color;
-  netSend({ t: 'skin', color: skinCol, scale: st.scale });
+  netSend({ t: 'skin', color: skinCol, scale: st.scale, name: profile.name });
   audio(); startEngine();
 }
 function duelPlayerDie() {
   player.alive = false; player.mesh.visible = false;
   explode(player.x, 1.2, player.z, true); hitFlash();
   duel.myDeaths++; netSend({ t: 'die' }); updateHUD();
+  killFeed(`<b>${duel.oppName || '?'}</b> ⚔️ ${profile.name}`);
   if (duel.over) return;
   setTimeout(() => {
     if (!duel || duel.over || mode !== 'duel') return;
@@ -1638,7 +1682,7 @@ function beginBall(you) {
   banner(T().ballBtn);
   const st = player.stat;
   const skinCol = profile.skin !== 'default' ? skinById(profile.skin).color : st.color;
-  netSend({ t: 'skin', color: skinCol, scale: st.scale });
+  netSend({ t: 'skin', color: skinCol, scale: st.scale, name: profile.name });
   audio(); startEngine();
 }
 function clampBall() {
@@ -1718,7 +1762,8 @@ function endBall() {
 
 // ---------------------------------------------------------------- kooperatif
 function clearCoop() {
-  if (coop) for (const rm of coop.remotes.values()) { scene.remove(rm.mesh); if (rm.shield) scene.remove(rm.shield); }
+  if (coop) for (const rm of coop.remotes.values()) { scene.remove(rm.mesh); if (rm.shield) scene.remove(rm.shield); if (rm.nameLabel) scene.remove(rm.nameLabel); }
+  $('coophud').style.display = 'none';
   for (const ce of coopEnemies.values()) scene.remove(ce);
   coopEnemies.clear();
   clearEnemies(); clearPowerups();
@@ -1753,9 +1798,11 @@ function beginCoop(you, players, mapIdx) {
   for (const pid of players) if (pid !== you) {
     const rmMesh = buildTank({ color: PLAYER_COLORS[pid] || 0x888888, scale: 1 });
     scene.add(rmMesh);
-    coop.remotes.set(pid, { mesh: rmMesh, shield: makeShieldBubble(), x: 0, z: 0, tx: 0, tz: 0, a: 0, ta: 0, alive: true, hp: player.maxHealth, inv: 0, shieldOn: false });
+    coop.remotes.set(pid, { mesh: rmMesh, shield: makeShieldBubble(), nameLabel: makeNameLabel('...'), name: '', x: 0, z: 0, tx: 0, tz: 0, a: 0, ta: 0, alive: true, hp: player.maxHealth, inv: 0, shieldOn: false });
   }
   placeCoopSpawns();
+  netSend({ t: 'pinfo', name: profile.name });
+  updateCoopRoster();
   wave = 1; score = 0; roundCoins = 0; powerupT = 6; puIdCounter = 0; enemyIdC = 0;
   profile.games++; saveProfile();
   renderHealth(); updateHUD();
@@ -1772,17 +1819,19 @@ function coopNearestPlayer(e) {
   return best;
 }
 function coopHitPlayer(pid) {
+  let downed = false, nm = '';
   if (pid === coop.you) {
     if (player.shieldT > 0) { player.inv = 0.3; explode(player.x, 1, player.z, false); sfxBounce(); return; }
     player.inv = 1.0; player.health--; renderHealth(); hitFlash(); explode(player.x, 1, player.z, false);
-    if (player.health <= 0) { player.alive = false; player.mesh.visible = false; explode(player.x, 1.2, player.z, true); }
+    if (player.health <= 0) { player.alive = false; player.mesh.visible = false; explode(player.x, 1.2, player.z, true); downed = true; nm = profile.name; }
     netSend({ t: 'phealth', pid, hp: player.health, alive: player.alive });
   } else {
     const rm = coop.remotes.get(pid); if (!rm) return;
     rm.inv = 1.0; rm.hp--; explode(rm.x, 1, rm.z, false);
-    if (rm.hp <= 0) { rm.alive = false; rm.mesh.visible = false; explode(rm.x, 1.2, rm.z, true); }
+    if (rm.hp <= 0) { rm.alive = false; rm.mesh.visible = false; explode(rm.x, 1.2, rm.z, true); downed = true; nm = rm.name || ('Oyuncu' + pid); }
     netSend({ t: 'phealth', pid, hp: rm.hp, alive: rm.alive });
   }
+  if (downed) { killFeed(`☠️ <b>${nm}</b>`); netSend({ t: 'down', name: nm }); updateCoopRoster(); }
   coopCheckOver();
 }
 function coopCheckOver() {
@@ -1817,15 +1866,20 @@ function coopGameOver() {
 function coopPeerLeft(who) {
   if (!coop) return;
   const rm = coop.remotes.get(who);
-  if (rm) { scene.remove(rm.mesh); if (rm.shield) scene.remove(rm.shield); coop.remotes.delete(who); }
+  if (rm) { scene.remove(rm.mesh); if (rm.shield) scene.remove(rm.shield); if (rm.nameLabel) scene.remove(rm.nameLabel); coop.remotes.delete(who); }
   coop.players = coop.players.filter(p => p !== who);
+  updateCoopRoster();
   banner(T().peerLeft);
   if (who === coop.hostPid && !isAuthority) setTimeout(() => { if (mode === 'coop') coopGameOver(); }, 900);
   else coopCheckOver();
 }
 function handleCoopNet(m) {
   if (!coop) return;
-  if (m.t === 'state') {
+  if (m.t === 'pinfo') {
+    const rm = coop.remotes.get(m.from);
+    if (rm) { rm.name = m.name || ('Oyuncu' + m.from); setLabelText(rm.nameLabel, rm.name); updateCoopRoster(); }
+  }
+  else if (m.t === 'state') {
     const rm = coop.remotes.get(m.from);
     if (rm) { rm.tx = m.x; rm.tz = m.z; rm.ta = m.a; rm.shieldOn = m.sh; if (!isAuthority) rm.alive = m.alive; rm.mesh.visible = rm.alive; }
   } else if (m.t === 'fire') {
@@ -1856,16 +1910,20 @@ function handleCoopNet(m) {
     }
   } else if (m.t === 'pu_spawn') { addPowerup(m.type, m.x, m.z, m.id); }
   else if (m.t === 'pu_take') { const i = powerups.findIndex(p => p.id === m.id); if (i >= 0) { scene.remove(powerups[i].mesh); powerups.splice(i, 1); } }
+  else if (m.t === 'down') { killFeed(`☠️ <b>${m.name || '?'}</b>`); updateCoopRoster(); }
   else if (m.t === 'coopover') { coopGameOver(); }
   else if (m.t === 'peerleft') { coopPeerLeft(m.who); }
 }
 function updateCoop(dt) {
   coop.sendT -= dt;
   if (coop.sendT <= 0) { coop.sendT = 0.05; netSend({ t: 'state', x: player.x, z: player.z, a: player.a, alive: player.alive, sh: player.shieldT > 0 }); }
+  coop.rosterT = (coop.rosterT || 0) - dt;
+  if (coop.rosterT <= 0) { coop.rosterT = 0.4; updateCoopRoster(); }
   const k = 1 - Math.exp(-12 * dt);
   for (const rm of coop.remotes.values()) {
     rm.x += (rm.tx - rm.x) * k; rm.z += (rm.tz - rm.z) * k; rm.a += angNorm(rm.ta - rm.a) * k;
     rm.mesh.position.set(rm.x, 0, rm.z); rm.mesh.rotation.y = rm.a; rm.mesh.visible = rm.alive;
+    if (rm.nameLabel) { rm.nameLabel.visible = rm.alive; if (rm.alive) rm.nameLabel.position.set(rm.x, 3.4, rm.z); }
     if (rm.inv > 0) rm.inv -= dt;
   }
   if (isAuthority) {
@@ -1909,6 +1967,12 @@ $('btn-garage').addEventListener('click', openGarage);
 $('gt-tanks').addEventListener('click', () => { garageTab = 'tanks'; renderGarageTabs(); });
 $('gt-skins').addEventListener('click', () => { garageTab = 'skins'; renderGarageTabs(); });
 $('statsline').addEventListener('click', openProfile);
+$('playername').value = profile.name;
+$('playername').addEventListener('input', e => {
+  const v = e.target.value.trim().slice(0, 12);
+  profile.name = v || ('Oyuncu' + Math.floor(Math.random() * 900 + 100));
+  saveProfile();
+});
 $('btn-back-profile').addEventListener('click', openMenu);
 $('btn-back-maps').addEventListener('click', openMenu);
 $('btn-back-garage').addEventListener('click', openMenu);
@@ -2133,6 +2197,7 @@ function tick() {
       duel.a += angNorm(duel.ta - duel.a) * k;
       duel.remoteMesh.position.set(duel.x, 0, duel.z);
       duel.remoteMesh.rotation.y = duel.a;
+      if (duel.nameLabel) { duel.nameLabel.visible = duel.remoteAlive; if (duel.remoteAlive) duel.nameLabel.position.set(duel.x, 3.4, duel.z); }
       duel.sendT -= dt;
       if (duel.sendT <= 0) { duel.sendT = 0.05; netSend({ t: 'state', x: player.x, z: player.z, a: player.a, alive: player.alive, sh: player.shieldT > 0 }); }
     }

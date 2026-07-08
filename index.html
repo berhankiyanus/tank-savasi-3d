@@ -85,6 +85,15 @@
   #flash { inset: 0; box-shadow: inset 0 0 120px 40px rgba(255,30,30,.9); opacity: 0; }
   #wavebanner { top: 26%; left: 0; right: 0; text-align: center; font-size: 42px; font-weight: bold;
                 color: #ffd76a; letter-spacing: 5px; opacity: 0; text-shadow: 0 0 24px rgba(255,170,40,.9); }
+  #namerow { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 6px; font-size: 18px; color: #cfe6bf; }
+  #playername { font-family: "Courier New", monospace; font-weight: bold; font-size: 17px; width: 150px; text-align: center;
+                background: rgba(255,255,255,.1); color: #ffd76a; border: 2px solid #7dff9b; border-radius: 8px; padding: 6px 8px; outline: none; }
+  #coophud { top: 78px; left: 22px; display: none; font-size: 14px; line-height: 1.5; }
+  #coophud .crow { color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.9); }
+  #killfeed { top: 182px; right: 12px; display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
+  .kfrow { font-size: 14px; color: #fff; background: rgba(0,0,0,.5); border-radius: 6px; padding: 3px 8px;
+           transition: opacity .5s; text-shadow: 0 1px 2px #000; }
+  .kfrow b { color: #ffd76a; }
   #buffs { top: 50px; left: 22px; display: flex; gap: 6px; }
   .buff { font-family: "Courier New", monospace; font-weight: bold; font-size: 15px; color: #fff;
           background: rgba(20,30,15,.7); border: 1px solid #7dff9b; border-radius: 7px; padding: 3px 8px;
@@ -161,6 +170,8 @@
   </div>
 </div>
 <div id="buffs" class="hud"></div>
+<div id="coophud" class="hud"></div>
+<div id="killfeed" class="hud"></div>
 <canvas id="minimap" class="hud" width="118" height="118"></canvas>
 <div id="wavebanner" class="hud"></div>
 <div id="bossbar" class="hud">
@@ -187,6 +198,7 @@
 
   <!-- ana menü -->
   <div id="panel-main" class="panel show">
+    <div id="namerow">🎖 <input id="playername" maxlength="12" placeholder="İsmin" autocomplete="off"></div>
     <div id="menubtns">
       <button class="mbtn" id="btn-single">TEK OYUNCU</button>
       <button class="mbtn alt" id="btn-duel">ARKADAŞLA DÜELLO</button>
