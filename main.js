@@ -29,7 +29,7 @@ const L = {
     rematchBtn: 'TEKRAR OYNA', leaveBtn: 'ÇIKIŞ',
     rematchWait: 'Rakip bekleniyor...', rematchPeerReady: 'Rakip tekrar oynamak istiyor!',
     puSpeed: 'HIZ! ⚡', puTriple: "3'LÜ ATIŞ!", puShield: 'KALKAN! 🛡',
-    setTitle: 'AYARLAR', setSound: 'Ses', setQuality: 'Kalite', onW: 'AÇIK', offW: 'KAPALI',
+    setTitle: 'AYARLAR', setSound: 'Ses', setMusic: 'Müzik', setQuality: 'Kalite', onW: 'AÇIK', offW: 'KAPALI',
     qHigh: 'YÜKSEK', qLow: 'DÜŞÜK', resumeW: 'DEVAM ET', toMenuW: 'ANA MENÜ', closeW: 'KAPAT', pausedW: 'DURAKLADI',
     coopBtn: 'KOOPERATİF', coopSub: '2-4 kişi birlikte dalgalara karşı! Oda kur veya kod ile katıl.',
     startW: 'BAŞLAT', playersW: 'oyuncu', waitHost: 'Host başlatmasını bekle...',
@@ -61,7 +61,7 @@ const L = {
     rematchBtn: 'PLAY AGAIN', leaveBtn: 'LEAVE',
     rematchWait: 'Waiting for opponent...', rematchPeerReady: 'Opponent wants a rematch!',
     puSpeed: 'SPEED! ⚡', puTriple: 'TRIPLE SHOT!', puShield: 'SHIELD! 🛡',
-    setTitle: 'SETTINGS', setSound: 'Sound', setQuality: 'Quality', onW: 'ON', offW: 'OFF',
+    setTitle: 'SETTINGS', setSound: 'Sound', setMusic: 'Music', setQuality: 'Quality', onW: 'ON', offW: 'OFF',
     qHigh: 'HIGH', qLow: 'LOW', resumeW: 'RESUME', toMenuW: 'MAIN MENU', closeW: 'CLOSE', pausedW: 'PAUSED',
     coopBtn: 'CO-OP', coopSub: '2-4 players together vs waves! Create a room or join with a code.',
     startW: 'START', playersW: 'players', waitHost: 'Waiting for host to start...',
@@ -92,8 +92,9 @@ function addCoins(n) { profile.coins += n; saveProfile(); updateCoinBar(); }
 
 // ayarlar (ses / kalite)
 let settings;
-try { settings = Object.assign({ muted: false, quality: 'high' }, JSON.parse(localStorage.getItem('tanksettings') || '{}')); }
-catch { settings = { muted: false, quality: 'high' }; }
+try { settings = Object.assign({ muted: false, quality: 'high', music: true }, JSON.parse(localStorage.getItem('tanksettings') || '{}')); }
+catch { settings = { muted: false, quality: 'high', music: true }; }
+if (typeof settings.music !== 'boolean') settings.music = true;
 function saveSettings() { localStorage.setItem('tanksettings', JSON.stringify(settings)); }
 let paused = false;
 
@@ -625,6 +626,65 @@ function sfxCoin() {
   g.gain.setValueAtTime(0.08, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
   o.connect(g).connect(ac.destination); o.start(t); o.stop(t + 0.2);
 }
+// ---- prosedürel arka plan müziği (özgün, WebAudio ile üretilir) ----
+let musicGain = null, musicPlaying = false, musicTimer = null, musicNext = 0, musicChord = 0;
+const CHORDS = [
+  [110.00, [220.00, 261.63, 329.63]], // Am
+  [87.31, [174.61, 220.00, 261.63]],  // F
+  [130.81, [261.63, 329.63, 392.00]], // C
+  [98.00, [196.00, 246.94, 293.66]],  // G
+];
+function playChordAt(bass, triad, t, dur) {
+  const ac = AC, v = 0.045;
+  const bo = ac.createOscillator(), bg = ac.createGain();
+  bo.type = 'triangle'; bo.frequency.value = bass;
+  bg.gain.setValueAtTime(0.0001, t); bg.gain.linearRampToValueAtTime(v * 1.3, t + 0.06); bg.gain.linearRampToValueAtTime(0.0001, t + dur);
+  bo.connect(bg).connect(musicGain); bo.start(t); bo.stop(t + dur + 0.1);
+  for (const f of triad) {
+    const o = ac.createOscillator(), g = ac.createGain(), fl = ac.createBiquadFilter();
+    o.type = 'sawtooth'; o.frequency.value = f; fl.type = 'lowpass'; fl.frequency.value = 850;
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(v * 0.35, t + 0.35); g.gain.linearRampToValueAtTime(0.0001, t + dur);
+    o.connect(fl).connect(g).connect(musicGain); o.start(t); o.stop(t + dur + 0.1);
+  }
+}
+function scheduleMusic() {
+  if (!musicPlaying || !AC) return;
+  if (settings.muted || !settings.music) { musicNext = AC.currentTime + 0.1; return; }
+  const now = AC.currentTime, beat = state === 'play' ? 1.7 : 2.1;
+  while (musicNext < now + 0.35) {
+    const [bass, triad] = CHORDS[musicChord % 4];
+    playChordAt(bass, triad, musicNext, beat);
+    musicNext += beat; musicChord++;
+  }
+}
+function updateMusicGain() {
+  if (!musicGain || !AC) return;
+  musicGain.gain.setTargetAtTime((settings.muted || !settings.music) ? 0 : 1, AC.currentTime, 0.3);
+}
+function startMusic() {
+  audio();
+  if (!musicGain) { musicGain = AC.createGain(); musicGain.gain.value = 0; musicGain.connect(AC.destination); }
+  if (!musicPlaying) { musicPlaying = true; musicNext = AC.currentTime + 0.15; musicChord = 0; musicTimer = setInterval(scheduleMusic, 130); }
+  updateMusicGain();
+}
+// olay müzikleri (kısa flöriler)
+function sting(notes, dur = 0.14, type = 'square', vol = 0.12) {
+  if (settings.muted) return;
+  const ac = audio(); let t = ac.currentTime;
+  for (const f of notes) {
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.type = type; o.frequency.value = f;
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g).connect(ac.destination); o.start(t); o.stop(t + dur + 0.03);
+    t += dur;
+  }
+}
+const stingWave = () => sting([523, 659, 784], 0.12);
+const stingBoss = () => sting([146, 123, 98, 82], 0.26, 'sawtooth', 0.14);
+const stingWin = () => sting([523, 659, 784, 1047], 0.13);
+const stingLose = () => sting([392, 330, 262, 196], 0.2, 'triangle', 0.12);
+const stingGoal = () => sting([659, 880], 0.1);
+
 // motor sesi (sürüşe göre uğultu)
 let engineOsc = null, engineGain = null, engineFreq = null;
 function startEngine() {
@@ -1536,6 +1596,7 @@ function duelEnd(won) {
   if (won) { profile.wins++; saveProfile(); }
   const t = T(), a = duel.myKills, b = duel.myDeaths;
   banner(won ? t.youWin : t.youLose);
+  if (won) stingWin(); else stingLose();
   setTimeout(() => showRematch('duel', won ? t.youWin : t.youLose, t.duelOverSub(a, b)), 1800);
 }
 function peerLeft() {
@@ -1745,6 +1806,7 @@ function applyGoal(g1, g2, scorer) {
   ball.g1 = g1; ball.g2 = g2;
   updateHUD();
   banner(scorer === duel.you ? T().golYou : T().golOpp);
+  stingGoal();
   explode(ball.x, 1.2, ball.z, true);
   if (!isAuthority) { ball.vx = 0; ball.vz = 0; setTimeout(() => { if (ball && !ball.over) resetBallPositions(); }, 900); }
 }
@@ -1755,6 +1817,7 @@ function endBall() {
   ball.over = true;
   if (won) { profile.wins++; saveProfile(); }
   banner(won ? t.youWin : t.youLose);
+  if (won) stingWin(); else stingLose();
   const a = duel.you === 1 ? ball.g1 : ball.g2;
   const b = duel.you === 1 ? ball.g2 : ball.g1;
   setTimeout(() => showRematch('ball', won ? t.youWin : t.youLose, t.duelOverSub(a, b)), 1900);
@@ -1851,6 +1914,7 @@ function coopNextWave() {
   netSend({ t: 'phealth', pid: coop.you, hp: player.health, alive: true });
   for (const [pid, rm] of coop.remotes) netSend({ t: 'phealth', pid, hp: rm.hp, alive: true });
   banner(wave % 5 === 0 ? T().bossW : `${T().wave} ${wave}  +🪙${bonus}`);
+  if (wave % 5 === 0) stingBoss(); else stingWave();
   spawnEnemies(waveComposition(wave, coop.players.length));
 }
 function coopGameOver() {
@@ -2021,6 +2085,7 @@ function updateSettingsLabels() {
   const t = T();
   $('set-title').textContent = paused ? t.pausedW : t.setTitle;
   $('set-sound').textContent = `${t.setSound}: ${settings.muted ? t.offW : t.onW}`;
+  $('set-music').textContent = `${t.setMusic}: ${settings.music ? t.onW : t.offW}`;
   $('set-quality').textContent = `${t.setQuality}: ${settings.quality === 'low' ? t.qLow : t.qHigh}`;
   $('set-resume').textContent = t.resumeW;
   $('set-quit').textContent = t.toMenuW;
@@ -2036,7 +2101,8 @@ function openSettings() {
 function closeSettings() { paused = false; $('settings').classList.add('hidden'); }
 $('btn-settings').addEventListener('click', openSettings);
 $('btn-settings-menu').addEventListener('click', openSettings);
-$('set-sound').addEventListener('click', () => { settings.muted = !settings.muted; saveSettings(); updateSettingsLabels(); if (!settings.muted) sfxCoin(); });
+$('set-sound').addEventListener('click', () => { settings.muted = !settings.muted; saveSettings(); updateSettingsLabels(); updateMusicGain(); if (!settings.muted) sfxCoin(); });
+$('set-music').addEventListener('click', () => { settings.music = !settings.music; saveSettings(); updateSettingsLabels(); if (settings.music) startMusic(); else updateMusicGain(); });
 $('set-quality').addEventListener('click', () => { settings.quality = settings.quality === 'low' ? 'high' : 'low'; saveSettings(); applyQuality(); updateSettingsLabels(); });
 $('set-resume').addEventListener('click', closeSettings);
 $('set-close').addEventListener('click', closeSettings);
@@ -2060,6 +2126,15 @@ addEventListener('keydown', e => {
   keys[e.code] = true;
 });
 addEventListener('keyup', e => { keys[e.code] = false; });
+
+// ilk kullanıcı etkileşiminde ses bağlamını + müziği başlat (tarayıcı kuralı)
+let audioUnlocked = false;
+function unlockAudio() {
+  if (audioUnlocked) return; audioUnlocked = true;
+  try { startMusic(); } catch (e) { }
+}
+addEventListener('pointerdown', unlockAudio);
+addEventListener('keydown', unlockAudio);
 
 const touchCtl = { turn: 0, move: 0, fire: false };
 if (IS_TOUCH) {
@@ -2314,6 +2389,7 @@ function tick() {
         const bonus = wave * 25; roundCoins += bonus; addCoins(bonus);
         updateHUD();
         banner(wave % 5 === 0 ? T().bossW : `${T().wave} ${wave}  +🪙${bonus}`);
+        if (wave % 5 === 0) stingBoss(); else stingWave();
         player.health = Math.min(player.maxHealth, player.health + 1);
         renderHealth();
         spawnEnemies(waveComposition(wave));
