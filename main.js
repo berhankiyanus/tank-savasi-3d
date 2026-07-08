@@ -31,6 +31,8 @@ const L = {
     puSpeed: 'HIZ! ⚡', puTriple: "3'LÜ ATIŞ!", puShield: 'KALKAN! 🛡',
     setTitle: 'AYARLAR', setSound: 'Ses', setQuality: 'Kalite', onW: 'AÇIK', offW: 'KAPALI',
     qHigh: 'YÜKSEK', qLow: 'DÜŞÜK', resumeW: 'DEVAM ET', toMenuW: 'ANA MENÜ', closeW: 'KAPAT', pausedW: 'DURAKLADI',
+    coopBtn: 'KOOPERATİF', coopSub: '2-4 kişi birlikte dalgalara karşı! Oda kur veya kod ile katıl.',
+    startW: 'BAŞLAT', playersW: 'oyuncu', waitHost: 'Host başlatmasını bekle...',
   },
   en: {
     title: 'TANK BATTLE 3D',
@@ -59,6 +61,8 @@ const L = {
     puSpeed: 'SPEED! ⚡', puTriple: 'TRIPLE SHOT!', puShield: 'SHIELD! 🛡',
     setTitle: 'SETTINGS', setSound: 'Sound', setQuality: 'Quality', onW: 'ON', offW: 'OFF',
     qHigh: 'HIGH', qLow: 'LOW', resumeW: 'RESUME', toMenuW: 'MAIN MENU', closeW: 'CLOSE', pausedW: 'PAUSED',
+    coopBtn: 'CO-OP', coopSub: '2-4 players together vs waves! Create a room or join with a code.',
+    startW: 'START', playersW: 'players', waitHost: 'Waiting for host to start...',
   },
 };
 let lang = localStorage.getItem('tanklang') || ((navigator.language || 'tr').startsWith('tr') ? 'tr' : 'en');
@@ -704,8 +708,14 @@ let pendingMode = 'duel';
 let netYou = null, netMode = null, netBegun = false, netMapIdx = null;
 let matchOverMode = null, myReady = false, peerReady = false;
 let duelMap = 0;
+// kooperatif (2-4 kişi vs dalgalar)
+let coop = null;
+let coopCode = null, coopYou = 1, coopIsHost = false;
+const coopEnemies = new Map();
+const PLAYER_COLORS = { 1: 0x4a8d3a, 2: 0x2f7db0, 3: 0xd08a2a, 4: 0x9c4fd0 };
+const COOP_SPAWNS = [[1, 11], [11, 11], [1, 1], [11, 1]];
 
-function fire(owner, angOff = 0) {
+function fire(owner, angOff = 0, playerShot = null) {
   const isPlayer = owner === player;
   const a = owner.a + angOff;
   const mesh = new THREE.Mesh(bulletGeo, isPlayer ? playerBulletMat : enemyBulletMat);
@@ -717,7 +727,7 @@ function fire(owner, angOff = 0) {
   if (isPlayer) sp = player.stat.bspeed;
   else if (mode === 'duel' || mode === 'ball') sp = owner.bspeed || 24;
   else sp = ENEMY_BSPEED;
-  bullets.push({ mesh, fromPlayer: isPlayer, vx: fwdX(a) * sp, vz: fwdZ(a) * sp, life: 2.6, bounces: 1 });
+  bullets.push({ mesh, fromPlayer: isPlayer, playerShot: playerShot == null ? isPlayer : playerShot, vx: fwdX(a) * sp, vz: fwdZ(a) * sp, life: 2.6, bounces: 1 });
   muzzleFlash(bx, 1.3, bz);
   sfxFire();
   if (isPlayer && playerTurret) recoil = 0.14;
@@ -770,14 +780,14 @@ function addPowerup(type, x, z, id) {
 function clearPowerups() { for (const p of powerups) scene.remove(p.mesh); powerups.length = 0; }
 function updatePowerups(dt) {
   // üretim: tek oyunculuda hep, düelloda sadece otorite (P1) yapar ve rakibe bildirir
-  if (mode === 'solo' || (mode === 'duel' && isAuthority)) {
+  if (mode === 'solo' || ((mode === 'duel' || mode === 'coop') && isAuthority)) {
     powerupT -= dt;
     if (powerupT <= 0 && powerups.length < 3) {
       const def = POWERUPS[Math.floor(Math.random() * POWERUPS.length)];
       const cell = randOpenCell(player.x, player.z, 10);
       const id = ++puIdCounter;
       addPowerup(def.type, cell.x, cell.z, id);
-      if (mode === 'duel') netSend({ t: 'pu_spawn', id, type: def.type, x: cell.x, z: cell.z });
+      if (mode === 'duel' || mode === 'coop') netSend({ t: 'pu_spawn', id, type: def.type, x: cell.x, z: cell.z });
       powerupT = 9 + Math.random() * 6;
     }
   }
@@ -787,7 +797,7 @@ function updatePowerups(dt) {
     p.mesh.position.y = 1.25 + Math.sin(p.bob) * 0.25;
     if (player.alive && Math.hypot(player.x - p.x, player.z - p.z) < TANK_R + 1.05) {
       applyPowerup(p.type); explode(p.x, 1.2, p.z, false);
-      if (mode === 'duel') netSend({ t: 'pu_take', id: p.id });
+      if (mode === 'duel' || mode === 'coop') netSend({ t: 'pu_take', id: p.id });
       scene.remove(p.mesh); powerups.splice(i, 1);
     }
   }
@@ -805,11 +815,12 @@ shieldBubble.visible = false;
 scene.add(shieldBubble);
 
 const ENEMY_COLORS = [0xa03428, 0xb07a30, 0x8a3a8a, 0x2f6ea0, 0x9c2f55, 0x777777];
+let enemyIdC = 0;
 function spawnEnemies(n) {
   for (let i = 0; i < n; i++) {
     const cell = randOpenCell(player.x, player.z, 18);
-    const def = { color: ENEMY_COLORS[i % ENEMY_COLORS.length], scale: 1 };
-    const e = { mesh: buildTank(def), x: cell.x, z: cell.z, a: Math.random() * Math.PI * 2,
+    const color = ENEMY_COLORS[Math.floor(Math.random() * ENEMY_COLORS.length)];
+    const e = { id: ++enemyIdC, color, mesh: buildTank({ color, scale: 1 }), x: cell.x, z: cell.z, a: Math.random() * Math.PI * 2,
                 cool: 3.5 + Math.random() * 2, alive: true, turnDir: 1, thinkT: 0 };
     e.mesh.position.set(e.x, 0, e.z);
     scene.add(e.mesh); enemies.push(e);
@@ -862,13 +873,13 @@ function updateHUD() {
 
 // panel yönetimi
 function showPanel(id) {
-  for (const p of ['panel-main', 'panel-maps', 'panel-garage', 'panel-duel', 'panel-rematch'])
+  for (const p of ['panel-main', 'panel-maps', 'panel-garage', 'panel-duel', 'panel-coop', 'panel-rematch'])
     $(p).classList.toggle('show', p === id);
 }
 function openMenu() {
   state = 'menu';
   mode = 'solo';
-  clearBallMode(); clearPowerups();
+  clearBallMode(); clearCoop(); clearPowerups();
   shieldBubble.visible = false;
   if (!wallInst) buildArena(0);
   const t = T();
@@ -889,7 +900,13 @@ function applyLang() {
   $('btn-single').textContent = t.single;
   $('btn-duel').textContent = t.duel;
   $('btn-ball').textContent = t.ballBtn;
+  $('btn-coop').textContent = t.coopBtn;
   $('btn-garage').textContent = t.garage;
+  $('btn-coop-create').textContent = t.create;
+  $('btn-coop-join').textContent = t.join;
+  $('btn-coop-start').textContent = t.startW;
+  $('btn-back-coop').textContent = t.back;
+  $('coopcode').placeholder = t.codePh;
   $('btn-create').textContent = t.create;
   $('btn-join').textContent = t.join;
   $('joincode').placeholder = t.codePh;
@@ -1077,10 +1094,18 @@ function tryBegin() {
 }
 function handleNet(m) {
   const t = T();
-  if (m.t === 'room') { if (duel) duel.code = m.code; duelStatusEl.innerHTML = `${t.roomLbl} <span class="code">${m.code}</span><br>${t.waiting}`; }
-  else if (m.t === 'err') { duelStatusEl.textContent = t.joinFail; }
-  else if (m.t === 'start') { netYou = m.you; if (netYou === 1) netSend({ t: 'gamemode', mode: pendingMode, map: duelMap }); tryBegin(); }
+  if (m.t === 'room') {
+    if (pendingMode === 'coop') { coopCode = m.code; coopYou = m.you; updateLobby(1, [m.you]); }
+    else { if (duel) duel.code = m.code; duelStatusEl.innerHTML = `${t.roomLbl} <span class="code">${m.code}</span><br>${t.waiting}`; }
+  }
+  else if (m.t === 'err') { (pendingMode === 'coop' ? $('coopstatus') : duelStatusEl).textContent = t.joinFail; }
+  else if (m.t === 'lobby') { updateLobby(m.count, m.players); }
+  else if (m.t === 'start') {
+    if (m.coop) beginCoop(m.you, m.players, m.map || 0);
+    else { netYou = m.you; if (netYou === 1) netSend({ t: 'gamemode', mode: pendingMode, map: duelMap }); tryBegin(); }
+  }
   else if (m.t === 'gamemode') { netMode = m.mode; netMapIdx = (m.map != null ? m.map : 0); tryBegin(); }
+  else if (mode === 'coop') { handleCoopNet(m); }
   else if (!duel) { return; }
   else if (m.t === 'skin') { applyRemoteSkin(m.color, m.scale); }
   else if (m.t === 'ball') { if (ball && !isAuthority) { ball.tx = m.x; ball.tz = m.z; ball.mesh.rotation.x = m.rx; ball.mesh.rotation.z = m.rz; } }
@@ -1391,28 +1416,227 @@ function endBall() {
   setTimeout(() => showRematch('ball', won ? t.youWin : t.youLose, t.duelOverSub(a, b)), 1900);
 }
 
+// ---------------------------------------------------------------- kooperatif
+function clearCoop() {
+  if (coop) for (const rm of coop.remotes.values()) scene.remove(rm.mesh);
+  for (const ce of coopEnemies.values()) scene.remove(ce);
+  coopEnemies.clear();
+  clearEnemies(); clearPowerups();
+  coop = null;
+}
+function placeCoopSpawns() {
+  const posOf = pid => { const [c, r] = COOP_SPAWNS[(pid - 1) % 4]; return { x: cellX(c), z: cellZ(r) }; };
+  const me = posOf(coop.you);
+  player.x = me.x; player.z = me.z; player.a = 0; player.inv = 1.5;
+  player.mesh.position.set(player.x, 0, player.z); player.mesh.visible = true;
+  for (const [pid, rm] of coop.remotes) {
+    const p = posOf(pid);
+    rm.x = rm.tx = p.x; rm.z = rm.tz = p.z; rm.a = rm.ta = 0; rm.inv = 1.5;
+    rm.mesh.position.set(rm.x, 0, rm.z); rm.mesh.visible = true;
+  }
+}
+function beginCoop(you, players, mapIdx) {
+  mode = 'coop'; state = 'play';
+  const host = you === players[0];
+  isAuthority = host;
+  buildArena(mapIdx);
+  msgEl.classList.add('hidden');
+  $('topbar').style.visibility = 'visible';
+  $('healthwrap').style.visibility = 'visible';
+  clearEnemies(); clearBullets(); clearPowerups();
+  for (const ce of coopEnemies.values()) scene.remove(ce);
+  coopEnemies.clear();
+  setPlayerTank();
+  player.speedT = 0; player.tripleT = 0; player.shieldT = 0; shieldBubble.visible = false;
+  player.health = player.maxHealth; player.alive = true;
+  coop = { you, players: players.slice(), hostPid: players[0], isHost: host, remotes: new Map(), sendT: 0, enemT: 0, over: false };
+  for (const pid of players) if (pid !== you) {
+    const rmMesh = buildTank({ color: PLAYER_COLORS[pid] || 0x888888, scale: 1 });
+    scene.add(rmMesh);
+    coop.remotes.set(pid, { mesh: rmMesh, x: 0, z: 0, tx: 0, tz: 0, a: 0, ta: 0, alive: true, hp: player.maxHealth, inv: 0 });
+  }
+  placeCoopSpawns();
+  wave = 1; score = 0; roundCoins = 0; powerupT = 6; puIdCounter = 0; enemyIdC = 0;
+  profile.games++; saveProfile();
+  renderHealth(); updateHUD();
+  banner(`${T().wave} 1`);
+  if (host) spawnEnemies(2 + players.length);
+  audio();
+}
+function coopNearestPlayer(e) {
+  let best = null, bd = 1e9;
+  const cand = [];
+  if (player.alive) cand.push({ x: player.x, z: player.z, alive: true });
+  for (const rm of coop.remotes.values()) if (rm.alive) cand.push({ x: rm.x, z: rm.z, alive: true });
+  for (const c of cand) { const d = Math.hypot(c.x - e.x, c.z - e.z); if (d < bd) { bd = d; best = c; } }
+  return best;
+}
+function coopHitPlayer(pid) {
+  if (pid === coop.you) {
+    if (player.shieldT > 0) { player.inv = 0.3; explode(player.x, 1, player.z, false); sfxBounce(); return; }
+    player.inv = 1.0; player.health--; renderHealth(); hitFlash(); explode(player.x, 1, player.z, false);
+    if (player.health <= 0) { player.alive = false; player.mesh.visible = false; explode(player.x, 1.2, player.z, true); }
+    netSend({ t: 'phealth', pid, hp: player.health, alive: player.alive });
+  } else {
+    const rm = coop.remotes.get(pid); if (!rm) return;
+    rm.inv = 1.0; rm.hp--; explode(rm.x, 1, rm.z, false);
+    if (rm.hp <= 0) { rm.alive = false; rm.mesh.visible = false; explode(rm.x, 1.2, rm.z, true); }
+    netSend({ t: 'phealth', pid, hp: rm.hp, alive: rm.alive });
+  }
+  coopCheckOver();
+}
+function coopCheckOver() {
+  if (!isAuthority || coop.over) return;
+  const anyAlive = player.alive || [...coop.remotes.values()].some(r => r.alive);
+  if (!anyAlive) { coop.over = true; netSend({ t: 'coopover' }); coopGameOver(); }
+}
+function coopNextWave() {
+  wave++;
+  if (wave > profile.bestWave) { profile.bestWave = wave; saveProfile(); }
+  player.alive = true; player.health = Math.min(player.maxHealth, player.health + 2);
+  for (const rm of coop.remotes.values()) { rm.alive = true; rm.hp = player.maxHealth; }
+  placeCoopSpawns();
+  renderHealth(); updateHUD();
+  const bonus = wave * 25; roundCoins += bonus; addCoins(bonus);
+  netSend({ t: 'wave', n: wave });
+  netSend({ t: 'phealth', pid: coop.you, hp: player.health, alive: true });
+  for (const [pid, rm] of coop.remotes) netSend({ t: 'phealth', pid, hp: rm.hp, alive: true });
+  banner(`${T().wave} ${wave}  +🪙${bonus}`);
+  spawnEnemies(Math.min(2 + wave, 5 + coop.players.length));
+}
+function coopGameOver() {
+  if (coop) coop.over = true;
+  state = 'over';
+  const t = T();
+  $('title').textContent = t.over;
+  $('submsg').textContent = t.overSub(score, wave, roundCoins);
+  showPanel('panel-main'); msgEl.classList.remove('hidden'); $('topbar').style.visibility = 'hidden';
+  clearCoop(); closeNet();
+  updateCoinBar(); updateStats();
+}
+function coopPeerLeft(who) {
+  if (!coop) return;
+  const rm = coop.remotes.get(who);
+  if (rm) { scene.remove(rm.mesh); coop.remotes.delete(who); }
+  coop.players = coop.players.filter(p => p !== who);
+  banner(T().peerLeft);
+  if (who === coop.hostPid && !isAuthority) setTimeout(() => { if (mode === 'coop') coopGameOver(); }, 900);
+  else coopCheckOver();
+}
+function handleCoopNet(m) {
+  if (!coop) return;
+  if (m.t === 'state') {
+    const rm = coop.remotes.get(m.from);
+    if (rm) { rm.tx = m.x; rm.tz = m.z; rm.ta = m.a; if (!isAuthority) rm.alive = m.alive; rm.mesh.visible = rm.alive; }
+  } else if (m.t === 'fire') {
+    if (m.trip) { fire({ x: m.x, z: m.z, a: m.a, bspeed: m.bs }, -0.17, true); fire({ x: m.x, z: m.z, a: m.a, bspeed: m.bs }, 0, true); fire({ x: m.x, z: m.z, a: m.a, bspeed: m.bs }, 0.17, true); }
+    else fire({ x: m.x, z: m.z, a: m.a, bspeed: m.bs }, 0, true);
+  } else if (m.t === 'efire') {
+    fire({ x: m.x, z: m.z, a: m.a }, 0, false);
+  } else if (m.t === 'enemies') {
+    for (const it of m.list) {
+      let ce = coopEnemies.get(it.id);
+      if (!ce) { ce = buildTank({ color: it.c || 0xa03428, scale: 1 }); scene.add(ce); coopEnemies.set(it.id, ce); }
+      ce.userData.tx = it.x; ce.userData.tz = it.z; ce.userData.ta = it.a;
+    }
+  } else if (m.t === 'ekill') {
+    const ce = coopEnemies.get(m.id);
+    if (ce) { explode(ce.position.x, 1, ce.position.z, true); scene.remove(ce); coopEnemies.delete(m.id); }
+  } else if (m.t === 'wave') {
+    wave = m.n; updateHUD(); banner(`${T().wave} ${wave}`);
+    for (const ce of coopEnemies.values()) scene.remove(ce);
+    coopEnemies.clear();
+    player.alive = true; player.mesh.visible = true;
+  } else if (m.t === 'phealth') {
+    if (m.pid === coop.you) {
+      player.health = m.hp; player.alive = m.alive; renderHealth();
+      if (!m.alive) { player.mesh.visible = false; } else { player.mesh.visible = true; }
+      if (m.hp >= 0 && m.alive) hitFlash();
+    }
+  } else if (m.t === 'pu_spawn') { addPowerup(m.type, m.x, m.z, m.id); }
+  else if (m.t === 'pu_take') { const i = powerups.findIndex(p => p.id === m.id); if (i >= 0) { scene.remove(powerups[i].mesh); powerups.splice(i, 1); } }
+  else if (m.t === 'coopover') { coopGameOver(); }
+  else if (m.t === 'peerleft') { coopPeerLeft(m.who); }
+}
+function updateCoop(dt) {
+  coop.sendT -= dt;
+  if (coop.sendT <= 0) { coop.sendT = 0.05; netSend({ t: 'state', x: player.x, z: player.z, a: player.a, alive: player.alive }); }
+  const k = 1 - Math.exp(-12 * dt);
+  for (const rm of coop.remotes.values()) {
+    rm.x += (rm.tx - rm.x) * k; rm.z += (rm.tz - rm.z) * k; rm.a += angNorm(rm.ta - rm.a) * k;
+    rm.mesh.position.set(rm.x, 0, rm.z); rm.mesh.rotation.y = rm.a; rm.mesh.visible = rm.alive;
+    if (rm.inv > 0) rm.inv -= dt;
+  }
+  if (isAuthority) {
+    for (const e of enemies) updateEnemy(e, dt, coopNearestPlayer(e));
+    coop.enemT -= dt;
+    if (coop.enemT <= 0) {
+      coop.enemT = 0.06;
+      netSend({ t: 'enemies', list: enemies.map(e => ({ id: e.id, x: +e.x.toFixed(2), z: +e.z.toFixed(2), a: +e.a.toFixed(2), c: e.color })) });
+    }
+    enemies = enemies.filter(e => e.alive);
+    if (enemies.length === 0 && !coop.over) coopNextWave();
+  } else {
+    for (const ce of coopEnemies.values()) {
+      const u = ce.userData;
+      if (u.tx !== undefined) { ce.position.x += (u.tx - ce.position.x) * k; ce.position.z += (u.tz - ce.position.z) * k; ce.rotation.y += angNorm(u.ta - ce.rotation.y) * k; }
+    }
+  }
+}
+
 // ---------------------------------------------------------------- menü olayları
 $('lang-tr').addEventListener('click', () => { lang = 'tr'; applyLang(); if ($('panel-garage').classList.contains('show')) renderGarage(); if ($('panel-maps').classList.contains('show')) renderMaps(); });
 $('lang-en').addEventListener('click', () => { lang = 'en'; applyLang(); if ($('panel-garage').classList.contains('show')) renderGarage(); if ($('panel-maps').classList.contains('show')) renderMaps(); });
 $('btn-single').addEventListener('click', () => { $('title').textContent = T().chooseMap; $('submsg').textContent = T().bestWave(profile.bestWave); renderMaps(); showPanel('panel-maps'); });
-function renderDuelMaps() {
-  const wrap = $('duelmapsrow');
+function renderMapPicker(containerId, rerender) {
+  const wrap = $(containerId);
   wrap.style.cssText = 'display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin:4px 8px 12px;max-width:640px';
   wrap.innerHTML = '';
   MAPS.forEach((mp, idx) => {
     const b = document.createElement('button');
     b.className = 'mbtn small' + (idx === duelMap ? ' on' : '');
     b.textContent = mp.name[lang];
-    b.onclick = () => { duelMap = idx; renderDuelMaps(); };
+    b.onclick = () => { duelMap = idx; rerender(); };
     wrap.appendChild(b);
   });
 }
+function renderDuelMaps() { renderMapPicker('duelmapsrow', renderDuelMaps); }
+function renderCoopMaps() { renderMapPicker('coopmapsrow', renderCoopMaps); }
 $('btn-duel').addEventListener('click', () => { pendingMode = 'duel'; duelStatusEl.textContent = ''; $('title').textContent = T().duel; $('submsg').textContent = T().duelSub(KILL_TARGET); $('duelmapsrow').style.display = 'flex'; renderDuelMaps(); showPanel('panel-duel'); });
 $('btn-ball').addEventListener('click', () => { pendingMode = 'ball'; duelStatusEl.textContent = ''; $('title').textContent = T().ballBtn; $('submsg').textContent = T().ballSub(BALL_TARGET); $('duelmapsrow').style.display = 'none'; showPanel('panel-duel'); });
 $('btn-garage').addEventListener('click', () => { $('title').textContent = T().garage; $('submsg').textContent = '🪙 ' + profile.coins; renderGarage(); showPanel('panel-garage'); });
 $('btn-back-maps').addEventListener('click', openMenu);
 $('btn-back-garage').addEventListener('click', openMenu);
 $('btn-back-duel').addEventListener('click', () => { closeNet(); openMenu(); });
+
+// kooperatif menü
+function updateLobby(count, players) {
+  const t = T();
+  const code = coopCode || '';
+  $('coopstatus').innerHTML = `${t.roomLbl} <span class="code">${code}</span><br>${count}/4 ${t.playersW}` +
+    (coopIsHost ? '' : `<br>${t.waitHost}`);
+  $('btn-coop-start').style.display = (coopIsHost && count >= 2) ? 'inline-block' : 'none';
+}
+$('btn-coop').addEventListener('click', () => {
+  pendingMode = 'coop'; coopCode = null; coopIsHost = false;
+  $('title').textContent = T().coopBtn; $('submsg').textContent = T().coopSub;
+  $('coopstatus').textContent = ''; $('btn-coop-start').style.display = 'none';
+  renderCoopMaps(); showPanel('panel-coop');
+});
+$('btn-coop-create').addEventListener('click', () => {
+  pendingMode = 'coop'; coopIsHost = true;
+  $('coopstatus').textContent = '...';
+  connectNet(() => netSend({ t: 'create', cap: 4 }));
+});
+$('btn-coop-join').addEventListener('click', () => {
+  const code = $('coopcode').value.trim().toUpperCase();
+  if (code.length !== 4) { $('coopstatus').textContent = T().joinFail; return; }
+  pendingMode = 'coop'; coopIsHost = false; coopCode = code;
+  $('coopstatus').textContent = '...';
+  connectNet(() => netSend({ t: 'join', code }));
+});
+$('btn-coop-start').addEventListener('click', () => { netSend({ t: 'startgame', map: duelMap }); });
+$('btn-back-coop').addEventListener('click', () => { closeNet(); openMenu(); });
 $('btn-rematch').addEventListener('click', () => {
   if (myReady || !matchOverMode) return;
   myReady = true;
@@ -1447,7 +1671,7 @@ $('set-sound').addEventListener('click', () => { settings.muted = !settings.mute
 $('set-quality').addEventListener('click', () => { settings.quality = settings.quality === 'low' ? 'high' : 'low'; saveSettings(); applyQuality(); updateSettingsLabels(); });
 $('set-resume').addEventListener('click', closeSettings);
 $('set-close').addEventListener('click', closeSettings);
-$('set-quit').addEventListener('click', () => { paused = false; $('settings').classList.add('hidden'); closeNet(); clearBallMode(); buildArena(0); openMenu(); });
+$('set-quit').addEventListener('click', () => { paused = false; $('settings').classList.add('hidden'); closeNet(); clearBallMode(); clearCoop(); buildArena(0); openMenu(); });
 $('btn-create').addEventListener('click', () => { duel = { code: null }; duelStatusEl.textContent = '...'; connectNet(() => netSend({ t: 'create' })); });
 $('btn-join').addEventListener('click', () => {
   const code = $('joincode').value.trim().toUpperCase();
@@ -1495,28 +1719,33 @@ if (IS_TOUCH) {
 }
 
 // ---------------------------------------------------------------- düşman AI
-function updateEnemy(e, dt) {
+function updateEnemy(e, dt, tgt) {
   e.cool -= dt; e.thinkT -= dt;
-  const distP = Math.hypot(player.x - e.x, player.z - e.z);
-  const seen = player.alive && distP < 55 && losClear(e.x, e.z, player.x, player.z);
+  const tp = tgt || player;
+  const alive = tgt ? true : player.alive;
+  const distP = Math.hypot(tp.x - e.x, tp.z - e.z);
+  const seen = alive && distP < 55 && losClear(e.x, e.z, tp.x, tp.z);
   let wantMove = 0;
   if (seen) {
-    const target = headingTo(e.x, e.z, player.x, player.z);
+    const target = headingTo(e.x, e.z, tp.x, tp.z);
     const diff = angNorm(target - e.a);
     e.a += Math.max(-ENEMY_TURN * dt, Math.min(ENEMY_TURN * dt, diff));
-    if (Math.abs(diff) < 0.09 && e.cool <= 0) { fire(e); e.cool = 2.2 + Math.random() * 1.6; }
+    if (Math.abs(diff) < 0.09 && e.cool <= 0) {
+      fire(e); if (mode === 'coop') netSend({ t: 'efire', x: e.x, z: e.z, a: e.a });
+      e.cool = 2.2 + Math.random() * 1.6;
+    }
     if (Math.abs(diff) < 0.5) { if (distP > 14) wantMove = 1; else if (distP < 7) wantMove = -1; }
   } else {
     if (e.thinkT <= 0) {
       e.thinkT = 1.2 + Math.random() * 1.8;
       e.turnDir = Math.random() < 0.5 ? -1 : 1;
-      if (Math.random() < 0.45) { const target = headingTo(e.x, e.z, player.x, player.z); e.turnDir = angNorm(target - e.a) > 0 ? 1 : -1; }
+      if (Math.random() < 0.45) { const target = headingTo(e.x, e.z, tp.x, tp.z); e.turnDir = angNorm(target - e.a) > 0 ? 1 : -1; }
     }
     const px = e.x + fwdX(e.a) * 3.0, pz = e.z + fwdZ(e.a) * 3.0;
     if (pointInWall(px, pz)) e.a += e.turnDir * ENEMY_TURN * dt;
     else {
       wantMove = 1;
-      const target = headingTo(e.x, e.z, player.x, player.z);
+      const target = headingTo(e.x, e.z, tp.x, tp.z);
       const diff = angNorm(target - e.a);
       e.a += Math.max(-0.5 * ENEMY_TURN * dt, Math.min(0.5 * ENEMY_TURN * dt, diff));
     }
@@ -1555,9 +1784,10 @@ function tick() {
       circleVsWalls(pos, TANK_R);
       player.x = pos.x; player.z = pos.z;
 
-      const others = mode === 'duel'
-        ? (duel && duel.remoteAlive ? [{ x: duel.x, z: duel.z, solid: false }] : [])
-        : enemies;
+      let others;
+      if (mode === 'duel') others = (duel && duel.remoteAlive ? [{ x: duel.x, z: duel.z, solid: false }] : []);
+      else if (mode === 'coop') others = [...coop.remotes.values()].filter(r => r.alive).map(r => ({ x: r.x, z: r.z, solid: false })).concat(isAuthority ? enemies : []);
+      else others = enemies;
       for (const e of others) {
         const dx = player.x - e.x, dz = player.z - e.z, d = Math.hypot(dx, dz);
         if (d < TANK_R * 2 && d > 0.01) {
@@ -1570,14 +1800,16 @@ function tick() {
         if (player.tripleT > 0) { fire(player, -0.17); fire(player, 0); fire(player, 0.17); }
         else fire(player);
         player.cool = player.stat.cool;
-        if (mode === 'duel' || mode === 'ball') netSend({ t: 'fire', x: player.x, z: player.z, a: player.a, bs: player.stat.bspeed, trip: player.tripleT > 0 });
+        if (mode === 'duel' || mode === 'ball' || mode === 'coop') netSend({ t: 'fire', x: player.x, z: player.z, a: player.a, bs: player.stat.bspeed, trip: player.tripleT > 0 });
       }
       player.mesh.position.set(player.x, 0, player.z);
       player.mesh.rotation.y = player.a;
       if (playerTurret) { recoil = Math.max(0, recoil - dt * 0.8); playerTurret.position.z = turretBaseZ + recoil; }
     }
 
-    if (mode === 'solo' || mode === 'duel') updatePowerups(dt);
+    if (mode === 'solo' || mode === 'duel' || mode === 'coop') updatePowerups(dt);
+
+    if (mode === 'coop' && coop) updateCoop(dt);
 
     if (mode === 'solo') {
       for (const e of enemies) updateEnemy(e, dt);
@@ -1626,7 +1858,31 @@ function tick() {
           explode(b.mesh.position.x, 1.0, b.mesh.position.z, false); dead = true;
         }
       }
-      if (!dead && b.fromPlayer) {
+      if (!dead && mode === 'coop') {
+        if (b.playerShot) {
+          if (isAuthority) {
+            for (const e of enemies) {
+              if (e.alive && Math.hypot(b.mesh.position.x - e.x, b.mesh.position.z - e.z) < 1.5) {
+                e.alive = false; explode(e.x, 1.0, e.z, true); scene.remove(e.mesh);
+                netSend({ t: 'ekill', id: e.id });
+                score += 100; roundCoins += KILL_COINS; profile.kills++; addCoins(KILL_COINS); updateHUD();
+                dead = true; break;
+              }
+            }
+          }
+        } else if (isAuthority) {
+          if (player.alive && player.inv <= 0 && Math.hypot(b.mesh.position.x - player.x, b.mesh.position.z - player.z) < 1.5) {
+            coopHitPlayer(coop.you); dead = true;
+          } else {
+            for (const [pid, rm] of coop.remotes) {
+              if (rm.alive && rm.inv <= 0 && Math.hypot(b.mesh.position.x - rm.x, b.mesh.position.z - rm.z) < 1.5) {
+                coopHitPlayer(pid); dead = true; break;
+              }
+            }
+          }
+        }
+      }
+      if (!dead && mode !== 'coop' && b.fromPlayer) {
         if (mode === 'solo') {
           for (const e of enemies) {
             if (e.alive && Math.hypot(b.mesh.position.x - e.x, b.mesh.position.z - e.z) < 1.5) {
@@ -1638,7 +1894,7 @@ function tick() {
         } else if (mode === 'duel' && duel && duel.remoteAlive && Math.hypot(b.mesh.position.x - duel.x, b.mesh.position.z - duel.z) < 1.5) {
           explode(b.mesh.position.x, 1.0, b.mesh.position.z, false); dead = true;
         }
-      } else if (!dead && !b.fromPlayer && player.alive && player.inv <= 0 && mode !== 'ball') {
+      } else if (!dead && mode !== 'coop' && !b.fromPlayer && player.alive && player.inv <= 0 && mode !== 'ball') {
         if (Math.hypot(b.mesh.position.x - player.x, b.mesh.position.z - player.z) < 1.5) {
           dead = true;
           if (player.shieldT > 0) {

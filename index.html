@@ -50,6 +50,8 @@
               border-radius: 10px; padding: 12px 8px; outline: none; }
   #duelstatus { margin-top: 14px; font-size: 20px; color: #7dff9b; min-height: 28px; }
   #rematchstatus { margin-top: 14px; font-size: 19px; color: #7dff9b; min-height: 26px; }
+  #coopstatus { margin-top: 12px; font-size: 18px; color: #7dff9b; min-height: 26px; line-height: 1.5; }
+  #coopstatus .code { font-size: 30px; letter-spacing: 7px; color: #ffd76a; font-weight: bold; }
   #statsline { margin-top: 16px; font-size: 16px; color: #cfe6bf; letter-spacing: 1px; }
   .gear { font-size: 19px; background: rgba(0,0,0,.35); border: 2px solid rgba(255,255,255,.4);
           color: #fff; border-radius: 8px; width: 40px; height: 34px; cursor: pointer; pointer-events: auto; }
@@ -158,6 +160,7 @@
       <button class="mbtn" id="btn-single">TEK OYUNCU</button>
       <button class="mbtn alt" id="btn-duel">ARKADAŞLA DÜELLO</button>
       <button class="mbtn alt" id="btn-ball">1v1 TOP MAÇI</button>
+      <button class="mbtn alt" id="btn-coop">KOOPERATİF</button>
       <button class="mbtn gold" id="btn-garage">GARAJ</button>
     </div>
     <div id="statsline"></div>
@@ -186,6 +189,20 @@
     </div>
     <div id="duelstatus"></div>
     <button class="mbtn small" id="btn-back-duel">‹ GERİ</button>
+  </div>
+
+  <!-- kooperatif (2-4 kişi, lobi) -->
+  <div id="panel-coop" class="panel">
+    <div id="coopmapsrow"></div>
+    <button class="mbtn" id="btn-coop-create">ODA KUR</button>
+    <div class="or">— / —</div>
+    <div id="coopjoinrow">
+      <input id="coopcode" maxlength="4" placeholder="KOD" autocomplete="off">
+      <button class="mbtn" id="btn-coop-join">KATIL</button>
+    </div>
+    <div id="coopstatus"></div>
+    <button class="mbtn gold" id="btn-coop-start" style="display:none">BAŞLAT</button>
+    <button class="mbtn small" id="btn-back-coop">‹ GERİ</button>
   </div>
 
   <!-- tekrar oyna (maç sonu, aynı oda) -->

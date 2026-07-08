@@ -32,15 +32,22 @@ const server = http.createServer((req, res) => {
   });
 });
 
-// ---- düello odaları ----
+// ---- odalar (düello/top = 2 kişi otomatik başlar; kooperatif = 2-4 kişi, host başlatır) ----
 const wss = new WebSocket.Server({ server });
-const rooms = new Map(); // kod -> [ws, ws]
+const rooms = new Map(); // kod -> { list:[{ws,pid}], started, pidC, auto }
+const MAX_PLAYERS = 4;
 
 function newCode() {
   const chars = 'ABCDEFGHJKLMNPRSTUVYZ23456789';
   let c = '';
   for (let i = 0; i < 4; i++) c += chars[Math.floor(Math.random() * chars.length)];
   return rooms.has(c) ? newCode() : c;
+}
+function roomOf(ws) { return ws.room ? rooms.get(ws.room) : null; }
+function pids(room) { return room.list.map(e => e.pid); }
+function bcast(room, obj, exceptWs) {
+  const s = JSON.stringify(obj);
+  for (const e of room.list) if (e.ws !== exceptWs && e.ws.readyState === WebSocket.OPEN) e.ws.send(s);
 }
 
 wss.on('connection', ws => {
@@ -49,36 +56,44 @@ wss.on('connection', ws => {
     try { m = JSON.parse(raw); } catch { return; }
     if (m.t === 'create') {
       const code = newCode();
-      rooms.set(code, [ws]);
-      ws.room = code;
-      ws.send(JSON.stringify({ t: 'room', code }));
+      const room = { list: [], started: false, pidC: 0, auto: !(m.cap > 2) };
+      rooms.set(code, room);
+      const pid = ++room.pidC;
+      room.list.push({ ws, pid }); ws.room = code; ws.pid = pid;
+      ws.send(JSON.stringify({ t: 'room', code, you: pid }));
+      if (!room.auto) bcast(room, { t: 'lobby', count: room.list.length, players: pids(room) });
     } else if (m.t === 'join') {
       const code = String(m.code || '').trim().toUpperCase();
-      const r = rooms.get(code);
-      if (!r || r.length >= 2 || r[0].readyState !== WebSocket.OPEN) {
-        ws.send(JSON.stringify({ t: 'err' }));
-        return;
+      const room = rooms.get(code);
+      if (!room || room.started || room.list.length >= MAX_PLAYERS) { ws.send(JSON.stringify({ t: 'err' })); return; }
+      const pid = ++room.pidC;
+      room.list.push({ ws, pid }); ws.room = code; ws.pid = pid;
+      if (room.auto && room.list.length === 2) {
+        room.started = true;
+        for (const e of room.list) e.ws.send(JSON.stringify({ t: 'start', you: e.pid }));
+      } else {
+        bcast(room, { t: 'lobby', count: room.list.length, players: pids(room) });
       }
-      r.push(ws);
-      ws.room = code;
-      r[0].send(JSON.stringify({ t: 'start', you: 1 }));
-      r[1].send(JSON.stringify({ t: 'start', you: 2 }));
-    } else if (ws.room) {
-      const r = rooms.get(ws.room);
-      if (!r) return;
-      for (const c of r) {
-        if (c !== ws && c.readyState === WebSocket.OPEN) c.send(JSON.stringify(m));
-      }
+    } else if (m.t === 'startgame') {
+      const room = roomOf(ws);
+      if (!room || room.started || room.list.length < 2 || room.list[0].ws !== ws) return;
+      room.started = true;
+      const map = m.map || 0, plist = pids(room);
+      for (const e of room.list) e.ws.send(JSON.stringify({ t: 'start', you: e.pid, players: plist, coop: true, map }));
+    } else {
+      const room = roomOf(ws);
+      if (!room) return;
+      m.from = ws.pid;
+      bcast(room, m, ws);
     }
   });
   ws.on('close', () => {
-    if (!ws.room) return;
-    const r = rooms.get(ws.room);
-    if (!r) return;
-    for (const c of r) {
-      if (c !== ws && c.readyState === WebSocket.OPEN) c.send(JSON.stringify({ t: 'peerleft' }));
-    }
-    rooms.delete(ws.room);
+    const room = roomOf(ws);
+    if (!room) return;
+    room.list = room.list.filter(e => e.ws !== ws);
+    if (room.list.length === 0) { rooms.delete(ws.room); return; }
+    if (room.started) bcast(room, { t: 'peerleft', who: ws.pid });
+    else bcast(room, { t: 'lobby', count: room.list.length, players: pids(room) });
   });
 });
 
