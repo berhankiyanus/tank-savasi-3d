@@ -480,7 +480,187 @@ let openCells = [];
 let wallInst = null;
 const wallGeo = new THREE.BoxGeometry(CELL, WALL_H, CELL);
 
+// ---------------------------------------------------------------- yıkılabilir siper + tema tehlikeleri
+// deterministik yerleşim: tüm kooperatif istemcileri (ve tekrar oynanışlar) aynı düzeni kursun
+function makeRng(seed) {
+  let s = seed >>> 0;
+  return () => {
+    s = (s + 0x6D2B79F5) | 0;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+// varil (patlayan siper) görselleri
+const barrelGeo = new THREE.CylinderGeometry(0.82, 0.9, 2.0, 14);
+const barrelBandGeo = new THREE.TorusGeometry(0.9, 0.075, 8, 18);
+const barrelMat = new THREE.MeshStandardMaterial({ color: 0xc2401e, roughness: 0.42, metalness: 0.45, emissive: 0x3a0d00, emissiveIntensity: 0.4 });
+const barrelBandMat = new THREE.MeshStandardMaterial({ color: 0x2c2c2c, roughness: 0.55, metalness: 0.55 });
+const barrelCapMat = new THREE.MeshStandardMaterial({ color: 0xffcf3a, roughness: 0.5, metalness: 0.3, emissive: 0x3a2a00, emissiveIntensity: 0.4 });
+// tehlike zemin görselleri
+const hazDiscGeo = new THREE.CircleGeometry(1, 30);
+const hazRingGeo = new THREE.RingGeometry(0.72, 1.02, 30);
+const teleRingGeo = new THREE.TorusGeometry(1.0, 0.13, 10, 26);
+const lavaHazMat = () => new THREE.MeshBasicMaterial({ color: 0xff6a1e, transparent: true, opacity: 0.92, toneMapped: false, fog: false });
+const iceHazMat = new THREE.MeshStandardMaterial({ color: 0xcdeeff, transparent: true, opacity: 0.6, roughness: 0.04, metalness: 0.1, emissive: 0x2a6a92, emissiveIntensity: 0.5 });
+const jumpDiscMat = new THREE.MeshBasicMaterial({ color: 0x2ad0ff, transparent: true, opacity: 0.75, toneMapped: false, fog: false });
+const jumpRingMat = new THREE.MeshBasicMaterial({ color: 0x7affff, transparent: true, opacity: 0.9, side: THREE.DoubleSide, toneMapped: false, fog: false });
+const teleHazMat = () => new THREE.MeshBasicMaterial({ color: 0xb46aff, toneMapped: false, fog: false });
+
+const covers = [];   // {mesh, x, z, r, hp, id}
+const hazards = [];  // {type, x, z, r, mesh, ...}
+function clearCovers() { for (const c of covers) scene.remove(c.mesh); covers.length = 0; }
+function clearHazards() { for (const h of hazards) if (h.mesh) scene.remove(h.mesh); hazards.length = 0; }
+
+// tehlike sayıları (tema başına)
+const HAZARD_SPEC = {
+  default: { jump: 2, barrel: 3 },
+  stadium: { jump: 3, barrel: 2 },
+  desert: { barrel: 4 },
+  snow: { ice: 4, barrel: 2 },
+  night: { barrel: 3, jump: 1 },
+  lava: { lava: 4, barrel: 2 },
+  space: { teleport: 4, barrel: 2 },
+};
+
+function addCover(cell, id) {
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(barrelGeo, barrelMat); body.castShadow = true; g.add(body);
+  const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.82, 0.82, 0.14, 14), barrelCapMat); cap.position.y = 1.02; g.add(cap);
+  const b1 = new THREE.Mesh(barrelBandGeo, barrelBandMat); b1.rotation.x = Math.PI / 2; b1.position.y = 0.55; g.add(b1);
+  const b2 = new THREE.Mesh(barrelBandGeo, barrelBandMat); b2.rotation.x = Math.PI / 2; b2.position.y = -0.55; g.add(b2);
+  g.position.set(cell.x, 1.0, cell.z);
+  scene.add(g);
+  covers.push({ mesh: g, x: cell.x, z: cell.z, r: 0.95, hp: 2, id });
+}
+function addLavaPool(cell) {
+  const m = new THREE.Mesh(hazDiscGeo, lavaHazMat()); m.rotation.x = -Math.PI / 2; m.position.set(cell.x, 0.06, cell.z); m.scale.setScalar(1.8);
+  scene.add(m);
+  const h = { type: 'lava', x: cell.x, z: cell.z, r: 1.9, mesh: m }; hazards.push(h); return h;
+}
+function addIcePatch(cell) {
+  const m = new THREE.Mesh(hazDiscGeo, iceHazMat); m.rotation.x = -Math.PI / 2; m.position.set(cell.x, 0.05, cell.z); m.scale.setScalar(2.0);
+  scene.add(m);
+  const h = { type: 'ice', x: cell.x, z: cell.z, r: 2.0, mesh: m }; hazards.push(h); return h;
+}
+function addJumpPad(cell) {
+  const g = new THREE.Group();
+  const d = new THREE.Mesh(hazDiscGeo, jumpDiscMat); d.rotation.x = -Math.PI / 2; d.scale.setScalar(1.2); g.add(d);
+  const r = new THREE.Mesh(hazRingGeo, jumpRingMat); r.rotation.x = -Math.PI / 2; r.position.y = 0.02; r.scale.setScalar(1.3); g.add(r);
+  g.position.set(cell.x, 0.05, cell.z); scene.add(g);
+  const h = { type: 'jump', x: cell.x, z: cell.z, r: 1.3, mesh: g, cool: 0 }; hazards.push(h); return h;
+}
+function addTeleport(cell) {
+  const m = new THREE.Mesh(teleRingGeo, teleHazMat()); m.rotation.x = -Math.PI / 2; m.position.set(cell.x, 0.55, cell.z);
+  scene.add(m);
+  const h = { type: 'teleport', x: cell.x, z: cell.z, r: 1.1, mesh: m, link: null }; hazards.push(h); return h;
+}
+function buildEnvironment(mapIdx) {
+  clearCovers(); clearHazards();
+  const theme = MAPS[mapIdx].theme || 'default';
+  const spec = HAZARD_SPEC[theme] || HAZARD_SPEC.default;
+  const rng = makeRng((mapIdx + 1) * 0x9e3779b1);
+  // kullanılabilir hücreler: kenar ve köşe (doğuş) hücrelerinden uzak
+  const pool = openCells.filter(c => c.r > 1 && c.r < ROWS - 2 && c.c > 1 && c.c < COLS - 2);
+  for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); const t = pool[i]; pool[i] = pool[j]; pool[j] = t; }
+  let pi = 0;
+  const take = () => {
+    const c = pool[pi++]; if (!c) return null;
+    const oi = openCells.indexOf(c); if (oi >= 0) openCells.splice(oi, 1); // doğuş bu hücrede olmasın
+    return c;
+  };
+  const barrels = (mode === 'solo' || mode === 'coop') ? (spec.barrel || 0) : 0;
+  for (let i = 0; i < barrels; i++) { const c = take(); if (c) addCover(c, i); }
+  for (let i = 0; i < (spec.jump || 0); i++) { const c = take(); if (c) addJumpPad(c); }
+  for (let i = 0; i < (spec.lava || 0); i++) { const c = take(); if (c) addLavaPool(c); }
+  for (let i = 0; i < (spec.ice || 0); i++) { const c = take(); if (c) addIcePatch(c); }
+  const pads = [];
+  for (let i = 0; i < (spec.teleport || 0); i++) { const c = take(); if (c) pads.push(addTeleport(c)); }
+  for (let i = 0; i + 1 < pads.length; i += 2) { pads[i].link = pads[i + 1]; pads[i + 1].link = pads[i]; }
+}
+// varil hasarı / yıkımı
+function damageCover(cv) { cv.hp--; if (cv.hp <= 0) destroyCover(cv); }
+function destroyCover(cv, fromNet) {
+  const i = covers.indexOf(cv); if (i < 0) return;
+  covers.splice(i, 1); scene.remove(cv.mesh);
+  explode(cv.x, 1.0, cv.z, true);
+  const R = 4.2;
+  if (mode === 'solo' || (mode === 'coop' && isAuthority)) {
+    for (const e of enemies) if (e.alive && Math.hypot(e.x - cv.x, e.z - cv.z) < R) damageEnemy(e, 2);
+  }
+  barrelHurtLocalPlayer(cv, R);
+  if (mode === 'coop' && isAuthority && !fromNet) netSend({ t: 'barrel', id: cv.id });
+}
+function damageEnemy(e, dmg) {
+  e.hp -= dmg;
+  if (e.hp <= 0) {
+    e.alive = false; explode(e.x, 1.0, e.z, true); scene.remove(e.mesh);
+    popFloater(e.x, 2.2, e.z, '+' + e.score, e.type === 'boss' ? '#ff7a3a' : '#ffe86a');
+    if (mode === 'coop') netSend({ t: 'ekill', id: e.id });
+    score += e.score; roundCoins += e.coins; profile.kills++; addCoins(e.coins); updateHUD();
+  } else { e.hitT = 0.14; }
+}
+function barrelHurtLocalPlayer(cv, R) {
+  if (!player.alive || player.inv > 0) return;
+  if (Math.hypot(player.x - cv.x, player.z - cv.z) > R) return;
+  if (player.shieldT > 0) { player.inv = 0.3; return; }
+  if (mode === 'coop') { coopHitPlayer(coop.you); return; }
+  if (mode !== 'solo') return;
+  player.inv = 1.0; player.health--; renderHealth(); hitFlash();
+  if (player.health <= 0) { player.alive = false; player.mesh.visible = false; explode(player.x, 1.2, player.z, true); setTimeout(gameOver, 1600); }
+}
+// tehlike güncellemesi (yerel oyuncuya etkir)
+let lavaBurnT = 0.35, teleCool = 0;
+function hazardAt(x, z, type) {
+  for (const h of hazards) if (h.type === type && Math.hypot(x - h.x, z - h.z) < h.r) return h;
+  return null;
+}
+function updateHazards(dt) {
+  if (!hazards.length) return;
+  const pulse = 0.5 + 0.5 * Math.sin(clock.elapsedTime * 4);
+  for (const h of hazards) {
+    if (h.type === 'lava') h.mesh.material.color.setRGB(1, 0.32 + 0.26 * pulse, 0.05);
+    else if (h.type === 'jump') { h.mesh.rotation.y += dt * 1.6; h.mesh.scale.setScalar(1 + 0.06 * pulse); if (h.cool > 0) h.cool -= dt; }
+    else if (h.type === 'teleport') { h.mesh.rotation.z += dt * 2.4; h.mesh.material.color.setRGB(0.62 + 0.18 * pulse, 0.34, 1); }
+  }
+  if (teleCool > 0) teleCool -= dt;
+  if (!player.alive) return;
+  // lav yanığı
+  let onLava = false;
+  for (const h of hazards) if (h.type === 'lava' && Math.hypot(player.x - h.x, player.z - h.z) < h.r) { onLava = true; break; }
+  if (onLava) {
+    emberT -= dt; if (emberT <= 0) { emberT = 0.09; spawnPuff(player.x + (Math.random() - 0.5), 0.6, player.z + (Math.random() - 0.5), 0xff6a1e, 0.7, 1.4, 0.5); }
+    lavaBurnT -= dt; if (lavaBurnT <= 0) { lavaBurnT = 1.0; lavaDamagePlayer(); }
+  } else lavaBurnT = 0.35;
+  // zıplama pedi
+  for (const h of hazards) if (h.type === 'jump' && h.cool <= 0 && Math.hypot(player.x - h.x, player.z - h.z) < h.r) { launchPlayer(h); break; }
+  // ışınlanma
+  if (teleCool <= 0) for (const h of hazards) if (h.type === 'teleport' && h.link && Math.hypot(player.x - h.x, player.z - h.z) < h.r) { doTeleport(h); break; }
+}
+let emberT = 0;
+function lavaDamagePlayer() {
+  if (player.inv > 0 || player.shieldT > 0) return;
+  if (mode === 'coop') { coopHitPlayer(coop.you); return; }
+  player.inv = 0.6; player.health--; renderHealth(); hitFlash();
+  if (player.health <= 0) { player.alive = false; player.mesh.visible = false; explode(player.x, 1.2, player.z, true); setTimeout(gameOver, 1600); }
+}
+function launchPlayer(h) {
+  h.cool = 0.85;
+  player.vx = fwdX(player.a) * 24; player.vz = fwdZ(player.a) * 24;
+  player.slideT = 0.55; player.hopT = 0.5;
+  sfxPower();
+}
+function doTeleport(h) {
+  teleCool = 1.3;
+  explode(player.x, 1.0, player.z, false);
+  player.x = h.link.x; player.z = h.link.z;
+  player.vx = 0; player.vz = 0; player.slideT = 0;
+  explode(player.x, 1.0, player.z, false);
+  sfxPower();
+}
+
 function buildArena(mapIdx) {
+  clearCovers(); clearHazards();
   const wallMaterial = applyTheme(MAPS[mapIdx].theme);
   MAP = MAPS[mapIdx].grid;
   ROWS = MAP.length; COLS = MAP[0].length;
@@ -539,6 +719,15 @@ function circleVsWalls(pos, radius) {
       const d = Math.sqrt(d2) || 0.001;
       pos.x += (dx / d) * (radius - d);
       pos.z += (dz / d) * (radius - d);
+    }
+  }
+  for (const cv of covers) {
+    const dx = pos.x - cv.x, dz = pos.z - cv.z, rr = radius + cv.r;
+    const d2 = dx * dx + dz * dz;
+    if (d2 < rr * rr) {
+      const d = Math.sqrt(d2) || 0.001;
+      pos.x += (dx / d) * (rr - d);
+      pos.z += (dz / d) * (rr - d);
     }
   }
 }
@@ -881,6 +1070,7 @@ const player = {
   health: 5, maxHealth: 5, cool: 0, alive: true, speed: 0, inv: 0,
   stat: tankById(profile.selected),
   speedT: 0, tripleT: 0, shieldT: 0,
+  vx: 0, vz: 0, slideT: 0, hopT: 0,
 };
 let playerTurret = null, turretBaseZ = 0;
 
@@ -1154,6 +1344,7 @@ function drawMinimap() {
   c.fillStyle = 'rgba(0,0,0,0.35)'; c.fillRect(0, 0, S, S);
   c.fillStyle = 'rgba(190,160,120,0.6)';
   for (const w of walls) c.fillRect(px(w.minX), pz(w.minZ), Math.max(1, px(w.maxX) - px(w.minX)), Math.max(1, pz(w.maxZ) - pz(w.minZ)));
+  if (covers.length) { c.fillStyle = '#e0742a'; for (const cv of covers) dot(cv.x, cv.z, 2); }
   c.fillStyle = '#ff4030';
   if (enemies.length) { for (const e of enemies) if (e.alive) dot(e.x, e.z, e.type === 'boss' ? 4.5 : 2.5); }
   else for (const m of coopEnemies.values()) dot(m.position.x, m.position.z, 2.5);
@@ -1422,6 +1613,7 @@ function startSolo(mapIdx) {
   profile.games++; saveProfile();
   closeNet();
   buildArena(mapIdx);
+  buildEnvironment(mapIdx);
   msgEl.classList.add('hidden');
   $('topbar').style.visibility = 'visible';
   $('healthwrap').style.visibility = 'visible';
@@ -1430,6 +1622,7 @@ function startSolo(mapIdx) {
   setPlayerTank();
   player.health = player.maxHealth; player.alive = true; player.inv = 0;
   player.speedT = 0; player.tripleT = 0; player.shieldT = 0;
+  player.vx = 0; player.vz = 0; player.slideT = 0; player.hopT = 0;
   shieldBubble.visible = false;
   const c = randOpenCell();
   player.x = c.x; player.z = c.z; player.a = 0;
@@ -1836,6 +2029,7 @@ function placeCoopSpawns() {
   const posOf = pid => { const [c, r] = COOP_SPAWNS[(pid - 1) % 4]; return { x: cellX(c), z: cellZ(r) }; };
   const me = posOf(coop.you);
   player.x = me.x; player.z = me.z; player.a = 0; player.inv = 1.5;
+  player.vx = 0; player.vz = 0; player.slideT = 0; player.hopT = 0;
   player.mesh.position.set(player.x, 0, player.z); player.mesh.visible = true;
   for (const [pid, rm] of coop.remotes) {
     const p = posOf(pid);
@@ -1848,6 +2042,7 @@ function beginCoop(you, players, mapIdx) {
   const host = you === players[0];
   isAuthority = host;
   buildArena(mapIdx);
+  buildEnvironment(mapIdx);
   msgEl.classList.add('hidden');
   $('topbar').style.visibility = 'visible';
   $('healthwrap').style.visibility = 'visible';
@@ -1975,6 +2170,7 @@ function handleCoopNet(m) {
   } else if (m.t === 'pu_spawn') { addPowerup(m.type, m.x, m.z, m.id); }
   else if (m.t === 'pu_take') { const i = powerups.findIndex(p => p.id === m.id); if (i >= 0) { scene.remove(powerups[i].mesh); powerups.splice(i, 1); } }
   else if (m.t === 'down') { killFeed(`☠️ <b>${m.name || '?'}</b>`); updateCoopRoster(); }
+  else if (m.t === 'barrel') { const cv = covers.find(c => c.id === m.id); if (cv) destroyCover(cv, true); }
   else if (m.t === 'coopover') { coopGameOver(); }
   else if (m.t === 'peerleft') { coopPeerLeft(m.who); }
 }
@@ -2227,8 +2423,17 @@ function tick() {
       turn = Math.max(-1, Math.min(1, turn)); move = Math.max(-1, Math.min(1, move));
       player.a += turn * player.stat.turn * dt;
       player.speed = move * player.stat.speed * (player.speedT > 0 ? 1.6 : 1);
-      player.x += fwdX(player.a) * player.speed * dt;
-      player.z += fwdZ(player.a) * player.speed * dt;
+      const dvx = fwdX(player.a) * player.speed, dvz = fwdZ(player.a) * player.speed;
+      const onIce = hazards.length && hazardAt(player.x, player.z, 'ice');
+      if (onIce || player.slideT > 0) {
+        const k = 1 - Math.exp(-(onIce ? 2.2 : 3.6) * dt);
+        player.vx += (dvx - player.vx) * k;
+        player.vz += (dvz - player.vz) * k;
+      } else { player.vx = dvx; player.vz = dvz; }
+      if (player.slideT > 0) player.slideT -= dt;
+      if (player.hopT > 0) player.hopT -= dt;
+      player.x += player.vx * dt;
+      player.z += player.vz * dt;
       const pos = { x: player.x, z: player.z };
       circleVsWalls(pos, TANK_R);
       player.x = pos.x; player.z = pos.z;
@@ -2254,12 +2459,14 @@ function tick() {
       if (Math.abs(player.speed) > 3) { dustT -= dt; if (dustT <= 0) { dustT = 0.06; spawnDust(player.x - fwdX(player.a) * 1.3, player.z - fwdZ(player.a) * 1.3); } }
       if (player.maxHealth > 2 && player.health <= 2) { smokeT -= dt; if (smokeT <= 0) { smokeT = 0.16; spawnSmoke(player.x, player.z); } }
       const bob = Math.abs(Math.sin(clock.elapsedTime * 16)) * 0.05 * Math.min(1, Math.abs(player.speed) / 6);
-      player.mesh.position.set(player.x, bob, player.z);
+      const hop = player.hopT > 0 ? Math.sin((1 - player.hopT / 0.5) * Math.PI) * 0.8 : 0;
+      player.mesh.position.set(player.x, bob + hop, player.z);
       player.mesh.rotation.y = player.a;
       if (playerTurret) { recoil = Math.max(0, recoil - dt * 0.8); playerTurret.position.z = turretBaseZ + recoil; }
     }
 
     if (mode === 'solo' || mode === 'duel' || mode === 'coop') updatePowerups(dt);
+    updateHazards(dt);
 
     if (mode === 'coop' && coop) updateCoop(dt);
 
@@ -2300,6 +2507,17 @@ function tick() {
         } else { explode(b.mesh.position.x, 1.0, b.mesh.position.z, false); dead = true; }
       } else { b.mesh.position.x = nx; b.mesh.position.z = nz; }
       if (!dead) b.mesh.rotation.y = Math.atan2(-b.vx, -b.vz);
+
+      if (!dead && covers.length) {
+        for (const cv of covers) {
+          if (Math.hypot(b.mesh.position.x - cv.x, b.mesh.position.z - cv.z) < cv.r + 0.25) {
+            explode(b.mesh.position.x, 1.0, b.mesh.position.z, false);
+            dead = true;
+            if (mode === 'solo' || (mode === 'coop' && isAuthority)) damageCover(cv);
+            break;
+          }
+        }
+      }
 
       if (!dead && mode === 'ball' && ball) {
         const dbx = b.mesh.position.x - ball.x, dbz = b.mesh.position.z - ball.z;
