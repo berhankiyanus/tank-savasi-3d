@@ -5,12 +5,25 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#3f7d2f">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="assets/icon-192.png">
 <title>TANK SAVAŞI 3D</title>
 <style>
   html, body { margin: 0; padding: 0; overflow: hidden; background: #000; height: 100%;
                touch-action: none; overscroll-behavior: none;
                -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
   #game { position: fixed; inset: 0; }
+  #loading { position: fixed; inset: 0; z-index: 100; display: flex; flex-direction: column;
+             align-items: center; justify-content: center; gap: 22px;
+             background: radial-gradient(circle at 50% 40%, #1b2a14, #070a05); }
+  #loading.gone { opacity: 0; pointer-events: none; transition: opacity .5s; }
+  .ldtitle { font-family: "Courier New", monospace; font-weight: bold; letter-spacing: 5px; font-size: 34px;
+             color: #ffd76a; text-shadow: 0 0 26px rgba(255,160,40,.7), 0 4px 0 #7a4a00; }
+  .ldspin { width: 52px; height: 52px; border: 5px solid rgba(125,255,155,.25); border-top-color: #7dff9b;
+            border-radius: 50%; animation: ldsp 0.9s linear infinite; }
+  @keyframes ldsp { to { transform: rotate(360deg); } }
+  .ldtext { font-family: "Courier New", monospace; color: #cfe6bf; letter-spacing: 2px; font-size: 15px; }
   .hud { position: fixed; font-family: "Courier New", monospace; color: #fff; z-index: 10;
          text-shadow: 0 2px 6px rgba(0,0,0,.8); user-select: none; pointer-events: none; }
   #topbar { top: 14px; left: 0; right: 0; display: flex; justify-content: space-between;
@@ -161,6 +174,12 @@
 <body>
 <canvas id="game"></canvas>
 
+<div id="loading">
+  <div class="ldtitle">TANK SAVAŞI 3D</div>
+  <div class="ldspin"></div>
+  <div class="ldtext">Yükleniyor...</div>
+</div>
+
 <div id="topbar" class="hud">
   <div id="healthwrap"><span id="hlabel">SAĞLIK</span>&nbsp;<span id="health"></span></div>
   <div id="wave">DALGA 1</div>
@@ -299,6 +318,9 @@
   setTimeout(function () {
     if (!window.__gameLoaded) window.__showErr('Oyun yüklenemedi — tarayıcı çok eski olabilir / Game failed to load.');
   }, 15000);
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });
+  }
 </script>
 <script type="module" src="main.js"></script>
 </body>

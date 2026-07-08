@@ -2445,3 +2445,4 @@ function tick() {
 }
 tick();
 window.__gameLoaded = true;
+{ const ls = document.getElementById('loading'); if (ls) { ls.classList.add('gone'); setTimeout(() => ls.remove(), 600); } }
