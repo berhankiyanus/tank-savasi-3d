@@ -1718,6 +1718,7 @@ function handleNet(m) {
   }
   else if (m.t === 'pu_spawn') { addPowerup(m.type, m.x, m.z, m.id); }
   else if (m.t === 'pu_take') { const i = powerups.findIndex(p => p.id === m.id); if (i >= 0) { scene.remove(powerups[i].mesh); powerups.splice(i, 1); } }
+  else if (m.t === 'thit') { duelReceiveHit(); }
   else if (m.t === 'die') {
     duel.remoteAlive = false; duel.remoteMesh.visible = false;
     explode(duel.tx, 1.2, duel.tz, true);
@@ -1781,7 +1782,10 @@ function beginDuel(you) {
   netSend({ t: 'skin', color: skinCol, scale: st.scale, name: profile.name });
   audio(); startEngine();
 }
-function duelPlayerDie() {
+// rakip "vuruldun" (thit) dediğinde: ölümü BEN onaylarım (kalkan/dokunulmazlık yerel otoriteli)
+function duelReceiveHit() {
+  if (!duel || !player.alive || player.inv > 0) return;
+  if (player.shieldT > 0) { player.inv = 0.3; explode(player.x, 1.0, player.z, false); sfxBounce(); return; }
   player.alive = false; player.mesh.visible = false;
   explode(player.x, 1.2, player.z, true); hitFlash();
   duel.myDeaths++; netSend({ t: 'die' }); updateHUD();
@@ -1790,7 +1794,7 @@ function duelPlayerDie() {
   setTimeout(() => {
     if (!duel || duel.over || mode !== 'duel') return;
     const cell = randOpenCell(duel.tx, duel.tz, 16);
-    player.x = cell.x; player.z = cell.z;
+    player.x = cell.x; player.z = cell.z; player.vx = 0; player.vz = 0;
     player.a = headingTo(cell.x, cell.z, duel.tx, duel.tz);
     player.alive = true; player.inv = 1.5; player.mesh.visible = true;
   }, 2000);
@@ -2296,23 +2300,32 @@ function teamNameOf(pid) {
   const rm = team.remotes.get(pid);
   return rm ? (rm.name || ('Oyuncu' + pid)) : '?';
 }
+// bir ölüm işlenir (skoru herkeste bir kez sayar; kurban lokalde, diğerleri 'tdie' mesajında)
 function onTeamKill(byPid, diedPid) {
   const kt = team.teamOf[byPid];
   if (kt != null) team.scores[kt]++;
-  const rm = team.remotes.get(diedPid);
-  if (rm && rm.alive) { rm.alive = false; rm.mesh.visible = false; explode(rm.x, 1.2, rm.z, true); }
+  if (diedPid === team.you) {
+    // ben öldüm (rakip atıcı bildirdi, ben onayladım)
+    if (player.alive) {
+      player.alive = false; player.mesh.visible = false; explode(player.x, 1.2, player.z, true); hitFlash();
+      setTimeout(() => { if (team && !team.over && mode === 'team') placeTeamSelf(2.0); }, 2000);
+    }
+  } else {
+    const rm = team.remotes.get(diedPid);
+    if (rm && rm.alive) { rm.alive = false; rm.mesh.visible = false; explode(rm.x, 1.2, rm.z, true); }
+  }
   const dt = team.teamOf[diedPid];
   const col = dt != null ? TEAM_COLOR_HEX[dt] : '#fff';
   killFeed(`<b>${teamNameOf(byPid)}</b> ⚔️ <span style="color:${col}">${teamNameOf(diedPid)}</span>`);
   updateHUD(); updateTeamRoster();
   if (!team.over && kt != null && team.scores[kt] >= TEAM_TARGET) { team.over = true; teamEnd(kt === team.mine); }
 }
-function teamPlayerDie(byPid) {
-  player.alive = false; player.mesh.visible = false;
-  explode(player.x, 1.2, player.z, true); hitFlash();
+// rakip "vuruldun" (thit) dediğinde: ölümü BEN onaylarım (kalkan/dokunulmazlık yerel otoriteli)
+function teamReceiveHit(byPid) {
+  if (!team || !player.alive || player.inv > 0) return;
+  if (player.shieldT > 0) { player.inv = 0.3; explode(player.x, 1.0, player.z, false); sfxBounce(); return; }
   netSend({ t: 'tdie', me: team.you, by: byPid });
   onTeamKill(byPid, team.you);
-  setTimeout(() => { if (team && !team.over && mode === 'team') placeTeamSelf(2.0); }, 2000);
 }
 function teamEnd(won) {
   if (won) { profile.wins++; saveProfile(); }
@@ -2357,7 +2370,8 @@ function handleTeamNet(m) {
     const o = { x: m.x, z: m.z, a: m.a, bspeed: m.bs, team: team.teamOf[m.from], pid: m.from };
     if (m.trip) { fire(o, -0.17, true); fire(o, 0, true); fire(o, 0.17, true); }
     else fire(o, 0, true);
-  } else if (m.t === 'tdie') { onTeamKill(m.by, m.me); }
+  } else if (m.t === 'thit') { if (m.target === team.you) teamReceiveHit(m.by); }
+  else if (m.t === 'tdie') { onTeamKill(m.by, m.me); }
   else if (m.t === 'pu_spawn') { addPowerup(m.type, m.x, m.z, m.id); }
   else if (m.t === 'pu_take') { const i = powerups.findIndex(p => p.id === m.id); if (i >= 0) { scene.remove(powerups[i].mesh); powerups.splice(i, 1); } }
   else if (m.t === 'peerleft') { teamPeerLeft(); }
@@ -2727,18 +2741,16 @@ function tick() {
           }
         }
       }
-      if (!dead && mode === 'team' && team) {
+      if (!dead && mode === 'team' && team && b.owner === team.you) {
+        // ATICI OTORİTELİ: sadece KENDİ mermim, gördüğüm rakip konumuna göre isabet tespit eder.
+        // Kurbana "vuruldun" (thit) yollarım; o kalkan/dokunulmazlık kontrolüyle ölümü onaylar.
         const bx = b.mesh.position.x, bz = b.mesh.position.z;
-        // düşman takımın mermisi bana → öl (kendi ölümüm otoriteli)
-        if (b.team != null && b.team !== team.mine && player.alive && player.inv <= 0 &&
-            Math.hypot(bx - player.x, bz - player.z) < 1.75) {
-          dead = true;
-          if (player.shieldT > 0) { player.inv = 0.3; explode(bx, 1.0, bz, false); sfxBounce(); }
-          else teamPlayerDie(b.owner);
-        }
-        // uzak rakip tanklara görsel isabet (ölüm onların cihazında karar verilir)
-        if (!dead) for (const rm of team.remotes.values()) {
-          if (rm.alive && rm.team !== b.team && Math.hypot(bx - rm.x, bz - rm.z) < 1.75) { explode(bx, 1.0, bz, false); dead = true; break; }
+        for (const [pid, rm] of team.remotes) {
+          if (rm.alive && rm.team !== team.mine && Math.hypot(bx - rm.x, bz - rm.z) < 1.9) {
+            explode(bx, 1.0, bz, false); dead = true;
+            netSend({ t: 'thit', target: pid, by: team.you });
+            break;
+          }
         }
       }
       if (!dead && mode !== 'coop' && mode !== 'team' && b.fromPlayer) {
@@ -2755,18 +2767,19 @@ function tick() {
               dead = true; break;
             }
           }
-        } else if (mode === 'duel' && duel && duel.remoteAlive && Math.hypot(b.mesh.position.x - duel.x, b.mesh.position.z - duel.z) < 1.75) {
+        } else if (mode === 'duel' && duel && duel.remoteAlive && Math.hypot(b.mesh.position.x - duel.x, b.mesh.position.z - duel.z) < 1.9) {
+          // ATICI OTORİTELİ: gördüğüm rakip konumuna isabet → "vuruldun" (thit) yolla; ölümü o onaylar
           explode(b.mesh.position.x, 1.0, b.mesh.position.z, false); dead = true;
+          netSend({ t: 'thit' });
         }
-      } else if (!dead && mode !== 'coop' && mode !== 'team' && !b.fromPlayer && player.alive && player.inv <= 0 && mode !== 'ball') {
-        if (Math.hypot(b.mesh.position.x - player.x, b.mesh.position.z - player.z) < (mode === 'duel' ? 1.75 : 1.5)) {
+      } else if (!dead && mode === 'solo' && !b.fromPlayer && player.alive && player.inv <= 0) {
+        if (Math.hypot(b.mesh.position.x - player.x, b.mesh.position.z - player.z) < 1.5) {
           dead = true;
           if (player.shieldT > 0) {
             player.inv = 0.3;
             explode(b.mesh.position.x, 1.0, b.mesh.position.z, false);
             sfxBounce();
           }
-          else if (mode === 'duel') duelPlayerDie();
           else {
             player.inv = 1.0; player.health--; renderHealth(); hitFlash();
             explode(b.mesh.position.x, 1.0, b.mesh.position.z, false);
