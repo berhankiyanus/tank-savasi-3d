@@ -36,7 +36,7 @@ const L = {
     peerLeft: 'Rakip oyundan ayrıldı',
     chooseMap: 'HARİTA SEÇ', garageTitle: 'GARAJ — Tank Al & Değiştir',
     buy: 'SATIN AL', owned: 'SEÇ', selected: '✓ SEÇİLİ', locked: w => `🔒 Dalga ${w}`,
-    accTab: 'AKSESUAR', accEquip: 'TAK', accRemove: '✓ ÇIKAR', accNone: 'Aksesuar yok',
+    accTab: 'AKSESUAR', accEquip: 'TAK', accRemove: '✓ ÇIKAR', accNone: 'Aksesuar yok', shopTitle: 'ELMAS DÜKKÂNI',
     noMoney: 'Yetersiz 🪙!', sHealth: 'Can', sSpeed: 'Hız', sFire: 'Ateş',
     reward: '🪙', bestWave: w => `En iyi: Dalga ${w}`, maxLevel: 'MAKS',
     ballBtn: '1v1 TOP MAÇI', ballSub: t => `Topu ateşle karşı base'e sok! İlk ${t} gol kazanır.`,
@@ -88,7 +88,7 @@ const L = {
     peerLeft: 'Your rival left the game',
     chooseMap: 'CHOOSE MAP', garageTitle: 'GARAGE — Buy & Switch Tanks',
     buy: 'BUY', owned: 'SELECT', selected: '✓ SELECTED', locked: w => `🔒 Wave ${w}`,
-    accTab: 'ACCESSORY', accEquip: 'EQUIP', accRemove: '✓ REMOVE', accNone: 'No accessory',
+    accTab: 'ACCESSORY', accEquip: 'EQUIP', accRemove: '✓ REMOVE', accNone: 'No accessory', shopTitle: 'GEM SHOP',
     noMoney: 'Not enough 🪙!', sHealth: 'HP', sSpeed: 'Speed', sFire: 'Fire',
     reward: '🪙', bestWave: w => `Best: Wave ${w}`, maxLevel: 'MAX',
     ballBtn: '1v1 BALL MATCH', ballSub: t => `Shoot the ball into the rival base! First to ${t} goals wins.`,
@@ -178,8 +178,18 @@ const Platform = {
   },
   // maç aralarında interstitial (asla maç İÇİNDE değil). Web: no-op. Native: AdMob interstitial (TODO).
   interstitial() { /* native TODO: AdMob interstitial */ },
-  // IAP satın alma → Promise<bool>. Native: StoreKit/Play Billing (TODO). Web: yok.
-  purchase(sku) { return Promise.resolve(false); },
+  // IAP satın alma → Promise<bool>. Native: StoreKit/Play Billing (TODO). Web/dev: test için simüle başarılı.
+  purchase(sku) {
+    return new Promise(resolve => {
+      const P = capPlugins();
+      if (isNativeApp() && P.InAppPurchase) {
+        // TODO(native): StoreKit/Play Billing satın alma akışı; başarılıysa resolve(true).
+        resolve(false);
+      } else {
+        setTimeout(() => resolve(true), 600); // web/dev: mağaza yok → akışı test etmek için simüle
+      }
+    });
+  },
 };
 // ödüllü reklam sıklık sınırı (GDD: saatte ≤4, FTUE'nin ilk 3 maçında hiç)
 let rewardedTimes = [];
@@ -1985,7 +1995,7 @@ function updateHUD() {
 
 // panel yönetimi
 function showPanel(id) {
-  for (const p of ['panel-main', 'panel-maps', 'panel-garage', 'panel-duel', 'panel-coop', 'panel-profile', 'panel-rematch', 'panel-result', 'panel-quests', 'panel-lb', 'panel-season', 'panel-showroom'])
+  for (const p of ['panel-main', 'panel-maps', 'panel-garage', 'panel-duel', 'panel-coop', 'panel-profile', 'panel-rematch', 'panel-result', 'panel-quests', 'panel-lb', 'panel-season', 'panel-showroom', 'panel-shop'])
     $(p).classList.toggle('show', p === id);
 }
 function openMenu() {
@@ -2362,6 +2372,50 @@ function renderAccessories() {
     card.appendChild(btn); wrap.appendChild(card);
   }
 }
+// ---------------------------------------------------------------- elmas dükkânı (IAP)
+const GEM_PACKS = [
+  { sku: 'gems_small', gems: 50,   bonus: 0,   price: '₺29,99',  tag: '' },
+  { sku: 'gems_mid',   gems: 150,  bonus: 15,  price: '₺79,99',  tag: '+%10' },
+  { sku: 'gems_big',   gems: 400,  bonus: 60,  price: '₺179,99', tag: '★ POPÜLER' },
+  { sku: 'gems_mega',  gems: 1000, bonus: 250, price: '₺379,99', tag: '★ EN AVANTAJLI' },
+];
+let shopFromGarage = false;
+function openShop() {
+  shopFromGarage = $('panel-garage').classList.contains('show');
+  $('title').textContent = T().shopTitle;
+  renderShop();
+  showPanel('panel-shop');
+}
+function renderShop() {
+  $('submsg').textContent = `💎 ${profile.gems || 0}`;
+  const wrap = $('shoplist');
+  wrap.style.cssText = 'display:flex;flex-wrap:wrap;justify-content:center;gap:12px;margin:12px 8px';
+  wrap.innerHTML = '';
+  for (const p of GEM_PACKS) {
+    const total = p.gems + p.bonus;
+    const card = document.createElement('div'); card.className = 'card';
+    card.innerHTML =
+      `<div class="cname" style="color:#6fe0ff">💎 ${total}</div>` +
+      `<div class="cswatch" style="background:radial-gradient(circle at 50% 38%,#1c6a86,#0c1620);display:flex;align-items:center;justify-content:center;font-size:34px">💎</div>` +
+      (p.bonus ? `<div class="cstat" style="text-align:center;color:#7dff9b">+${p.bonus} bonus 🎁</div>` : `<div class="cstat" style="text-align:center">&nbsp;</div>`) +
+      `<div class="cstat" style="text-align:center;color:#ffd76a;font-weight:bold;min-height:16px">${p.tag || ''}</div>`;
+    const btn = document.createElement('button'); btn.className = 'mbtn small gold';
+    btn.textContent = p.price;
+    btn.onclick = () => buyGems(p, btn);
+    card.appendChild(btn); wrap.appendChild(card);
+  }
+}
+async function buyGems(pack, btn) {
+  btn.disabled = true; const old = btn.textContent; btn.textContent = '...';
+  const ok = await Platform.purchase(pack.sku);
+  if (ok) {
+    const total = pack.gems + pack.bonus;
+    addGems(total); sfxCoin(); showToast(`💎 +${total}`, 2600);
+    track('iap', { sku: pack.sku, gems: total });
+    renderShop();
+  } else { btn.disabled = false; btn.textContent = old; }
+}
+
 function renderAchievements() {
   const wrap = $('achlist'); wrap.innerHTML = '';
   for (const a of ACHIEVEMENTS) {
@@ -3362,6 +3416,8 @@ $('btn-back-profile').addEventListener('click', openMenu);
 $('btn-back-maps').addEventListener('click', openMenu);
 $('btn-back-garage').addEventListener('click', openMenu);
 $('sr-back').addEventListener('click', closeShowroom);
+$('gembar').addEventListener('click', openShop);
+$('btn-back-shop').addEventListener('click', () => shopFromGarage ? openGarage() : openMenu());
 $('btn-back-duel').addEventListener('click', () => { closeNet(); openMenu(); });
 
 // kooperatif menü

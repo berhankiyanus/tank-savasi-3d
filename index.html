@@ -151,7 +151,9 @@
   .st-t { min-width: 26px; font-weight: bold; color: #ff9de0; }
   .st-r { flex: 1; text-align: left; }
   #tokenbar { color: #ff9de0; }
-  #gembar { color: #6fe0ff; }
+  #gembar { color: #6fe0ff; cursor: pointer; }
+  .gem-plus { display: inline-block; margin-left: 3px; background: #2ea043; color: #fff; border-radius: 6px; padding: 0 5px; font-size: 13px; font-weight: bold; line-height: 1.5; }
+  .shop-note { color: #9fb4c4; font-size: 12px; text-align: center; max-width: 420px; margin: 8px 14px 2px; line-height: 1.5; }
   #tokenmachine { margin: 8px auto 2px; }
   .tm-box { display: inline-flex; flex-direction: column; align-items: center; gap: 6px;
             background: rgba(0,0,0,.35); border: 2px solid #ff9de0; border-radius: 12px; padding: 12px 22px; }
@@ -315,7 +317,7 @@
     <div id="levelwrap"><span id="lvlnum">Sv 1</span><div id="lvlbar"><div id="lvlfill"></div></div></div>
     🪙 <span id="coins">0</span>
     <span id="tokenbar">🎰 <span id="tokens">0</span></span>
-    <span id="gembar">💎 <span id="gems">0</span></span>
+    <span id="gembar" title="Elmas al">💎 <span id="gems">0</span><span class="gem-plus">＋</span></span>
   </div>
   <div id="langsw">
     <button class="mbtn small" id="lang-tr">TR</button>
@@ -374,6 +376,13 @@
       <div id="sr-stats" class="sr-stats"></div>
       <button id="sr-action" class="mbtn sr-btn"></button>
     </div>
+  </div>
+
+  <!-- elmas dükkânı (IAP) -->
+  <div id="panel-shop" class="panel">
+    <div id="shoplist" class="card-list"></div>
+    <div class="shop-note">💎 Uygulama içi satın alma · gerçek para. Elmaslarla premium tank ve aksesuar al.</div>
+    <button class="mbtn small" id="btn-back-shop">‹ GERİ</button>
   </div>
 
   <!-- profil & başarımlar -->
