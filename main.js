@@ -35,6 +35,7 @@ const L = {
     puSpeed: 'HIZ! ⚡', puTriple: "3'LÜ ATIŞ!", puShield: 'KALKAN! 🛡',
     setTitle: 'AYARLAR', setSound: 'Ses', setMusic: 'Müzik', setQuality: 'Kalite', onW: 'AÇIK', offW: 'KAPALI',
     qHigh: 'YÜKSEK', qLow: 'DÜŞÜK', resumeW: 'DEVAM ET', toMenuW: 'ANA MENÜ', closeW: 'KAPAT', pausedW: 'DURAKLADI',
+    autoLow: '⚙️ Akıcılık için kalite otomatik düşürüldü',
     coopBtn: 'KOOPERATİF', coopSub: '2-4 kişi birlikte dalgalara karşı! Oda kur veya kod ile katıl.',
     startW: 'BAŞLAT', playersW: 'oyuncu', waitHost: 'Host başlatmasını bekle...',
     teamBtn: '2v2 TAKIM', teamSub: '2v2 takım savaşı — tam 4 oyuncu! Oda kur (3 kişi daha) ya da kod ile katıl.',
@@ -75,6 +76,7 @@ const L = {
     puSpeed: 'SPEED! ⚡', puTriple: 'TRIPLE SHOT!', puShield: 'SHIELD! 🛡',
     setTitle: 'SETTINGS', setSound: 'Sound', setMusic: 'Music', setQuality: 'Quality', onW: 'ON', offW: 'OFF',
     qHigh: 'HIGH', qLow: 'LOW', resumeW: 'RESUME', toMenuW: 'MAIN MENU', closeW: 'CLOSE', pausedW: 'PAUSED',
+    autoLow: '⚙️ Quality auto-lowered for smoother play',
     coopBtn: 'CO-OP', coopSub: '2-4 players together vs waves! Create a room or join with a code.',
     startW: 'START', playersW: 'players', waitHost: 'Waiting for host to start...',
     teamBtn: '2v2 TEAM', teamSub: '2v2 team battle — exactly 4 players! Create a room (3 more) or join with a code.',
@@ -237,11 +239,13 @@ const canvas = document.getElementById('game');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 renderer.setSize(innerWidth, innerHeight);
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+// Düşük preset: yarı-çözünürlük render + upscale + gölgesiz (zayıf cihazlarda akıcılık)
+const LOW_PR = 0.7;
 renderer.shadowMap.enabled = settings.quality !== 'low';
-renderer.setPixelRatio(settings.quality === 'low' ? 1 : Math.min(devicePixelRatio, IS_TOUCH ? 1.7 : 2));
+renderer.setPixelRatio(settings.quality === 'low' ? LOW_PR : Math.min(devicePixelRatio, IS_TOUCH ? 1.7 : 2));
 function applyQuality() {
   const low = settings.quality === 'low';
-  renderer.setPixelRatio(low ? 1 : Math.min(devicePixelRatio, IS_TOUCH ? 1.7 : 2));
+  renderer.setPixelRatio(low ? LOW_PR : Math.min(devicePixelRatio, IS_TOUCH ? 1.7 : 2));
   renderer.shadowMap.enabled = !low;
   renderer.shadowMap.needsUpdate = true;
   scene.traverse(o => {
@@ -2720,9 +2724,27 @@ applyLang();
 openMenu();
 checkDaily();
 
+// oto-kalite: oyun sırasında FPS ölçülür; sürekli düşükse (zayıf cihaz) kalite bir kez otomatik düşürülür
+let perfAccum = 0, perfFrames = 0, perfChecked = false;
+function monitorPerf(dt, active) {
+  if (perfChecked || settings.quality === 'low') { perfChecked = true; return; }
+  if (!active) { perfAccum = 0; perfFrames = 0; return; } // sadece oyunda ölç
+  perfAccum += dt; perfFrames++;
+  if (perfAccum >= 3.5) {
+    const fps = perfFrames / perfAccum;
+    if (fps < 40) {
+      settings.quality = 'low'; saveSettings(); applyQuality();
+      updateSettingsLabels(); showToast(T().autoLow, 3500);
+      perfChecked = true;
+    } else if (fps >= 50) perfChecked = true; // yeterince akıcı, artık bakma
+    perfAccum = 0; perfFrames = 0;
+  }
+}
+
 function tick() {
   requestAnimationFrame(tick);
   const dt = Math.min(clock.getDelta(), 0.05);
+  monitorPerf(dt, state === 'play' && !paused);
 
   if (state === 'play' && !paused) {
     if (player.alive) {
