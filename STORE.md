@@ -20,15 +20,17 @@ npm run sync        # www/ yeniden üretir + iOS & Android'e kopyalar
 > Sadece `git push` ile web + sunucu güncellenir. Mağaza uygulaması güncellemesi için
 > yeni sürüm derleyip mağazaya tekrar yüklemen gerekir.
 
-## 2. Uygulama ikonu + açılış ekranı (bir kez)
-1024×1024 PNG bir ikon hazırla, sonra:
+## 2. Uygulama ikonu + açılış ekranı — HAZIR ✅
+İkon (Blender'da render, tank) ve splash zaten üretildi:
+- Kaynak: `resources/icon.png` (1024×1024), `resources/splash.png` (2732×2732).
+- Tüm iOS/Android boyutları `ios/` ve `android/` içine yerleştirildi.
+
+Değiştirmek istersen: `resources/icon.png`'yi değiştir, sonra:
 ```bash
-npm i -D @capacitor/assets
-mkdir -p resources
-# resources/icon.png (1024x1024) ve resources/splash.png (2732x2732) koy
-npx @capacitor/assets generate --iconBackgroundColor '#12160f' --splashBackgroundColor '#12160f'
+npx @capacitor/assets generate --assetPath resources --iconBackgroundColor '#12160f' --splashBackgroundColor '#12160f'
 ```
-Bu tüm iOS/Android ikon ve splash boyutlarını otomatik üretir.
+> Not: `ios/`+`android/` git'te yok (yeniden üretilebilir). Projeyi başka makinede
+> kurarsan `npx cap add ios android` sonra yukarıdaki generate komutunu tekrar çalıştır.
 
 ## 3. iOS → App Store
 ```bash
