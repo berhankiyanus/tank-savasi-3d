@@ -111,6 +111,9 @@
                 background: rgba(255,255,255,.1); color: #ffd76a; border: 2px solid #7dff9b; border-radius: 8px; padding: 6px 8px; outline: none; }
   #coophud { top: 78px; left: 22px; display: none; font-size: 14px; line-height: 1.5; }
   #coophud .crow { color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.9); }
+  #ftuehint { display: none; bottom: 15%; left: 0; right: 0; text-align: center; font-size: 17px; font-weight: bold;
+              letter-spacing: 1px; color: #fff; text-shadow: 0 2px 6px #000; transition: opacity .5s;
+              pointer-events: none; padding: 0 14px; }
   #killfeed { top: 182px; right: 12px; display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
   .kfrow { font-size: 14px; color: #fff; background: rgba(0,0,0,.5); border-radius: 6px; padding: 3px 8px;
            transition: opacity .5s; text-shadow: 0 1px 2px #000; }
@@ -199,6 +202,7 @@
 <div id="buffs" class="hud"></div>
 <div id="coophud" class="hud"></div>
 <div id="killfeed" class="hud"></div>
+<div id="ftuehint" class="hud"></div>
 <canvas id="minimap" class="hud" width="118" height="118"></canvas>
 <div id="wavebanner" class="hud"></div>
 <div id="bossbar" class="hud">

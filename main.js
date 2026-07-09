@@ -10,6 +10,9 @@ const L = {
     keysDesk: 'W / ↑ &nbsp;→&nbsp; ileri &nbsp;|&nbsp; S / ↓ &nbsp;→&nbsp; geri &nbsp;|&nbsp; A / D &nbsp;→&nbsp; dön &nbsp;|&nbsp; BOŞLUK &nbsp;→&nbsp; ateş',
     keysTouch: 'Soldaki joystick &nbsp;→&nbsp; sür ve dön &nbsp;|&nbsp; Sağdaki buton &nbsp;→&nbsp; ateş',
     quickPlay: '⚡ HIZLI OYNA', quickPlaySub: 'Tek tıkla bota karşı 1v1 — bekleme yok!',
+    ftueGift: s => `🎁 İlk düşmanını yok ettin! "${s}" kaplaması hediye!`,
+    ftueHintDesk: 'W/↑ ilerle · S/↓ geri · A/D dön · BOŞLUK ateş 🔫',
+    ftueHintTouch: 'Sol joystick: sür & dön · Sağ buton: ateş 🔫',
     single: 'TEK OYUNCU', duel: 'ARKADAŞLA DÜELLO', garage: 'GARAJ', back: '‹ GERİ',
     create: 'ODA KUR', join: 'KATIL', codePh: 'KOD',
     waiting: 'Arkadaşın bekleniyor...', roomLbl: 'ODA KODU:',
@@ -47,6 +50,9 @@ const L = {
     keysDesk: 'W / ↑ &nbsp;→&nbsp; forward &nbsp;|&nbsp; S / ↓ &nbsp;→&nbsp; back &nbsp;|&nbsp; A / D &nbsp;→&nbsp; turn &nbsp;|&nbsp; SPACE &nbsp;→&nbsp; fire',
     keysTouch: 'Left joystick &nbsp;→&nbsp; drive & turn &nbsp;|&nbsp; Right button &nbsp;→&nbsp; fire',
     quickPlay: '⚡ QUICK PLAY', quickPlaySub: 'One tap 1v1 vs a bot — no waiting!',
+    ftueGift: s => `🎁 First enemy down! "${s}" skin unlocked!`,
+    ftueHintDesk: 'W/↑ move · S/↓ back · A/D turn · SPACE fire 🔫',
+    ftueHintTouch: 'Left stick: drive & turn · Right button: fire 🔫',
     single: 'SINGLE PLAYER', duel: 'DUEL WITH A FRIEND', garage: 'GARAGE', back: '‹ BACK',
     create: 'CREATE ROOM', join: 'JOIN', codePh: 'CODE',
     waiting: 'Waiting for your friend...', roomLbl: 'ROOM CODE:',
@@ -83,7 +89,7 @@ let lang = localStorage.getItem('tanklang') || ((navigator.language || 'tr').sta
 const T = () => L[lang];
 
 // ---------------------------------------------------------------- kalıcı profil
-const DEFAULT_PROFILE = { coins: 0, owned: ['recruit'], selected: 'recruit', bestWave: 1, upgrades: {}, kills: 0, wins: 0, games: 0, skins: ['default'], skin: 'default', achieved: [], lastDaily: '', streak: 0, name: '' };
+const DEFAULT_PROFILE = { coins: 0, owned: ['recruit'], selected: 'recruit', bestWave: 1, upgrades: {}, kills: 0, wins: 0, games: 0, skins: ['default'], skin: 'default', achieved: [], lastDaily: '', streak: 0, name: '', gift1: false };
 let profile;
 try {
   profile = Object.assign({}, DEFAULT_PROFILE, JSON.parse(localStorage.getItem('tankprofile') || '{}'));
@@ -1287,6 +1293,32 @@ let toastT = 0, statsCheckT = 2;
 function showToast(text, dur = 2800) {
   const el = $('toast'); el.textContent = text; el.style.opacity = '1'; toastT = dur / 1000;
 }
+// FTUE: ilk düşman öldürüldüğünde bedava kozmetik hediye (erken dopamin + ödül döngüsünü öğret)
+function checkFtue() {
+  if (!profile.gift1 && (profile.kills || 0) >= 1) {
+    profile.gift1 = true;
+    if (!profile.skins.includes('crimson')) profile.skins.push('crimson');
+    if (profile.skin === 'default') profile.skin = 'crimson';
+    saveProfile();
+    showToast(T().ftueGift(skinById('crimson').name[lang]), 4500);
+    sfxCoin();
+  }
+}
+// FTUE: yeni oyuncuya kontrol ipuçları (tutorial ekranı yerine oyun içi)
+let ftueHintOn = false, ftueHintT = 0;
+function showFtueHint() {
+  if ((profile.games || 0) > 3) return;
+  const el = $('ftuehint');
+  el.innerHTML = IS_TOUCH ? T().ftueHintTouch : T().ftueHintDesk;
+  el.style.display = 'block'; el.style.opacity = '1';
+  ftueHintOn = true; ftueHintT = 8;
+}
+function hideFtueHint() {
+  if (!ftueHintOn) return;
+  ftueHintOn = false;
+  const el = $('ftuehint'); el.style.opacity = '0';
+  setTimeout(() => { if (!ftueHintOn) el.style.display = 'none'; }, 500);
+}
 function checkAchievements() {
   for (const a of ACHIEVEMENTS) {
     if (profile.achieved.includes(a.id)) continue;
@@ -1409,6 +1441,7 @@ function openMenu() {
   state = 'menu';
   mode = 'solo';
   clearBallMode(); clearCoop(); clearTeam(); clearPowerups();
+  hideFtueHint();
   shieldBubble.visible = false;
   if (!wallInst) buildArena(0);
   const t = T();
@@ -1639,6 +1672,7 @@ function startSolo(mapIdx) {
   spawnEnemies(waveComposition(1));
   renderHealth(); updateHUD();
   banner(`${T().wave} 1`);
+  showFtueHint();
   audio(); startEngine();
 }
 function gameOver() {
@@ -1832,6 +1866,7 @@ function startBotDuel() {
   player.mesh.position.set(SX, 0, SZ); player.mesh.visible = true;
   updateHUD();
   banner(T().duelStart);
+  showFtueHint();
   audio(); startEngine();
 }
 function updateDuelBot(dt) {
@@ -2923,7 +2958,12 @@ function tick() {
   updateFlashes(dt);
   updateFloaters(dt);
   if (toastT > 0) { toastT -= dt; if (toastT <= 0) $('toast').style.opacity = '0'; }
-  statsCheckT -= dt; if (statsCheckT <= 0) { statsCheckT = 1.2; checkAchievements(); }
+  statsCheckT -= dt; if (statsCheckT <= 0) { statsCheckT = 1.2; checkAchievements(); checkFtue(); }
+  if (ftueHintOn && state === 'play') {
+    ftueHintT -= dt;
+    const anyInput = keys.KeyW || keys.KeyS || keys.KeyA || keys.KeyD || keys.ArrowUp || keys.ArrowDown || keys.ArrowLeft || keys.ArrowRight || keys.Space || touchCtl.move || touchCtl.turn || touchCtl.fire;
+    if (anyInput || ftueHintT <= 0) hideFtueHint();
+  }
 
   const bossE = (state === 'play' && (mode === 'solo' || (mode === 'coop' && isAuthority))) ? enemies.find(e => e.type === 'boss' && e.alive) : null;
   updateBossBar(bossE);
