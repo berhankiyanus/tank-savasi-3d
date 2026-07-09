@@ -114,6 +114,16 @@ try { settings = Object.assign({ muted: false, quality: 'high', music: true }, J
 catch { settings = { muted: false, quality: 'high', music: true }; }
 if (typeof settings.music !== 'boolean') settings.music = true;
 function saveSettings() { localStorage.setItem('tanksettings', JSON.stringify(settings)); }
+
+// ---------------------------------------------------------------- analitik (anonim huni ölçümü)
+const SESSION_ID = Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+function track(ev, data) {
+  try {
+    const payload = JSON.stringify(Object.assign({ ev, sid: SESSION_ID, t: Date.now() }, data || {}));
+    if (navigator.sendBeacon) navigator.sendBeacon('/ev', payload);
+    else fetch('/ev', { method: 'POST', body: payload, keepalive: true }).catch(() => {});
+  } catch {}
+}
 let paused = false;
 
 // ---------------------------------------------------------------- tanklar
@@ -2512,7 +2522,7 @@ function handleTeamNet(m) {
 // ---------------------------------------------------------------- menü olayları
 $('lang-tr').addEventListener('click', () => { lang = 'tr'; applyLang(); if ($('panel-garage').classList.contains('show')) renderGarage(); if ($('panel-maps').classList.contains('show')) renderMaps(); });
 $('lang-en').addEventListener('click', () => { lang = 'en'; applyLang(); if ($('panel-garage').classList.contains('show')) renderGarage(); if ($('panel-maps').classList.contains('show')) renderMaps(); });
-$('btn-quickplay').addEventListener('click', () => { duelMap = 0; startBotDuel(); });
+$('btn-quickplay').addEventListener('click', () => { track('quickplay_click'); duelMap = 0; startBotDuel(); });
 $('btn-single').addEventListener('click', () => { $('title').textContent = T().chooseMap; $('submsg').textContent = T().bestWave(profile.bestWave); renderMaps(); showPanel('panel-maps'); });
 function renderMapPicker(containerId, rerender) {
   const wrap = $(containerId);
@@ -2584,6 +2594,7 @@ $('btn-coop-start').addEventListener('click', () => { netSend({ t: 'startgame', 
 $('btn-back-coop').addEventListener('click', () => { closeNet(); openMenu(); });
 $('btn-rematch').addEventListener('click', () => {
   if (myReady || !matchOverMode) return;
+  track('retry_click', { mode: matchOverMode });
   myReady = true;
   $('btn-rematch').disabled = true;
   $('rematchstatus').textContent = T().rematchWait;
@@ -2741,10 +2752,23 @@ function monitorPerf(dt, active) {
   }
 }
 
+// analitik: durum geçişlerinden gameplay_start / match_end üret (tek yerden tüm modlar)
+let lastTrackedState = 'menu', matchMode = '', matchStartT = 0, killsBaseline = profile.kills || 0, firstKillSent = false;
+function trackTransitions() {
+  if (state !== lastTrackedState) {
+    if (state === 'play') { matchMode = mode; matchStartT = clock.elapsedTime; track('gameplay_start', { mode }); }
+    else if (lastTrackedState === 'play') { track('match_end', { mode: matchMode, dur: Math.round(clock.elapsedTime - matchStartT) }); }
+    lastTrackedState = state;
+  }
+  // ilk kill: sadece bir maç oynanırken ve oturum başındaki sayının üstüne çıkınca
+  if (!firstKillSent && state === 'play' && (profile.kills || 0) > killsBaseline) { firstKillSent = true; track('first_kill', { mode: matchMode }); }
+}
+
 function tick() {
   requestAnimationFrame(tick);
   const dt = Math.min(clock.getDelta(), 0.05);
   monitorPerf(dt, state === 'play' && !paused);
+  trackTransitions();
 
   if (state === 'play' && !paused) {
     if (player.alive) {
@@ -3030,3 +3054,6 @@ function tick() {
 tick();
 window.__gameLoaded = true;
 { const ls = document.getElementById('loading'); if (ls) { ls.classList.add('gone'); setTimeout(() => ls.remove(), 600); } }
+// analitik: yükleme tamam + oturum çıkışı
+track('load_end', { touch: IS_TOUCH, lang });
+addEventListener('pagehide', () => track('quit', { atState: state, mode: matchMode }));

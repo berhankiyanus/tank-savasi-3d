@@ -17,7 +17,42 @@ const MIME = {
   '.hdr': 'application/octet-stream',
 };
 
+// ---- basit anonim analitik (huni ölçümü; in-memory + konsol; Render loglarında görünür) ----
+const stats = { started: Date.now(), events: {}, modes: {}, sessions: {} };
+function trackEvent(m) {
+  if (!m || !m.ev) return;
+  stats.events[m.ev] = (stats.events[m.ev] || 0) + 1;
+  if (m.mode) stats.modes[m.mode] = (stats.modes[m.mode] || 0) + 1;
+  if (m.sid) stats.sessions[m.sid] = Date.now();
+  // eski oturumları buda (bellek sızıntısı önle)
+  const keys = Object.keys(stats.sessions);
+  if (keys.length > 5000) for (const k of keys.slice(0, 1000)) delete stats.sessions[k];
+  console.log('[EV]', m.ev, m.mode || '', (m.sid || '').slice(0, 6), m.dur != null ? m.dur + 's' : '');
+}
+
 const server = http.createServer((req, res) => {
+  // analitik olay alımı (sendBeacon POST)
+  if (req.method === 'POST' && (req.url || '').startsWith('/ev')) {
+    let body = '';
+    req.on('data', c => { body += c; if (body.length > 8000) req.destroy(); });
+    req.on('end', () => { try { trackEvent(JSON.parse(body)); } catch {} res.writeHead(204); res.end(); });
+    return;
+  }
+  // basit dashboard (JSON huni)
+  if (req.method === 'GET' && (req.url || '').startsWith('/stats')) {
+    const now = Date.now();
+    const active5m = Object.values(stats.sessions).filter(t => now - t < 300000).length;
+    res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
+    res.end(JSON.stringify({
+      uptimeMin: Math.round((now - stats.started) / 60000),
+      totalSessions: Object.keys(stats.sessions).length,
+      activeLast5min: active5m,
+      events: stats.events,
+      modes: stats.modes,
+    }, null, 2));
+    return;
+  }
+
   let p = decodeURIComponent((req.url || '/').split('?')[0]);
   if (p === '/') p = '/index.html';
   const file = path.normalize(path.join(ROOT, p));
