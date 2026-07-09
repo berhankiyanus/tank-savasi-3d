@@ -2532,7 +2532,7 @@ function handleNet(m) {
   else if (mode === 'coop') { handleCoopNet(m); }
   else if (mode === 'team') { handleTeamNet(m); }
   else if (!duel) { return; }
-  else if (m.t === 'skin') { applyRemoteSkin(m.color, m.scale, m.name); }
+  else if (m.t === 'skin') { applyRemoteSkin(m.color, m.scale, m.name, m.acc); }
   else if (m.t === 'ball') { if (ball && !isAuthority) { ball.tx = m.x; ball.tz = m.z; ball.mesh.rotation.x = m.rx; ball.mesh.rotation.z = m.rz; } }
   else if (m.t === 'goal') { if (ball) { applyGoal(m.g1, m.g2, m.scorer); if (m.done) { ball.over = true; endBall(); } } }
   else if (m.t === 'state') {
@@ -2561,10 +2561,11 @@ function handleNet(m) {
   }
   else if (m.t === 'peerleft') { if (matchOverMode) onPeerGone(); else peerLeft(); }
 }
-function applyRemoteSkin(color, scale, name) {
+function applyRemoteSkin(color, scale, name, acc) {
   if (!duel) return;
   scene.remove(duel.remoteMesh);
   duel.remoteMesh = buildTank({ color, scale: scale || 1 });
+  applyAccessory(duel.remoteMesh, acc); // rakibin aksesuarı (base tank → turretTop 1.5)
   duel.remoteMesh.position.set(duel.x, 0, duel.z);
   duel.remoteMesh.rotation.y = duel.a;
   duel.remoteMesh.visible = duel.remoteAlive;
@@ -2606,7 +2607,7 @@ function beginDuel(you) {
   banner(T().duelStart);
   const st = player.stat;
   const skinCol = profile.skin !== 'default' ? skinById(profile.skin).color : st.color;
-  netSend({ t: 'skin', color: skinCol, scale: st.scale, name: profile.name });
+  netSend({ t: 'skin', color: skinCol, scale: st.scale, name: profile.name, acc: profile.accessory });
   audio(); startEngine();
 }
 // rakip "vuruldun" (thit) dediğinde: ölümü BEN onaylarım (kalkan/dokunulmazlık yerel otoriteli)
@@ -2873,7 +2874,7 @@ function beginBall(you) {
   banner(T().ballBtn);
   const st = player.stat;
   const skinCol = profile.skin !== 'default' ? skinById(profile.skin).color : st.color;
-  netSend({ t: 'skin', color: skinCol, scale: st.scale, name: profile.name });
+  netSend({ t: 'skin', color: skinCol, scale: st.scale, name: profile.name, acc: profile.accessory });
   audio(); startEngine();
 }
 function clampBall() {
@@ -2997,7 +2998,7 @@ function beginCoop(you, players, mapIdx) {
     coop.remotes.set(pid, { mesh: rmMesh, shield: makeShieldBubble(), nameLabel: makeNameLabel('...'), name: '', x: 0, z: 0, tx: 0, tz: 0, a: 0, ta: 0, alive: true, hp: player.maxHealth, inv: 0, shieldOn: false });
   }
   placeCoopSpawns();
-  netSend({ t: 'pinfo', name: profile.name });
+  netSend({ t: 'pinfo', name: profile.name, acc: profile.accessory });
   updateCoopRoster();
   wave = 1; score = 0; roundCoins = 0; powerupT = 6; puIdCounter = 0; enemyIdC = 0;
   profile.games++; saveProfile();
@@ -3072,7 +3073,7 @@ function handleCoopNet(m) {
   if (!coop) return;
   if (m.t === 'pinfo') {
     const rm = coop.remotes.get(m.from);
-    if (rm) { rm.name = m.name || ('Oyuncu' + m.from); setLabelText(rm.nameLabel, rm.name); updateCoopRoster(); }
+    if (rm) { rm.name = m.name || ('Oyuncu' + m.from); setLabelText(rm.nameLabel, rm.name); if (m.acc) applyAccessory(rm.mesh, m.acc); updateCoopRoster(); }
   }
   else if (m.t === 'state') {
     const rm = coop.remotes.get(m.from);
@@ -3197,7 +3198,7 @@ function beginTeam(you, players, mapIdx) {
     team.remotes.set(pid, rm);
   }
   placeTeamSelf(1.5);
-  netSend({ t: 'pinfo', name: profile.name });
+  netSend({ t: 'pinfo', name: profile.name, acc: profile.accessory });
   profile.games++; saveProfile();
   updateHUD(); updateTeamRoster();
   banner(T().teamStart);
