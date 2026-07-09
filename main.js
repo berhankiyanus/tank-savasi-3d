@@ -1374,6 +1374,7 @@ function setPlayerTank(overrideDef) {
   player.mesh.position.set(player.x, 0, player.z);
   scene.add(player.mesh);
   playerTurret = player.mesh.getObjectByName('TankTurret');
+  if (!playerTurret) player.mesh.traverse(o => { if (!playerTurret && o.name && o.name.indexOf('TankTurret') === 0) playerTurret = o; });
   turretBaseZ = playerTurret ? playerTurret.position.z : 0;
   player.stat = def;
   player.maxHealth = def.health;
