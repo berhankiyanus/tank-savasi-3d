@@ -232,6 +232,10 @@ const TANKS = [
   { id: 'phantom',  name: { tr: 'Hayalet',    en: 'Phantom'  }, price: 800,  color: 0x1aa37a, scale: 1.00, health: 6, speed: 9.6,  turn: 3.0, cool: 0.33, bspeed: 32, glow: true },
   { id: 'goldking', name: { tr: 'Altın Kral', en: 'Gold King'}, price: 1500, color: 0xffcc33, scale: 1.08, health: 9, speed: 9.2,  turn: 2.9, cool: 0.30, bspeed: 36, glow: true, metal: true },
   { id: 'heavy',    name: { tr: 'Ağır Tank',   en: 'Heavy Tank'}, price: 2500, color: 0x6b6f4a, scale: 0.95, health: 12, speed: 5.6, turn: 1.8, cool: 0.50, bspeed: 30, model: 'heavy', metal: true },
+  { id: 'twin',     name: { tr: 'İkiz Namlu',  en: 'Twin Cannon'}, price: 3000, color: 0x556047, scale: 0.95, health: 7,  speed: 8.4, turn: 2.8, cool: 0.26, bspeed: 30, model: 'twin' },
+  { id: 'arty',     name: { tr: 'Obüs',        en: 'Howitzer'  }, price: 3500, color: 0x6a6248, scale: 0.95, health: 6,  speed: 5.4, turn: 1.7, cool: 0.60, bspeed: 46, model: 'arty' },
+  { id: 'hover',    name: { tr: 'Hover Tank',  en: 'Hover Tank'}, gem: 40, color: 0x3a4450, scale: 1.00, health: 5, speed: 12.0, turn: 3.5, cool: 0.34, bspeed: 34, model: 'hover', metal: true, glow: true },
+  { id: 'titan',    name: { tr: 'Titan',       en: 'Titan'     }, gem: 60, color: 0x40444a, scale: 1.05, health: 14, speed: 5.2, turn: 1.6, cool: 0.44, bspeed: 32, model: 'titan', metal: true, glow: true },
 ];
 const tankById = id => TANKS.find(t => t.id === id) || TANKS[0];
 const STAT_MAX = { health: 14, speed: 13.6, fire: 1 / 0.16 };
@@ -435,7 +439,7 @@ scene.environment = envTex;
 
 // ---------------------------------------------------------------- tank modelleri (tembel-yükleme)
 // farklı GLB gövde modelleri; ilk pakete girmez, seçilince/önizlenince yüklenir (performans bütçesi)
-const MODEL_PATHS = { heavy: 'assets/tank_heavy.glb' };
+const MODEL_PATHS = { heavy: 'assets/tank_heavy.glb', hover: 'assets/tank_hover.glb', twin: 'assets/tank_twin.glb', arty: 'assets/tank_arty.glb', titan: 'assets/tank_titan.glb' };
 const loadedModels = {}; // modelId -> gltf.scene
 const _modelLoader = new GLTFLoader();
 async function ensureModel(modelId) {
@@ -848,6 +852,11 @@ function buildTank(def) {
         o.material.color.set(def.color);
         if (def.metal) o.material.metalness = 0.7;
         if (def.glow) { o.material.emissive.set(def.color); o.material.emissiveIntensity = 0.35; }
+      } else if (o.material && (o.material.name === 'EnergyGlow' || o.material.name === 'CoreGlow')) {
+        // enerji/çekirdek parçaları: oyunda parlamayı zorla (glTF emissive'e güvenme)
+        const col = o.material.name === 'EnergyGlow' ? 0x1ae0ff : 0xff2a1a;
+        o.material.color.set(col); o.material.emissive.set(col);
+        o.material.emissiveIntensity = 1.0; o.material.toneMapped = false;
       }
     }
   });
@@ -2140,11 +2149,14 @@ function renderShowroomUI() {
     act.textContent = t.owned; act.disabled = false;
     act.onclick = () => { profile.selected = base.id; saveProfile(); setPlayerTank(); showroom.accId = profile.accessory; buildShowroomTank(); renderShowroomUI(); };
   } else {
-    act.innerHTML = `${t.buy} · 🪙${base.price}`; act.disabled = profile.coins < base.price;
+    const isGem = !!base.gem;
+    act.innerHTML = `${t.buy} · ${isGem ? '💎' + base.gem : '🪙' + base.price}`;
+    act.disabled = isGem ? (profile.gems || 0) < base.gem : profile.coins < base.price;
     act.className = 'mbtn sr-btn gold';
     act.onclick = () => {
-      if (profile.coins < base.price) return;
-      profile.coins -= base.price; profile.owned.push(base.id); profile.selected = base.id;
+      if (isGem ? (profile.gems || 0) < base.gem : profile.coins < base.price) return;
+      if (isGem) profile.gems -= base.gem; else profile.coins -= base.price;
+      profile.owned.push(base.id); profile.selected = base.id;
       saveProfile(); sfxCoin(); setPlayerTank(); updateCoinBar(); showroom.accId = profile.accessory; buildShowroomTank(); renderShowroomUI();
     };
   }
@@ -2227,12 +2239,14 @@ function renderGarage() {
     if (sel) { btn.textContent = t.selected; btn.disabled = true; }
     else if (owned) { btn.textContent = t.owned; btn.onclick = async () => { await ensureModel(base.model); profile.selected = base.id; saveProfile(); setPlayerTank(); renderGarage(); }; }
     else {
-      btn.innerHTML = `${t.buy} · 🪙${base.price}`;
-      btn.disabled = profile.coins < base.price;
+      const isGem = !!base.gem;
+      btn.innerHTML = `${t.buy} · ${isGem ? '💎' + base.gem : '🪙' + base.price}`;
+      btn.disabled = isGem ? (profile.gems || 0) < base.gem : profile.coins < base.price;
       btn.onclick = async () => {
-        if (profile.coins < base.price) return;
+        if (isGem ? (profile.gems || 0) < base.gem : profile.coins < base.price) return;
         await ensureModel(base.model);
-        profile.coins -= base.price; profile.owned.push(base.id); profile.selected = base.id;
+        if (isGem) profile.gems -= base.gem; else profile.coins -= base.price;
+        profile.owned.push(base.id); profile.selected = base.id;
         saveProfile(); sfxCoin(); setPlayerTank(); updateCoinBar(); renderGarage();
       };
     }
