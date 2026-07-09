@@ -10,6 +10,7 @@ const L = {
     keysDesk: 'W / ↑ &nbsp;→&nbsp; ileri &nbsp;|&nbsp; S / ↓ &nbsp;→&nbsp; geri &nbsp;|&nbsp; A / D &nbsp;→&nbsp; dön &nbsp;|&nbsp; BOŞLUK &nbsp;→&nbsp; ateş',
     keysTouch: 'Soldaki joystick &nbsp;→&nbsp; sür ve dön &nbsp;|&nbsp; Sağdaki buton &nbsp;→&nbsp; ateş',
     quickPlay: '⚡ HIZLI OYNA', quickPlaySub: 'Tek tıkla bota karşı 1v1 — bekleme yok!',
+    againBtn: '↻ TEKRAR OYNA',
     ftueGift: s => `🎁 İlk düşmanını yok ettin! "${s}" kaplaması hediye!`,
     ftueHintDesk: 'W/↑ ilerle · S/↓ geri · A/D dön · BOŞLUK ateş 🔫',
     ftueHintTouch: 'Sol joystick: sür & dön · Sağ buton: ateş 🔫',
@@ -52,6 +53,7 @@ const L = {
     keysDesk: 'W / ↑ &nbsp;→&nbsp; forward &nbsp;|&nbsp; S / ↓ &nbsp;→&nbsp; back &nbsp;|&nbsp; A / D &nbsp;→&nbsp; turn &nbsp;|&nbsp; SPACE &nbsp;→&nbsp; fire',
     keysTouch: 'Left joystick &nbsp;→&nbsp; drive & turn &nbsp;|&nbsp; Right button &nbsp;→&nbsp; fire',
     quickPlay: '⚡ QUICK PLAY', quickPlaySub: 'One tap 1v1 vs a bot — no waiting!',
+    againBtn: '↻ PLAY AGAIN',
     ftueGift: s => `🎁 First enemy down! "${s}" skin unlocked!`,
     ftueHintDesk: 'W/↑ move · S/↓ back · A/D turn · SPACE fire 🔫',
     ftueHintTouch: 'Left stick: drive & turn · Right button: fire 🔫',
@@ -1361,7 +1363,7 @@ function hideFtueHint() {
 // ---------------------------------------------------------------- profil XP / seviye (retention omurgası)
 function xpForLevel(n) { return Math.round(100 * Math.pow(n, 1.35)); } // n→n+1 için gereken XP
 function grantXp(amount) {
-  if (!amount || amount <= 0) return;
+  if (!amount || amount <= 0) return 0;
   profile.xp = (profile.xp || 0) + amount;
   let leveled = 0;
   while (profile.xp >= xpForLevel(profile.level || 1)) {
@@ -1372,6 +1374,7 @@ function grantXp(amount) {
   }
   saveProfile();
   updateLevelBar();
+  return leveled;
 }
 function onLevelUp(lvl) {
   const big = lvl % 5 === 0;
@@ -1382,15 +1385,60 @@ function onLevelUp(lvl) {
   track('level_up', { level: lvl });
 }
 // maç sonunda kazanılan XP (mod + performansa göre)
-function grantMatchXp(kind, opts) {
+function computeMatchXp(kind, opts) {
   opts = opts || {};
   let xp = 12; // katılım tabanı
   if (kind === 'wave') xp += (opts.wave || 1) * 6;
   else if (kind === 'pvp') xp += (opts.kills || 0) * 8 + (opts.won ? 30 : 8);
   else if (kind === 'ball') xp += (opts.won ? 30 : 10);
+  return xp;
+}
+function grantMatchXp(kind, opts) {
+  const xp = computeMatchXp(kind, opts);
   grantXp(xp);
   showToast(`+${xp} XP`, 2200);
   return xp;
+}
+// maç-sonu "hasat" ekranı — GDD retention hub'ı: XP çubuğu dolar → seviye → ödüller → tek tuş tekrar
+let harvestReplay = null;
+function showHarvest(opts) {
+  state = 'over';
+  const t = T();
+  const preLvl = profile.level || 1, prePct = ((profile.xp || 0) / xpForLevel(preLvl)) * 100;
+  const gained = computeMatchXp(opts.xpKind, opts.xpOpts);
+  grantXp(gained); // seviye atlarsa onLevelUp banner+coin
+  $('res-title').textContent = opts.title;
+  $('res-title').style.color = opts.won === false ? '#ff8a6a' : '#7dff9b';
+  $('res-sub').innerHTML = opts.sub || '';
+  $('res-rewards').innerHTML = `+${gained} XP` + (opts.coins ? ` &nbsp;·&nbsp; +🪙${opts.coins}` : '');
+  $('res-lvl').textContent = (lang === 'tr' ? 'Sv ' : 'Lv ') + preLvl;
+  $('res-again').textContent = t.againBtn;
+  $('res-menu').textContent = '‹ ' + t.toMenuW;
+  harvestReplay = opts.replay || null;
+  showPanel('panel-result');
+  msgEl.classList.remove('hidden');
+  $('topbar').style.visibility = 'hidden';
+  updateCoinBar(); updateLevelBar();
+  animateHarvestXp(preLvl, prePct);
+}
+function animateHarvestXp(preLvl, prePct) {
+  const fill = $('res-xpfill');
+  fill.style.transition = 'none'; fill.style.width = prePct + '%';
+  const finalPct = ((profile.xp || 0) / xpForLevel(profile.level || 1)) * 100;
+  const leveled = (profile.level || 1) > preLvl;
+  requestAnimationFrame(() => setTimeout(() => {
+    fill.style.transition = 'width .7s ease';
+    if (leveled) {
+      fill.style.width = '100%';
+      setTimeout(() => {
+        fill.style.transition = 'none'; fill.style.width = '0%';
+        $('res-lvl').textContent = (lang === 'tr' ? 'Sv ' : 'Lv ') + (profile.level || 1);
+        requestAnimationFrame(() => { fill.style.transition = 'width .6s ease'; fill.style.width = Math.max(3, finalPct) + '%'; });
+      }, 780);
+    } else {
+      fill.style.width = Math.max(3, finalPct) + '%';
+    }
+  }, 300));
 }
 function updateLevelBar() {
   const el = $('lvlnum'); if (!el) return;
@@ -1514,7 +1562,7 @@ function updateHUD() {
 
 // panel yönetimi
 function showPanel(id) {
-  for (const p of ['panel-main', 'panel-maps', 'panel-garage', 'panel-duel', 'panel-coop', 'panel-profile', 'panel-rematch'])
+  for (const p of ['panel-main', 'panel-maps', 'panel-garage', 'panel-duel', 'panel-coop', 'panel-profile', 'panel-rematch', 'panel-result'])
     $(p).classList.toggle('show', p === id);
 }
 function openMenu() {
@@ -1732,8 +1780,10 @@ function renderMaps() {
 }
 
 // ---------------------------------------------------------------- tek oyunculu
+let lastSoloMap = 0;
 function startSolo(mapIdx) {
   mode = 'solo'; state = 'play';
+  lastSoloMap = mapIdx;
   profile.games++; saveProfile();
   closeNet();
   buildArena(mapIdx);
@@ -1762,13 +1812,13 @@ function gameOver() {
   state = 'over';
   clearPowerups();
   shieldBubble.visible = false;
-  grantMatchXp('wave', { wave });
   const t = T();
-  $('title').textContent = t.over;
-  $('submsg').textContent = t.overSub(score, wave, roundCoins);
-  showPanel('panel-main');
-  msgEl.classList.remove('hidden');
-  updateCoinBar();
+  showHarvest({
+    title: t.over, won: null,
+    sub: t.overSub(score, wave, roundCoins),
+    xpKind: 'wave', xpOpts: { wave }, coins: roundCoins,
+    replay: () => startSolo(lastSoloMap),
+  });
 }
 
 // ---------------------------------------------------------------- düello
@@ -2017,18 +2067,18 @@ function duelBotEnd(won) {
   if (!duel || duel.over) return;
   duel.over = true;
   if (won) { profile.wins++; saveProfile(); }
-  grantMatchXp('pvp', { kills: duel.myKills, won });
   const t = T();
   banner(won ? t.youWin : t.youLose);
   if (won) stingWin(); else stingLose();
+  const mk = duel.myKills, md = duel.myDeaths;
   setTimeout(() => {
-    const mk = duel.myKills, md = duel.myDeaths;
     clearDuelMeshes(); duel = null;
-    state = 'over';
-    $('title').textContent = won ? t.youWin : t.youLose;
-    $('submsg').textContent = t.duelOverSub(mk, md);
-    showPanel('panel-main'); msgEl.classList.remove('hidden'); $('topbar').style.visibility = 'hidden';
-    updateCoinBar();
+    showHarvest({
+      title: won ? t.youWin : t.youLose, won,
+      sub: t.duelOverSub(mk, md),
+      xpKind: 'pvp', xpOpts: { kills: mk, won }, coins: 0,
+      replay: () => startBotDuel(),
+    });
   }, 1800);
 }
 function duelEnd(won) {
@@ -2617,6 +2667,8 @@ function handleTeamNet(m) {
 $('lang-tr').addEventListener('click', () => { lang = 'tr'; applyLang(); if ($('panel-garage').classList.contains('show')) renderGarage(); if ($('panel-maps').classList.contains('show')) renderMaps(); });
 $('lang-en').addEventListener('click', () => { lang = 'en'; applyLang(); if ($('panel-garage').classList.contains('show')) renderGarage(); if ($('panel-maps').classList.contains('show')) renderMaps(); });
 $('btn-quickplay').addEventListener('click', () => { track('quickplay_click'); duelMap = 0; startBotDuel(); });
+$('res-again').addEventListener('click', () => { const fn = harvestReplay; harvestReplay = null; if (fn) { track('retry_click', { mode: matchMode }); fn(); } else openMenu(); });
+$('res-menu').addEventListener('click', () => { harvestReplay = null; openMenu(); });
 $('btn-single').addEventListener('click', () => { $('title').textContent = T().chooseMap; $('submsg').textContent = T().bestWave(profile.bestWave); renderMaps(); showPanel('panel-maps'); });
 function renderMapPicker(containerId, rerender) {
   const wrap = $(containerId);

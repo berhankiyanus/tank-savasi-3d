@@ -107,6 +107,16 @@
             overflow: hidden; border: 1px solid rgba(125,255,155,.4); }
   #lvlfill { height: 100%; width: 2%; background: linear-gradient(90deg, #3f7d2f, #7dff9b);
              border-radius: 5px; transition: width .6s ease; }
+  #res-title { font-size: 40px; font-weight: bold; letter-spacing: 2px; color: #7dff9b;
+               text-shadow: 0 2px 10px rgba(0,0,0,.6); margin-bottom: 4px; }
+  #res-sub { font-size: 17px; color: #d8d8d8; margin-bottom: 20px; min-height: 22px; }
+  #res-xprow { display: flex; align-items: center; justify-content: center; gap: 12px; margin: 6px auto 4px;
+               width: min(90%, 380px); }
+  #res-lvl { font-size: 17px; color: #7dff9b; font-weight: bold; min-width: 52px; }
+  #res-xpbar { flex: 1; height: 16px; background: rgba(255,255,255,.14); border-radius: 8px;
+               overflow: hidden; border: 1px solid rgba(125,255,155,.45); }
+  #res-xpfill { height: 100%; width: 0%; background: linear-gradient(90deg, #3f7d2f, #7dff9b); border-radius: 8px; }
+  #res-rewards { font-size: 20px; font-weight: bold; color: #ffdd55; margin: 14px 0 22px; letter-spacing: 1px; }
   #errbox { bottom: 8px; left: 8px; right: 8px; background: rgba(160,20,20,.92); color: #fff;
             font-size: 13px; padding: 10px; border-radius: 8px; z-index: 99; display: none;
             word-break: break-all; }
@@ -310,6 +320,19 @@
       <button class="mbtn alt" id="btn-leave">ÇIKIŞ</button>
     </div>
     <div id="rematchstatus"></div>
+  </div>
+
+  <!-- maç sonu "hasat" ekranı (XP/ödül + tek tuş tekrar) -->
+  <div id="panel-result" class="panel">
+    <div id="res-title">KAZANDIN!</div>
+    <div id="res-sub"></div>
+    <div id="res-xprow">
+      <span id="res-lvl">Sv 1</span>
+      <div id="res-xpbar"><div id="res-xpfill"></div></div>
+    </div>
+    <div id="res-rewards"></div>
+    <button class="mbtn play" id="res-again">↻ TEKRAR OYNA</button>
+    <button class="mbtn small" id="res-menu">‹ ANA MENÜ</button>
   </div>
 </div>
 
