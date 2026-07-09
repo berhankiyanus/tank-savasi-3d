@@ -14,6 +14,7 @@ const L = {
     questsBtn: '🎯 GÖREVLER', questsTitle: 'GÜNLÜK GÖREVLER', questsSub: 'Her gece yenilenir',
     lbBtn: '🏆 LİDER', lbTitle: 'LİDER TABLOSU', lbDaily: 'BUGÜN', lbWeekly: 'BU HAFTA', lbEmpty: 'Henüz skor yok — ilk sen ol!', lbLoad: 'Yükleniyor...', lbScore: 'Dalga',
     seasonBtn: '🎟️ SEZON', seasonWord: 'Sezon', seasonTier: 'Kademe', seasonTierUp: (n, r) => `🎟️ Sezon ${n}. kademe: ${r}`,
+    chestMsg: '📦 Günlük sandık açıldı! +🪙120 +🎰2', streakLabel: n => `🔥 ${n} günlük seri`, chestReady: '📦 Tüm görevleri bitir → günlük sandık', chestDone: '📦 Günlük sandık alındı ✓',
     tmTitle: '🎰 Jeton Makinesi', tmCount: 'Jetonların', tmSpin: '🎲 ÇEVİR · 1 🎰', tmNeed: 'Jeton kazanmak için görev tamamla / seviye atla',
     buildTitle: 'YÜKSELTME SEÇ',
     gachaNew: s => `🎁 YENİ KAPLAMA! ${s}`, gachaDup: (s, c) => `🔁 ${s} zaten var → +🪙${c}`, tokenGot: n => `🎰 +${n} jeton!`,
@@ -64,6 +65,7 @@ const L = {
     questsBtn: '🎯 QUESTS', questsTitle: 'DAILY QUESTS', questsSub: 'Refreshes every night',
     lbBtn: '🏆 RANKS', lbTitle: 'LEADERBOARD', lbDaily: 'TODAY', lbWeekly: 'THIS WEEK', lbEmpty: 'No scores yet — be the first!', lbLoad: 'Loading...', lbScore: 'Wave',
     seasonBtn: '🎟️ SEASON', seasonWord: 'Season', seasonTier: 'Tier', seasonTierUp: (n, r) => `🎟️ Season tier ${n}: ${r}`,
+    chestMsg: '📦 Daily chest opened! +🪙120 +🎰2', streakLabel: n => `🔥 ${n}-day streak`, chestReady: '📦 Finish all quests → daily chest', chestDone: '📦 Daily chest claimed ✓',
     tmTitle: '🎰 Token Machine', tmCount: 'Your tokens', tmSpin: '🎲 SPIN · 1 🎰', tmNeed: 'Complete quests / level up to earn tokens',
     buildTitle: 'CHOOSE UPGRADE',
     gachaNew: s => `🎁 NEW SKIN! ${s}`, gachaDup: (s, c) => `🔁 ${s} already owned → +🪙${c}`, tokenGot: n => `🎰 +${n} tokens!`,
@@ -1629,7 +1631,16 @@ function questProgress(type, amount) {
       track('quest_complete', { id: q.id });
     }
   }
-  if (changed) { saveProfile(); if ($('panel-quests').classList.contains('show')) renderQuests(); }
+  if (changed) {
+    // tüm günlük görevler bitince günlük sandık (günde bir)
+    if (!profile.quests.chest && dailyQuests().every(q => q.claimed)) {
+      profile.quests.chest = true;
+      addCoins(120); profile.tokens = (profile.tokens || 0) + 2; updateTokenBar();
+      showToast(T().chestMsg, 4200); sfxCoin(); track('daily_chest');
+    }
+    saveProfile();
+    if ($('panel-quests').classList.contains('show')) renderQuests();
+  }
 }
 // ---------------------------------------------------------------- sezon (30 kademe, ücretsiz ray, oynayarak dolar)
 const SEASON_TIER_XP = 120, SEASON_LEN = 30;
@@ -1701,8 +1712,10 @@ async function renderLeaderboard(period) {
   }).join('');
 }
 function renderQuests() {
-  const list = dailyQuests();
-  $('questlist').innerHTML = list.map(q => {
+  const list = dailyQuests(), t = T();
+  const chest = profile.quests.chest ? t.chestDone : t.chestReady;
+  const header = `<div class="qhead"><span>${t.streakLabel(profile.streak || 1)}</span><span class="${profile.quests.chest ? 'qchest-done' : ''}">${chest}</span></div>`;
+  $('questlist').innerHTML = header + list.map(q => {
     const def = questDef(q.id);
     const pct = Math.min(100, (q.prog / def.goal) * 100);
     return `<div class="qrow${q.claimed ? ' done' : ''}">
@@ -1728,9 +1741,14 @@ function checkDaily() {
   const yest = new Date(Date.now() - 864e5).toDateString();
   profile.streak = (profile.lastDaily === yest) ? (profile.streak || 0) + 1 : 1;
   profile.lastDaily = today;
-  const reward = 50 + Math.min(profile.streak, 7) * 25;
+  const day = ((profile.streak - 1) % 7) + 1; // 7 günlük döngü (artan)
+  const reward = 40 + day * 20;               // gün 7 = 180
   addCoins(reward);
-  showToast(`🎁 ${T().dailyW} ${profile.streak} · +🪙${reward}`, 4000);
+  let msg = `🎁 ${T().dailyW} ${profile.streak} · +🪙${reward}`;
+  if (day === 7) { profile.tokens = (profile.tokens || 0) + 3; updateTokenBar(); msg += ' +🎰3'; }      // 7. gün büyük ödül
+  else if (day % 3 === 0) { profile.tokens = (profile.tokens || 0) + 1; updateTokenBar(); msg += ' +🎰1'; }
+  saveProfile();
+  showToast(msg, 4500);
 }
 function updateBossBar(boss) {
   const el = $('bossbar');
