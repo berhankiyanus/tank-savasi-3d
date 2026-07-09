@@ -231,11 +231,11 @@ const TANKS = [
   { id: 'sniper',   name: { tr: 'Nişancı',    en: 'Sniper'   }, price: 500,  color: 0x7a3aa0, scale: 1.00, health: 5, speed: 8.6,  turn: 2.8, cool: 0.30, bspeed: 42 },
   { id: 'phantom',  name: { tr: 'Hayalet',    en: 'Phantom'  }, price: 800,  color: 0x1aa37a, scale: 1.00, health: 6, speed: 9.6,  turn: 3.0, cool: 0.33, bspeed: 32, glow: true },
   { id: 'goldking', name: { tr: 'Altın Kral', en: 'Gold King'}, price: 1500, color: 0xffcc33, scale: 1.08, health: 9, speed: 9.2,  turn: 2.9, cool: 0.30, bspeed: 36, glow: true, metal: true },
-  { id: 'heavy',    name: { tr: 'Ağır Tank',   en: 'Heavy Tank'}, price: 2500, color: 0x6b6f4a, scale: 0.95, health: 12, speed: 5.6, turn: 1.8, cool: 0.50, bspeed: 30, model: 'heavy', metal: true },
-  { id: 'twin',     name: { tr: 'İkiz Namlu',  en: 'Twin Cannon'}, price: 3000, color: 0x556047, scale: 0.95, health: 7,  speed: 8.4, turn: 2.8, cool: 0.26, bspeed: 30, model: 'twin' },
-  { id: 'arty',     name: { tr: 'Obüs',        en: 'Howitzer'  }, price: 3500, color: 0x6a6248, scale: 0.95, health: 6,  speed: 5.4, turn: 1.7, cool: 0.60, bspeed: 46, model: 'arty' },
-  { id: 'hover',    name: { tr: 'Hover Tank',  en: 'Hover Tank'}, gem: 40, color: 0x3a4450, scale: 1.00, health: 5, speed: 12.0, turn: 3.5, cool: 0.34, bspeed: 34, model: 'hover', metal: true, glow: true },
-  { id: 'titan',    name: { tr: 'Titan',       en: 'Titan'     }, gem: 60, color: 0x40444a, scale: 1.05, health: 14, speed: 5.2, turn: 1.6, cool: 0.44, bspeed: 32, model: 'titan', metal: true, glow: true },
+  { id: 'heavy',    name: { tr: 'Ağır Tank',   en: 'Heavy Tank'}, price: 2500, color: 0x6b6f4a, scale: 0.95, health: 12, speed: 5.6, turn: 1.8, cool: 0.50, bspeed: 30, model: 'heavy', metal: true, turretTop: 1.8 },
+  { id: 'twin',     name: { tr: 'İkiz Namlu',  en: 'Twin Cannon'}, price: 3000, color: 0x556047, scale: 0.95, health: 7,  speed: 8.4, turn: 2.8, cool: 0.26, bspeed: 30, model: 'twin', turretTop: 1.62 },
+  { id: 'arty',     name: { tr: 'Obüs',        en: 'Howitzer'  }, price: 3500, color: 0x6a6248, scale: 0.95, health: 6,  speed: 5.4, turn: 1.7, cool: 0.60, bspeed: 46, model: 'arty', turretTop: 1.55 },
+  { id: 'hover',    name: { tr: 'Hover Tank',  en: 'Hover Tank'}, gem: 40, color: 0x3a4450, scale: 1.00, health: 5, speed: 12.0, turn: 3.5, cool: 0.34, bspeed: 34, model: 'hover', metal: true, glow: true, turretTop: 1.5 },
+  { id: 'titan',    name: { tr: 'Titan',       en: 'Titan'     }, gem: 60, color: 0x40444a, scale: 1.05, health: 14, speed: 5.2, turn: 1.6, cool: 0.44, bspeed: 32, model: 'titan', metal: true, glow: true, turretTop: 2.05 },
 ];
 const tankById = id => TANKS.find(t => t.id === id) || TANKS[0];
 const STAT_MAX = { health: 14, speed: 13.6, fire: 1 / 0.16 };
@@ -956,12 +956,17 @@ const ACCESSORIES = [
   { id: 'jetpack', name: { tr: 'Jetpack', en: 'Jetpack' }, icon: '🚀', gem: 25, r: 'e', build: buildJetpack, mount: { x: 0, y: 0.7, z: 1.15 } },
 ];
 const accById = id => ACCESSORIES.find(a => a.id === id);
+// kule-üstü oturan aksesuarlar (tank kule yüksekliğine göre kaydırılır); diğerleri gövdeye sabit
+const ACC_TURRET_SLOT = new Set(['surf', 'cone', 'tophat', 'duck', 'crown']);
 function disposeSubtree(o) { o.traverse(n => { if (n.isMesh) { if (n.geometry) n.geometry.dispose(); if (n.material) (Array.isArray(n.material) ? n.material : [n.material]).forEach(m => m.dispose()); } }); }
-function applyAccessory(root, accId) {
+function applyAccessory(root, accId, tankDef) {
   if (root.userData.accMesh) { root.remove(root.userData.accMesh); disposeSubtree(root.userData.accMesh); root.userData.accMesh = null; }
   const a = accById(accId); if (!a) return;
   const g = a.build(), mt = a.mount;
-  g.position.set(mt.x || 0, mt.y || 0, mt.z || 0);
+  let y = mt.y || 0;
+  // kule-üstü aksesuar → tankın kule yüksekliğine göre kaydır (büyük tanklarda hizalı)
+  if (ACC_TURRET_SLOT.has(a.id)) y += (((tankDef && tankDef.turretTop) || 1.5) - 1.5);
+  g.position.set(mt.x || 0, y, mt.z || 0);
   if (mt.rx) g.rotation.x = mt.rx; if (mt.ry) g.rotation.y = mt.ry; if (mt.rz) g.rotation.z = mt.rz;
   if (mt.s) g.scale.setScalar(mt.s);
   root.add(g); root.userData.accMesh = g;
@@ -1355,7 +1360,7 @@ function setPlayerTank(overrideDef) {
   if (player.mesh) scene.remove(player.mesh);
   player.mesh = buildTank(def);
   applySkin(player.mesh, profile.skin);
-  applyAccessory(player.mesh, profile.accessory);
+  applyAccessory(player.mesh, profile.accessory, def);
   player.mesh.position.set(player.x, 0, player.z);
   scene.add(player.mesh);
   playerTurret = player.mesh.getObjectByName('TankTurret');
@@ -2107,7 +2112,7 @@ function buildShowroomTank() {
   const m = buildTank(def);
   // seçili tankta oyuncunun kaplaması, diğerlerinde varsayılan görünüm
   applySkin(m, showroom.tankId === profile.selected ? profile.skin : 'default');
-  applyAccessory(m, showroom.accId); // önizlenen/takılı aksesuar
+  applyAccessory(m, showroom.accId, def); // önizlenen/takılı aksesuar
   showroomTankMesh = m; showroomTurn.add(m);
   // kamerayı modelin boyutuna göre çerçevele
   const box = new THREE.Box3().setFromObject(m), size = new THREE.Vector3(); box.getSize(size);
