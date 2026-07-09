@@ -13,6 +13,7 @@ const L = {
     againBtn: '↻ TEKRAR OYNA',
     questsBtn: '🎯 GÖREVLER', questsTitle: 'GÜNLÜK GÖREVLER', questsSub: 'Her gece yenilenir',
     tmTitle: '🎰 Jeton Makinesi', tmCount: 'Jetonların', tmSpin: '🎲 ÇEVİR · 1 🎰', tmNeed: 'Jeton kazanmak için görev tamamla / seviye atla',
+    buildTitle: 'YÜKSELTME SEÇ',
     gachaNew: s => `🎁 YENİ KAPLAMA! ${s}`, gachaDup: (s, c) => `🔁 ${s} zaten var → +🪙${c}`, tokenGot: n => `🎰 +${n} jeton!`,
     ftueGift: s => `🎁 İlk düşmanını yok ettin! "${s}" kaplaması hediye!`,
     ftueHintDesk: 'W/↑ ilerle · S/↓ geri · A/D dön · BOŞLUK ateş 🔫',
@@ -59,6 +60,7 @@ const L = {
     againBtn: '↻ PLAY AGAIN',
     questsBtn: '🎯 QUESTS', questsTitle: 'DAILY QUESTS', questsSub: 'Refreshes every night',
     tmTitle: '🎰 Token Machine', tmCount: 'Your tokens', tmSpin: '🎲 SPIN · 1 🎰', tmNeed: 'Complete quests / level up to earn tokens',
+    buildTitle: 'CHOOSE UPGRADE',
     gachaNew: s => `🎁 NEW SKIN! ${s}`, gachaDup: (s, c) => `🔁 ${s} already owned → +🪙${c}`, tokenGot: n => `🎰 +${n} tokens!`,
     ftueGift: s => `🎁 First enemy down! "${s}" skin unlocked!`,
     ftueHintDesk: 'W/↑ move · S/↓ back · A/D turn · SPACE fire 🔫',
@@ -1198,6 +1200,7 @@ const PLAYER_COLORS = { 1: 0x4a8d3a, 2: 0x2f7db0, 3: 0xd08a2a, 4: 0x9c4fd0 };
 const COOP_SPAWNS = [[1, 11], [11, 11], [1, 1], [11, 1]];
 // 2v2 takım savaşı
 let team = null;
+let matchBuild = null, buildChoosing = false, buildOnDone = null; // maç-içi build durumu (openMenu top-level'da erişir → burada bildir)
 const TEAM_TARGET = 15;
 const TEAM_COLORS = [0xd8382a, 0x2f7db0];       // 0 = kırmızı (sol), 1 = mavi (sağ)
 const TEAM_COLOR_HEX = ['#e8503a', '#3a9de0'];
@@ -1700,6 +1703,7 @@ function openMenu() {
   mode = 'solo';
   clearBallMode(); clearCoop(); clearTeam(); clearPowerups();
   hideFtueHint();
+  $('buildchoice').classList.add('hidden'); buildChoosing = false;
   shieldBubble.visible = false;
   if (!wallInst) buildArena(0);
   const t = T();
@@ -1918,6 +1922,7 @@ let lastSoloMap = 0;
 function startSolo(mapIdx) {
   mode = 'solo'; state = 'play';
   lastSoloMap = mapIdx;
+  resetBuild();
   profile.games++; saveProfile();
   closeNet();
   buildArena(mapIdx);
@@ -3032,6 +3037,44 @@ checkDaily();
   }
 }
 
+// ---------------------------------------------------------------- maç-içi build (Diep tarzı, her maç sıfırlanır — solo)
+// (durum değişkenleri yukarıda team/duel yanında bildirildi — TDZ için)
+function resetBuild() { matchBuild = { fire: 0, armor: 0, speed: 0, dmg: 0, multi: 0 }; buildChoosing = false; }
+function buildOn() { return mode === 'solo' && matchBuild; } // şimdilik sadece solo (coop maç-içi build v1.x)
+function bFire() { return buildOn() ? Math.max(0.4, 1 - 0.11 * matchBuild.fire) : 1; }
+function bSpeed() { return buildOn() ? (1 + 0.10 * matchBuild.speed) : 1; }
+function bDmg() { return buildOn() ? matchBuild.dmg : 0; }
+function bMulti() { return !!(buildOn() && matchBuild.multi > 0); }
+const BUILD_OPTS = [
+  { id: 'fire', icon: '🔥', name: { tr: 'Hızlı Ateş', en: 'Rapid Fire' }, desc: { tr: 'Atış hızı +%11', en: '+11% fire rate' } },
+  { id: 'armor', icon: '🛡️', name: { tr: 'Zırh', en: 'Armor' }, desc: { tr: '+1 can', en: '+1 HP' } },
+  { id: 'speed', icon: '💨', name: { tr: 'Hız', en: 'Speed' }, desc: { tr: 'Hareket +%10', en: '+10% move' } },
+  { id: 'dmg', icon: '💥', name: { tr: 'Güç', en: 'Power' }, desc: { tr: 'Mermi hasarı +1', en: '+1 damage' } },
+  { id: 'multi', icon: '🔱', name: { tr: 'Çoklu Atış', en: 'Multi Shot' }, desc: { tr: 'Üçlü atış', en: 'Triple shot' } },
+];
+function offerBuildChoice(onDone) {
+  if (!matchBuild) resetBuild();
+  buildOnDone = onDone;
+  const pool = BUILD_OPTS.filter(o => !(o.id === 'multi' && matchBuild.multi > 0)).slice();
+  for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t = pool[i]; pool[i] = pool[j]; pool[j] = t; }
+  const picks = pool.slice(0, 3), tt = T();
+  $('build-title').textContent = tt.buildTitle;
+  $('build-cards').innerHTML = picks.map(o =>
+    `<button class="buildcard" data-id="${o.id}"><div class="bc-ic">${o.icon}</div><div class="bc-nm">${o.name[lang]}</div><div class="bc-ds">${o.desc[lang]}</div></button>`).join('');
+  for (const b of $('build-cards').children) b.onclick = () => pickBuild(b.dataset.id);
+  $('buildchoice').classList.remove('hidden');
+  buildChoosing = true;
+}
+function pickBuild(id) {
+  matchBuild[id] = (matchBuild[id] || 0) + 1;
+  if (id === 'armor') { player.maxHealth++; player.health++; renderHealth(); }
+  sfxPower(); haptic('LIGHT');
+  $('buildchoice').classList.add('hidden');
+  buildChoosing = false;
+  track('build_pick', { id });
+  const fn = buildOnDone; buildOnDone = null; if (fn) fn();
+}
+
 // oto-kalite: oyun sırasında FPS ölçülür; sürekli düşükse (zayıf cihaz) kalite bir kez otomatik düşürülür
 let perfAccum = 0, perfFrames = 0, perfChecked = false;
 function monitorPerf(dt, active) {
@@ -3070,7 +3113,7 @@ function tick() {
   monitorPerf(dt, state === 'play' && !paused);
   trackTransitions();
 
-  if (state === 'play' && !paused) {
+  if (state === 'play' && !paused && !buildChoosing) {
     if (player.alive) {
       player.cool -= dt; player.inv -= dt;
       if (player.speedT > 0) player.speedT -= dt;
@@ -3080,7 +3123,7 @@ function tick() {
       let move = (keys.KeyW || keys.ArrowUp ? 1 : 0) - (keys.KeyS || keys.ArrowDown ? 1 : 0) + touchCtl.move;
       turn = Math.max(-1, Math.min(1, turn)); move = Math.max(-1, Math.min(1, move));
       player.a += turn * player.stat.turn * dt;
-      player.speed = move * player.stat.speed * (player.speedT > 0 ? 1.6 : 1);
+      player.speed = move * player.stat.speed * (player.speedT > 0 ? 1.6 : 1) * bSpeed();
       const dvx = fwdX(player.a) * player.speed, dvz = fwdZ(player.a) * player.speed;
       const onIce = hazards.length && hazardAt(player.x, player.z, 'ice');
       if (onIce) {
@@ -3108,9 +3151,9 @@ function tick() {
         }
       }
       if ((keys.Space || touchCtl.fire) && player.cool <= 0) {
-        if (player.tripleT > 0) { fire(player, -0.17); fire(player, 0); fire(player, 0.17); }
+        if (player.tripleT > 0 || bMulti()) { fire(player, -0.17); fire(player, 0); fire(player, 0.17); }
         else fire(player);
-        player.cool = player.stat.cool;
+        player.cool = player.stat.cool * bFire();
         if (mode === 'duel' || mode === 'ball' || mode === 'coop' || mode === 'team') netSend({ t: 'fire', x: player.x, z: player.z, a: player.a, bs: player.stat.bspeed, trip: player.tripleT > 0 });
       }
       if (Math.abs(player.speed) > 3) { dustT -= dt; if (dustT <= 0) { dustT = 0.06; spawnDust(player.x - fwdX(player.a) * 1.3, player.z - fwdZ(player.a) * 1.3); } }
@@ -3195,7 +3238,7 @@ function tick() {
             for (const e of enemies) {
               const hr = 1.4 * (e.type === 'boss' ? 1.7 : 1);
               if (e.alive && Math.hypot(b.mesh.position.x - e.x, b.mesh.position.z - e.z) < hr) {
-                e.hp--;
+                e.hp -= 1 + bDmg();
                 if (e.hp <= 0) {
                   e.alive = false; explode(e.x, 1.0, e.z, true); scene.remove(e.mesh);
                   popFloater(e.x, 2.2, e.z, '+' + e.score, e.type === 'boss' ? '#ff7a3a' : '#ffe86a');
@@ -3248,7 +3291,7 @@ function tick() {
           for (const e of enemies) {
             const hr = 1.4 * (e.type === 'boss' ? 1.7 : 1);
             if (e.alive && Math.hypot(b.mesh.position.x - e.x, b.mesh.position.z - e.z) < hr) {
-              e.hp--;
+              e.hp -= 1 + bDmg();
               if (e.hp <= 0) {
                 e.alive = false; explode(e.x, 1.0, e.z, true); scene.remove(e.mesh);
                 popFloater(e.x, 2.2, e.z, '+' + e.score, e.type === 'boss' ? '#ff7a3a' : '#ffe86a');
@@ -3295,7 +3338,9 @@ function tick() {
         if (wave % 5 === 0) stingBoss(); else stingWave();
         player.health = Math.min(player.maxHealth, player.health + 1);
         renderHealth();
-        spawnEnemies(waveComposition(wave));
+        // her 5. dalga temizlendikten sonra maç-içi yükseltme seçimi (Diep tarzı)
+        if ((wave - 1) % 5 === 0 && wave >= 6) offerBuildChoice(() => spawnEnemies(waveComposition(wave)));
+        else spawnEnemies(waveComposition(wave));
       }
     }
   }
