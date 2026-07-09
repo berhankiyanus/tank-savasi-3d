@@ -151,6 +151,7 @@
   .st-t { min-width: 26px; font-weight: bold; color: #ff9de0; }
   .st-r { flex: 1; text-align: left; }
   #tokenbar { color: #ff9de0; }
+  #gembar { color: #6fe0ff; }
   #tokenmachine { margin: 8px auto 2px; }
   .tm-box { display: inline-flex; flex-direction: column; align-items: center; gap: 6px;
             background: rgba(0,0,0,.35); border: 2px solid #ff9de0; border-radius: 12px; padding: 12px 22px; }
@@ -247,7 +248,9 @@
     .hp { width: 15px; height: 10px; }
     #wavebanner { font-size: 28px; }
     .card { width: 150px; }
-    #coinbar, #langsw { font-size: 16px; }
+    #langsw { font-size: 16px; }
+    /* dar ekranda üst-sol para çubuğu langsw ile çakışmasın → kompakt sarmalanan yığın */
+    #coinbar { font-size: 15px; flex-wrap: wrap; max-width: 135px; gap: 4px 8px; }
   }
 </style>
 </head>
@@ -294,6 +297,7 @@
     <div id="levelwrap"><span id="lvlnum">Sv 1</span><div id="lvlbar"><div id="lvlfill"></div></div></div>
     🪙 <span id="coins">0</span>
     <span id="tokenbar">🎰 <span id="tokens">0</span></span>
+    <span id="gembar">💎 <span id="gems">0</span></span>
   </div>
   <div id="langsw">
     <button class="mbtn small" id="lang-tr">TR</button>

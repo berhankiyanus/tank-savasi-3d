@@ -111,7 +111,7 @@ let lang = localStorage.getItem('tanklang') || ((navigator.language || 'tr').sta
 const T = () => L[lang];
 
 // ---------------------------------------------------------------- kalıcı profil
-const DEFAULT_PROFILE = { coins: 0, owned: ['recruit'], selected: 'recruit', bestWave: 1, upgrades: {}, kills: 0, wins: 0, games: 0, skins: ['default'], skin: 'default', achieved: [], lastDaily: '', streak: 0, name: '', gift1: false, level: 1, xp: 0, tokens: 0 };
+const DEFAULT_PROFILE = { coins: 0, owned: ['recruit'], selected: 'recruit', bestWave: 1, upgrades: {}, kills: 0, wins: 0, games: 0, skins: ['default'], skin: 'default', achieved: [], lastDaily: '', streak: 0, name: '', gift1: false, level: 1, xp: 0, tokens: 0, gems: 0, accessories: [], accessory: '' };
 let profile;
 try {
   profile = Object.assign({}, DEFAULT_PROFILE, JSON.parse(localStorage.getItem('tankprofile') || '{}'));
@@ -127,6 +127,7 @@ try {
 } catch { profile = Object.assign({}, DEFAULT_PROFILE); }
 function saveProfile() { localStorage.setItem('tankprofile', JSON.stringify(profile)); }
 function addCoins(n) { profile.coins += n; saveProfile(); updateCoinBar(); }
+function addGems(n) { profile.gems = (profile.gems || 0) + n; saveProfile(); updateGemBar(); }
 
 // ayarlar (ses / kalite)
 let settings;
@@ -1372,11 +1373,11 @@ const shieldBubble = makeShieldBubble();
 
 // düşman tipleri: normal / keşif (hızlı-zayıf) / ağır (yavaş-zırhlı) / nişancı (uzaktan) / boss
 const ENEMY_TYPES = {
-  normal: { hp: 1, speed: 4.6, turn: 1.9, cool: [2.2, 3.8], bspeed: 17, keep: 11, sight: 55, scale: 1.0, color: 0xa03428, coins: 15, score: 100 },
-  scout:  { hp: 1, speed: 7.8, turn: 2.9, cool: [2.6, 4.2], bspeed: 16, keep: 6, sight: 50, scale: 0.82, color: 0xc9902f, coins: 12, score: 80 },
-  heavy:  { hp: 3, speed: 3.0, turn: 1.3, cool: [2.4, 3.8], bspeed: 20, keep: 9, sight: 52, scale: 1.35, color: 0x5a6b55, coins: 35, score: 250 },
-  sniper: { hp: 1, speed: 3.6, turn: 1.6, cool: [2.0, 3.2], bspeed: 34, keep: 24, sight: 75, scale: 0.95, color: 0x8a3a8a, coins: 25, score: 180 },
-  boss:   { hp: 14, speed: 2.8, turn: 1.1, cool: [1.3, 2.0], bspeed: 22, keep: 12, sight: 80, scale: 2.1, color: 0x8f1414, coins: 200, score: 2000, triple: true, glow: true },
+  normal: { hp: 1, speed: 4.6, turn: 1.9, cool: [2.2, 3.8], bspeed: 17, keep: 11, sight: 55, scale: 1.0, color: 0xa03428, coins: 9, score: 100 },
+  scout:  { hp: 1, speed: 7.8, turn: 2.9, cool: [2.6, 4.2], bspeed: 16, keep: 6, sight: 50, scale: 0.82, color: 0xc9902f, coins: 7, score: 80 },
+  heavy:  { hp: 3, speed: 3.0, turn: 1.3, cool: [2.4, 3.8], bspeed: 20, keep: 9, sight: 52, scale: 1.35, color: 0x5a6b55, coins: 21, score: 250 },
+  sniper: { hp: 1, speed: 3.6, turn: 1.6, cool: [2.0, 3.2], bspeed: 34, keep: 24, sight: 75, scale: 0.95, color: 0x8a3a8a, coins: 15, score: 180 },
+  boss:   { hp: 14, speed: 2.8, turn: 1.1, cool: [1.3, 2.0], bspeed: 22, keep: 12, sight: 80, scale: 2.1, color: 0x8f1414, coins: 120, score: 2000, triple: true, glow: true },
 };
 let enemyIdC = 0;
 function waveComposition(w, extra = 0) {
@@ -1421,8 +1422,9 @@ const healthEl = $('health'), scoreEl = $('score'), waveEl = $('wave');
 const msgEl = $('msg'), flashEl = $('flash'), bannerEl = $('wavebanner');
 const duelStatusEl = $('duelstatus'), coinsEl = $('coins');
 
-function updateCoinBar() { coinsEl.textContent = profile.coins; updateTokenBar(); }
+function updateCoinBar() { coinsEl.textContent = profile.coins; updateTokenBar(); updateGemBar(); }
 function updateTokenBar() { const el = $('tokens'); if (el) el.textContent = profile.tokens || 0; }
+function updateGemBar() { const el = $('gems'); if (el) el.textContent = profile.gems || 0; }
 function grantTokens(n) {
   if (!n || n <= 0) return;
   profile.tokens = (profile.tokens || 0) + n;
@@ -1520,8 +1522,8 @@ function onLevelUp(lvl) {
   const big = lvl % 5 === 0;
   const reward = big ? (100 + lvl * 12) : (20 + lvl * 3);
   addCoins(reward);
-  if (big) grantTokens(2); // her 5. seviye → 2 jeton
-  banner(`⭐ ${lang === 'tr' ? 'SEVİYE' : 'LEVEL'} ${lvl}!  +🪙${reward}`);
+  if (big) { grantTokens(2); addGems(2); } // her 5. seviye → 2 jeton + 2 elmas (ücretsiz premium akışı)
+  banner(`⭐ ${lang === 'tr' ? 'SEVİYE' : 'LEVEL'} ${lvl}!  +🪙${reward}${big ? '  +💎2' : ''}`);
   sfxPower();
   track('level_up', { level: lvl });
 }
@@ -1649,9 +1651,11 @@ const SEASON_THEMES = [
   { tr: 'Uzay Sezonu', en: 'Space Season' }, { tr: 'Çöl Sezonu', en: 'Desert Season' },
 ];
 const SEASON_SKINS = { 5: 'ember', 10: 'frost', 15: 'plasma', 20: 'void', 25: 'venom', 30: 'royal' };
+const SEASON_GEMS = { 8: 3, 16: 3, 24: 4 }; // sezon rayından ücretsiz elmas
 const SEASON_REWARDS = Array.from({ length: SEASON_LEN }, (_, i) => {
   const tier = i + 1;
   if (SEASON_SKINS[tier]) return { skin: SEASON_SKINS[tier] };
+  if (SEASON_GEMS[tier]) return { gems: SEASON_GEMS[tier] };
   if (tier % 3 === 0) return { tokens: 1 };
   return { coins: 30 + tier * 3 };
 });
@@ -1666,10 +1670,11 @@ function ensureSeason() {
   if (!profile.season || profile.season.id !== id) { profile.season = { id, xp: 0, tier: 0 }; saveProfile(); }
   return profile.season;
 }
-function rewardText(r) { return r.coins ? `🪙 ${r.coins}` : r.tokens ? `🎰 ${r.tokens}` : r.skin ? `🎨 ${skinById(r.skin).name[lang]}` : ''; }
+function rewardText(r) { return r.coins ? `🪙 ${r.coins}` : r.tokens ? `🎰 ${r.tokens}` : r.gems ? `💎 ${r.gems}` : r.skin ? `🎨 ${skinById(r.skin).name[lang]}` : ''; }
 function grantSeasonReward(tier) {
   const r = SEASON_REWARDS[tier - 1]; if (!r) return;
   if (r.coins) addCoins(r.coins);
+  if (r.gems) addGems(r.gems);
   if (r.tokens) { profile.tokens = (profile.tokens || 0) + r.tokens; updateTokenBar(); }
   if (r.skin && !profile.skins.includes(r.skin)) profile.skins.push(r.skin);
   saveProfile();
@@ -1994,7 +1999,7 @@ function renderGarageTabs() {
 }
 function openGarage() {
   $('title').textContent = T().garage;
-  $('submsg').textContent = '🪙 ' + profile.coins;
+  $('submsg').textContent = `🪙 ${profile.coins}  ·  💎 ${profile.gems || 0}`;
   renderGarageTabs();
   showPanel('panel-garage');
 }
@@ -2703,7 +2708,7 @@ function coopNextWave() {
   for (const rm of coop.remotes.values()) { rm.alive = true; rm.hp = player.maxHealth; }
   placeCoopSpawns();
   renderHealth(); updateHUD();
-  const bonus = wave * 25; roundCoins += bonus; addCoins(bonus);
+  const bonus = wave * 15; roundCoins += bonus; addCoins(bonus);
   netSend({ t: 'wave', n: wave });
   netSend({ t: 'phealth', pid: coop.you, hp: player.health, alive: true });
   for (const [pid, rm] of coop.remotes) netSend({ t: 'phealth', pid, hp: rm.hp, alive: true });
@@ -3513,7 +3518,7 @@ function tick() {
       if (enemies.length === 0 && player.alive) {
         wave++;
         if (wave > profile.bestWave) { profile.bestWave = wave; saveProfile(); }
-        const bonus = wave * 25; roundCoins += bonus; addCoins(bonus);
+        const bonus = wave * 15; roundCoins += bonus; addCoins(bonus);
         updateHUD();
         banner(wave % 5 === 0 ? T().bossW : `${T().wave} ${wave}  +🪙${bonus}`);
         if (wave % 5 === 0) stingBoss(); else stingWave();
