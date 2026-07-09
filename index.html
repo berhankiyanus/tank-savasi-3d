@@ -117,6 +117,14 @@
                overflow: hidden; border: 1px solid rgba(125,255,155,.45); }
   #res-xpfill { height: 100%; width: 0%; background: linear-gradient(90deg, #3f7d2f, #7dff9b); border-radius: 8px; }
   #res-rewards { font-size: 20px; font-weight: bold; color: #ffdd55; margin: 14px 0 22px; letter-spacing: 1px; }
+  #questlist { display: flex; flex-direction: column; gap: 12px; width: min(92%, 440px); margin: 10px auto 18px; }
+  .qrow { background: rgba(0,0,0,.32); border: 1px solid rgba(125,255,155,.3); border-radius: 10px; padding: 11px 14px; text-align: left; }
+  .qrow.done { border-color: #7dff9b; background: rgba(60,125,47,.28); }
+  .qtext { font-size: 16px; color: #fff; margin-bottom: 7px; display: flex; justify-content: space-between; gap: 8px; }
+  .qrew { color: #ffdd55; font-weight: bold; }
+  .qbar { height: 10px; background: rgba(255,255,255,.14); border-radius: 5px; overflow: hidden; }
+  .qfill { height: 100%; background: linear-gradient(90deg, #3f7d2f, #7dff9b); border-radius: 5px; }
+  .qprog { font-size: 12px; color: #bdbdbd; text-align: right; margin-top: 4px; }
   #errbox { bottom: 8px; left: 8px; right: 8px; background: rgba(160,20,20,.92); color: #fff;
             font-size: 13px; padding: 10px; border-radius: 8px; z-index: 99; display: none;
             word-break: break-all; }
@@ -257,6 +265,7 @@
       <button class="mbtn alt" id="btn-ball">1v1 TOP MAÇI</button>
       <button class="mbtn alt" id="btn-coop">KOOPERATİF</button>
       <button class="mbtn alt" id="btn-team">2v2 TAKIM</button>
+      <button class="mbtn gold" id="btn-quests">🎯 GÖREVLER</button>
       <button class="mbtn gold" id="btn-garage">GARAJ</button>
     </div>
     <div id="statsline"></div>
@@ -320,6 +329,12 @@
       <button class="mbtn alt" id="btn-leave">ÇIKIŞ</button>
     </div>
     <div id="rematchstatus"></div>
+  </div>
+
+  <!-- günlük görevler -->
+  <div id="panel-quests" class="panel">
+    <div id="questlist"></div>
+    <button class="mbtn small" id="btn-back-quests">‹ GERİ</button>
   </div>
 
   <!-- maç sonu "hasat" ekranı (XP/ödül + tek tuş tekrar) -->

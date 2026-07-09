@@ -11,6 +11,7 @@ const L = {
     keysTouch: 'Soldaki joystick &nbsp;→&nbsp; sür ve dön &nbsp;|&nbsp; Sağdaki buton &nbsp;→&nbsp; ateş',
     quickPlay: '⚡ HIZLI OYNA', quickPlaySub: 'Tek tıkla bota karşı 1v1 — bekleme yok!',
     againBtn: '↻ TEKRAR OYNA',
+    questsBtn: '🎯 GÖREVLER', questsTitle: 'GÜNLÜK GÖREVLER', questsSub: 'Her gece yenilenir',
     ftueGift: s => `🎁 İlk düşmanını yok ettin! "${s}" kaplaması hediye!`,
     ftueHintDesk: 'W/↑ ilerle · S/↓ geri · A/D dön · BOŞLUK ateş 🔫',
     ftueHintTouch: 'Sol joystick: sür & dön · Sağ buton: ateş 🔫',
@@ -54,6 +55,7 @@ const L = {
     keysTouch: 'Left joystick &nbsp;→&nbsp; drive & turn &nbsp;|&nbsp; Right button &nbsp;→&nbsp; fire',
     quickPlay: '⚡ QUICK PLAY', quickPlaySub: 'One tap 1v1 vs a bot — no waiting!',
     againBtn: '↻ PLAY AGAIN',
+    questsBtn: '🎯 QUESTS', questsTitle: 'DAILY QUESTS', questsSub: 'Refreshes every night',
     ftueGift: s => `🎁 First enemy down! "${s}" skin unlocked!`,
     ftueHintDesk: 'W/↑ move · S/↓ back · A/D turn · SPACE fire 🔫',
     ftueHintTouch: 'Left stick: drive & turn · Right button: fire 🔫',
@@ -1446,6 +1448,57 @@ function updateLevelBar() {
   el.textContent = (lang === 'tr' ? 'Sv ' : 'Lv ') + (profile.level || 1);
   $('lvlfill').style.width = Math.max(2, Math.min(100, ((profile.xp || 0) / need) * 100)) + '%';
 }
+// ---------------------------------------------------------------- günlük görevler (3/gün, gece yenilenir)
+const QUESTS = [
+  { id: 'play3', type: 'match', goal: 3, reward: 50, text: { tr: '3 maç oyna', en: 'Play 3 matches' } },
+  { id: 'kill15', type: 'kill', goal: 15, reward: 60, text: { tr: '15 tank patlat', en: 'Destroy 15 tanks' } },
+  { id: 'win2', type: 'win', goal: 2, reward: 80, text: { tr: '2 maç kazan', en: 'Win 2 matches' } },
+  { id: 'wave6', type: 'wave', goal: 6, reward: 70, text: { tr: '6 dalga temizle', en: 'Clear 6 waves' } },
+  { id: 'kill30', type: 'kill', goal: 30, reward: 110, text: { tr: '30 tank patlat', en: 'Destroy 30 tanks' } },
+];
+const questDef = id => QUESTS.find(q => q.id === id);
+function questDayKey() { return new Date().toDateString(); }
+function dailyQuests() {
+  const dk = questDayKey();
+  if (!profile.quests || profile.quests.date !== dk) {
+    const seed = [...dk].reduce((a, c) => a + c.charCodeAt(0), 0);
+    const start = seed % QUESTS.length;
+    const list = [0, 1, 2].map(k => ({ id: QUESTS[(start + k) % QUESTS.length].id, prog: 0, claimed: false }));
+    profile.quests = { date: dk, list };
+    saveProfile();
+  }
+  return profile.quests.list;
+}
+function questProgress(type, amount) {
+  amount = amount || 1;
+  if (amount <= 0) return;
+  let changed = false;
+  for (const q of dailyQuests()) {
+    const def = questDef(q.id);
+    if (!def || def.type !== type || q.claimed) continue;
+    q.prog = Math.min(def.goal, q.prog + amount);
+    changed = true;
+    if (q.prog >= def.goal) {
+      q.claimed = true;
+      addCoins(def.reward); grantXp(25);
+      showToast(`✅ ${def.text[lang]}  +🪙${def.reward}`, 3400);
+      track('quest_complete', { id: q.id });
+    }
+  }
+  if (changed) { saveProfile(); if ($('panel-quests').classList.contains('show')) renderQuests(); }
+}
+function renderQuests() {
+  const list = dailyQuests();
+  $('questlist').innerHTML = list.map(q => {
+    const def = questDef(q.id);
+    const pct = Math.min(100, (q.prog / def.goal) * 100);
+    return `<div class="qrow${q.claimed ? ' done' : ''}">
+      <div class="qtext"><span>${q.claimed ? '✅ ' : ''}${def.text[lang]}</span><span class="qrew">+🪙${def.reward}</span></div>
+      <div class="qbar"><div class="qfill" style="width:${pct}%"></div></div>
+      <div class="qprog">${q.prog}/${def.goal}</div>
+    </div>`;
+  }).join('');
+}
 function checkAchievements() {
   for (const a of ACHIEVEMENTS) {
     if (profile.achieved.includes(a.id)) continue;
@@ -1562,7 +1615,7 @@ function updateHUD() {
 
 // panel yönetimi
 function showPanel(id) {
-  for (const p of ['panel-main', 'panel-maps', 'panel-garage', 'panel-duel', 'panel-coop', 'panel-profile', 'panel-rematch', 'panel-result'])
+  for (const p of ['panel-main', 'panel-maps', 'panel-garage', 'panel-duel', 'panel-coop', 'panel-profile', 'panel-rematch', 'panel-result', 'panel-quests'])
     $(p).classList.toggle('show', p === id);
 }
 function openMenu() {
@@ -1593,6 +1646,8 @@ function applyLang() {
   $('btn-duel').textContent = t.duel;
   $('btn-ball').textContent = t.ballBtn;
   $('btn-quickplay').textContent = t.quickPlay;
+  $('btn-quests').textContent = t.questsBtn;
+  $('btn-back-quests').textContent = t.back;
   $('btn-coop-share').textContent = t.shareBtn;
   $('btn-duel-share').textContent = t.shareBtn;
   $('btn-coop').textContent = t.coopBtn;
@@ -1812,6 +1867,7 @@ function gameOver() {
   state = 'over';
   clearPowerups();
   shieldBubble.visible = false;
+  questProgress('wave', Math.max(0, wave - 1));
   const t = T();
   showHarvest({
     title: t.over, won: null,
@@ -2066,7 +2122,7 @@ function botDuelPlayerDies() {
 function duelBotEnd(won) {
   if (!duel || duel.over) return;
   duel.over = true;
-  if (won) { profile.wins++; saveProfile(); }
+  if (won) { profile.wins++; saveProfile(); questProgress('win', 1); }
   const t = T();
   banner(won ? t.youWin : t.youLose);
   if (won) stingWin(); else stingLose();
@@ -2084,7 +2140,7 @@ function duelBotEnd(won) {
 function duelEnd(won) {
   if (!duel || duel.over) return;
   duel.over = true;
-  if (won) { profile.wins++; saveProfile(); }
+  if (won) { profile.wins++; saveProfile(); questProgress('win', 1); }
   grantMatchXp('pvp', { kills: duel.myKills, won });
   const t = T(), a = duel.myKills, b = duel.myDeaths;
   banner(won ? t.youWin : t.youLose);
@@ -2308,7 +2364,7 @@ function endBall() {
   const winner = ball.g1 > ball.g2 ? 1 : 2;
   const won = winner === duel.you;
   ball.over = true;
-  if (won) { profile.wins++; saveProfile(); }
+  if (won) { profile.wins++; saveProfile(); questProgress('win', 1); }
   grantMatchXp('ball', { won });
   banner(won ? t.youWin : t.youLose);
   if (won) stingWin(); else stingLose();
@@ -2416,6 +2472,7 @@ function coopNextWave() {
 function coopGameOver() {
   if (coop) coop.over = true;
   state = 'over';
+  questProgress('wave', Math.max(0, wave - 1));
   grantMatchXp('wave', { wave });
   const t = T();
   $('title').textContent = t.over;
@@ -2613,7 +2670,7 @@ function teamReceiveHit(byPid) {
   onTeamKill(byPid, team.you);
 }
 function teamEnd(won) {
-  if (won) { profile.wins++; saveProfile(); }
+  if (won) { profile.wins++; saveProfile(); questProgress('win', 1); }
   grantMatchXp('pvp', { kills: team.scores[team.mine], won });
   const t = T();
   banner(won ? t.teamWin : t.teamLose);
@@ -2669,6 +2726,8 @@ $('lang-en').addEventListener('click', () => { lang = 'en'; applyLang(); if ($('
 $('btn-quickplay').addEventListener('click', () => { track('quickplay_click'); duelMap = 0; startBotDuel(); });
 $('res-again').addEventListener('click', () => { const fn = harvestReplay; harvestReplay = null; if (fn) { track('retry_click', { mode: matchMode }); fn(); } else openMenu(); });
 $('res-menu').addEventListener('click', () => { harvestReplay = null; openMenu(); });
+$('btn-quests').addEventListener('click', () => { const t = T(); $('title').textContent = t.questsTitle; $('submsg').textContent = t.questsSub; renderQuests(); showPanel('panel-quests'); });
+$('btn-back-quests').addEventListener('click', openMenu);
 $('btn-single').addEventListener('click', () => { $('title').textContent = T().chooseMap; $('submsg').textContent = T().bestWave(profile.bestWave); renderMaps(); showPanel('panel-maps'); });
 function renderMapPicker(containerId, rerender) {
   const wrap = $(containerId);
@@ -2912,14 +2971,17 @@ function monitorPerf(dt, active) {
 }
 
 // analitik: durum geçişlerinden gameplay_start / match_end üret (tek yerden tüm modlar)
-let lastTrackedState = 'menu', matchMode = '', matchStartT = 0, killsBaseline = profile.kills || 0, firstKillSent = false;
+let lastTrackedState = 'menu', matchMode = '', matchStartT = 0, killsBaseline = profile.kills || 0, firstKillSent = false, matchStartKills = 0;
 function trackTransitions() {
   if (state !== lastTrackedState) {
-    if (state === 'play') { matchMode = mode; matchStartT = clock.elapsedTime; track('gameplay_start', { mode }); }
-    else if (lastTrackedState === 'play') { track('match_end', { mode: matchMode, dur: Math.round(clock.elapsedTime - matchStartT) }); }
+    if (state === 'play') { matchMode = mode; matchStartT = clock.elapsedTime; matchStartKills = profile.kills || 0; track('gameplay_start', { mode }); }
+    else if (lastTrackedState === 'play') {
+      track('match_end', { mode: matchMode, dur: Math.round(clock.elapsedTime - matchStartT) });
+      questProgress('match', 1);                                   // görev: maç oyna
+      questProgress('kill', (profile.kills || 0) - matchStartKills); // görev: tank patlat
+    }
     lastTrackedState = state;
   }
-  // ilk kill: sadece bir maç oynanırken ve oturum başındaki sayının üstüne çıkınca
   if (!firstKillSent && state === 'play' && (profile.kills || 0) > killsBaseline) { firstKillSent = true; track('first_kill', { mode: matchMode }); }
 }
 
