@@ -12,6 +12,7 @@ const L = {
     quickPlay: '⚡ HIZLI OYNA', quickPlaySub: 'Tek tıkla bota karşı 1v1 — bekleme yok!',
     againBtn: '↻ TEKRAR OYNA',
     questsBtn: '🎯 GÖREVLER', questsTitle: 'GÜNLÜK GÖREVLER', questsSub: 'Her gece yenilenir',
+    lbBtn: '🏆 LİDER', lbTitle: 'LİDER TABLOSU', lbDaily: 'BUGÜN', lbWeekly: 'BU HAFTA', lbEmpty: 'Henüz skor yok — ilk sen ol!', lbLoad: 'Yükleniyor...', lbScore: 'Dalga',
     tmTitle: '🎰 Jeton Makinesi', tmCount: 'Jetonların', tmSpin: '🎲 ÇEVİR · 1 🎰', tmNeed: 'Jeton kazanmak için görev tamamla / seviye atla',
     buildTitle: 'YÜKSELTME SEÇ',
     gachaNew: s => `🎁 YENİ KAPLAMA! ${s}`, gachaDup: (s, c) => `🔁 ${s} zaten var → +🪙${c}`, tokenGot: n => `🎰 +${n} jeton!`,
@@ -59,6 +60,7 @@ const L = {
     quickPlay: '⚡ QUICK PLAY', quickPlaySub: 'One tap 1v1 vs a bot — no waiting!',
     againBtn: '↻ PLAY AGAIN',
     questsBtn: '🎯 QUESTS', questsTitle: 'DAILY QUESTS', questsSub: 'Refreshes every night',
+    lbBtn: '🏆 RANKS', lbTitle: 'LEADERBOARD', lbDaily: 'TODAY', lbWeekly: 'THIS WEEK', lbEmpty: 'No scores yet — be the first!', lbLoad: 'Loading...', lbScore: 'Wave',
     tmTitle: '🎰 Token Machine', tmCount: 'Your tokens', tmSpin: '🎲 SPIN · 1 🎰', tmNeed: 'Complete quests / level up to earn tokens',
     buildTitle: 'CHOOSE UPGRADE',
     gachaNew: s => `🎁 NEW SKIN! ${s}`, gachaDup: (s, c) => `🔁 ${s} already owned → +🪙${c}`, tokenGot: n => `🎰 +${n} tokens!`,
@@ -158,6 +160,21 @@ function track(ev, data) {
     if (navigator.sendBeacon) navigator.sendBeacon(url, payload);
     else fetch(url, { method: 'POST', body: payload, keepalive: true }).catch(() => {});
   } catch {}
+}
+// lider tablosu: kalıcı istemci kimliği (aynı oyuncunun günlük en iyisi tekilleşsin)
+const CLIENT_ID = (() => { let c = localStorage.getItem('tankcid'); if (!c) { c = Math.random().toString(36).slice(2, 12); localStorage.setItem('tankcid', c); } return c; })();
+function submitScore(score) {
+  if (!score || score < 1) return;
+  try {
+    const payload = JSON.stringify({ cid: CLIENT_ID, name: profile.name || 'Oyuncu', score: score | 0 });
+    const url = apiBase() + '/lb';
+    if (navigator.sendBeacon) navigator.sendBeacon(url, payload);
+    else fetch(url, { method: 'POST', body: payload, keepalive: true }).catch(() => {});
+  } catch {}
+}
+async function fetchLeaderboard(period) {
+  try { const r = await fetch(apiBase() + '/lb?p=' + period, { cache: 'no-store' }); return await r.json(); }
+  catch { return []; }
 }
 let paused = false;
 
@@ -1567,6 +1584,22 @@ function questProgress(type, amount) {
   }
   if (changed) { saveProfile(); if ($('panel-quests').classList.contains('show')) renderQuests(); }
 }
+let lbPeriod = 'day';
+async function renderLeaderboard(period) {
+  lbPeriod = period; const t = T();
+  $('lbt-day').classList.toggle('on', period === 'day');
+  $('lbt-week').classList.toggle('on', period === 'week');
+  $('lblist').innerHTML = `<div class="lbempty">${t.lbLoad}</div>`;
+  const rows = await fetchLeaderboard(period);
+  if (lbPeriod !== period) return; // sekme değiştiyse iptal
+  if (!rows.length) { $('lblist').innerHTML = `<div class="lbempty">${t.lbEmpty}</div>`; return; }
+  const myName = profile.name || 'Oyuncu';
+  $('lblist').innerHTML = rows.map((r, i) => {
+    const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1) + '.';
+    const me = r.name === myName ? ' me' : '';
+    return `<div class="lbrow${me}"><span class="lbrank">${medal}</span><span class="lbname">${r.name}</span><span class="lbscore">🌊 ${r.score}</span></div>`;
+  }).join('');
+}
 function renderQuests() {
   const list = dailyQuests();
   $('questlist').innerHTML = list.map(q => {
@@ -1695,7 +1728,7 @@ function updateHUD() {
 
 // panel yönetimi
 function showPanel(id) {
-  for (const p of ['panel-main', 'panel-maps', 'panel-garage', 'panel-duel', 'panel-coop', 'panel-profile', 'panel-rematch', 'panel-result', 'panel-quests'])
+  for (const p of ['panel-main', 'panel-maps', 'panel-garage', 'panel-duel', 'panel-coop', 'panel-profile', 'panel-rematch', 'panel-result', 'panel-quests', 'panel-lb'])
     $(p).classList.toggle('show', p === id);
 }
 function openMenu() {
@@ -1729,6 +1762,10 @@ function applyLang() {
   $('btn-quickplay').textContent = t.quickPlay;
   $('btn-quests').textContent = t.questsBtn;
   $('btn-back-quests').textContent = t.back;
+  $('btn-lb').textContent = t.lbBtn;
+  $('btn-back-lb').textContent = t.back;
+  $('lbt-day').textContent = t.lbDaily;
+  $('lbt-week').textContent = t.lbWeekly;
   $('btn-coop-share').textContent = t.shareBtn;
   $('btn-duel-share').textContent = t.shareBtn;
   $('btn-coop').textContent = t.coopBtn;
@@ -1952,6 +1989,7 @@ function gameOver() {
   clearPowerups();
   shieldBubble.visible = false;
   questProgress('wave', Math.max(0, wave - 1));
+  submitScore(wave);
   const t = T();
   showHarvest({
     title: t.over, won: null,
@@ -2557,6 +2595,7 @@ function coopGameOver() {
   if (coop) coop.over = true;
   state = 'over';
   questProgress('wave', Math.max(0, wave - 1));
+  submitScore(wave);
   grantMatchXp('wave', { wave });
   const t = T();
   $('title').textContent = t.over;
@@ -2812,6 +2851,10 @@ $('res-again').addEventListener('click', () => { const fn = harvestReplay; harve
 $('res-menu').addEventListener('click', () => { harvestReplay = null; openMenu(); });
 $('btn-quests').addEventListener('click', () => { const t = T(); $('title').textContent = t.questsTitle; $('submsg').textContent = t.questsSub; renderQuests(); showPanel('panel-quests'); });
 $('btn-back-quests').addEventListener('click', openMenu);
+$('btn-lb').addEventListener('click', () => { const t = T(); $('title').textContent = t.lbTitle; $('submsg').textContent = ''; showPanel('panel-lb'); renderLeaderboard('day'); });
+$('lbt-day').addEventListener('click', () => renderLeaderboard('day'));
+$('lbt-week').addEventListener('click', () => renderLeaderboard('week'));
+$('btn-back-lb').addEventListener('click', openMenu);
 $('btn-single').addEventListener('click', () => { $('title').textContent = T().chooseMap; $('submsg').textContent = T().bestWave(profile.bestWave); renderMaps(); showPanel('panel-maps'); });
 function renderMapPicker(containerId, rerender) {
   const wrap = $(containerId);

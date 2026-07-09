@@ -30,7 +30,49 @@ function trackEvent(m) {
   console.log('[EV]', m.ev, m.mode || '', (m.sid || '').slice(0, 6), m.dur != null ? m.dur + 's' : '');
 }
 
+// ---- lider tablosu (günlük + haftalık, in-memory; gece/hafta sonu sıfırlanır) ----
+// Not: Render restart'ta sıfırlanır (kalıcı için Postgres — GDD sonrası). Günlük tablo zaten her gece sıfırlanır.
+const lb = { day: { key: '', m: {} }, week: { key: '', m: {} } };
+function lbKeys() {
+  const d = new Date();
+  const day = d.toISOString().slice(0, 10);
+  const oneJan = new Date(d.getFullYear(), 0, 1);
+  const week = d.getFullYear() + '-W' + Math.ceil(((d - oneJan) / 86400000 + oneJan.getDay() + 1) / 7);
+  return { day, week };
+}
+function lbRoll() {
+  const k = lbKeys();
+  if (lb.day.key !== k.day) { lb.day.key = k.day; lb.day.m = {}; }
+  if (lb.week.key !== k.week) { lb.week.key = k.week; lb.week.m = {}; }
+}
+function lbSubmit(cid, name, score) {
+  if (!cid) return;
+  lbRoll();
+  score = Math.max(0, Math.min(9999, score | 0));
+  name = String(name || 'Oyuncu').slice(0, 14);
+  for (const b of [lb.day, lb.week]) { const e = b.m[cid]; if (!e || score > e.score) b.m[cid] = { name, score }; }
+}
+function lbTop(period) {
+  lbRoll();
+  const b = period === 'week' ? lb.week : lb.day;
+  return Object.values(b.m).sort((a, c) => c.score - a.score).slice(0, 20);
+}
+
 const server = http.createServer((req, res) => {
+  // lider tablosu gönderimi
+  if (req.method === 'POST' && (req.url || '').startsWith('/lb')) {
+    let body = '';
+    req.on('data', c => { body += c; if (body.length > 2000) req.destroy(); });
+    req.on('end', () => { try { const m = JSON.parse(body); lbSubmit(m.cid, m.name, m.score); } catch {} res.writeHead(204); res.end(); });
+    return;
+  }
+  // lider tablosu okuma (?p=day|week)
+  if (req.method === 'GET' && (req.url || '').startsWith('/lb')) {
+    const period = /p=week/.test(req.url || '') ? 'week' : 'day';
+    res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
+    res.end(JSON.stringify(lbTop(period)));
+    return;
+  }
   // analitik olay alımı (sendBeacon POST)
   if (req.method === 'POST' && (req.url || '').startsWith('/ev')) {
     let body = '';
