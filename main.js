@@ -1555,9 +1555,9 @@ function showHarvest(opts) {
   $('res-sub').innerHTML = opts.sub || '';
   $('res-rewards').innerHTML = `+${gained} XP` + (opts.coins ? ` &nbsp;·&nbsp; +🪙${opts.coins}` : '');
   $('res-lvl').textContent = (lang === 'tr' ? 'Sv ' : 'Lv ') + preLvl;
-  $('res-again').textContent = t.againBtn;
+  if (opts.replay) { $('res-again').style.display = ''; $('res-again').textContent = t.againBtn; harvestReplay = opts.replay; }
+  else { $('res-again').style.display = 'none'; harvestReplay = null; } // ağ modları: tekrar-oyna yok (koordinasyon gerekir), menü
   $('res-menu').textContent = '‹ ' + t.toMenuW;
-  harvestReplay = opts.replay || null;
   // ödüllü reklam teklifi (x2) — FTUE'den sonra + sıklık sınırı
   harvestReward = { xp: gained, coins: opts.coins || 0 };
   const rb = $('res-rewarded');
@@ -2713,16 +2713,11 @@ function coopNextWave() {
 }
 function coopGameOver() {
   if (coop) coop.over = true;
-  state = 'over';
   questProgress('wave', Math.max(0, wave - 1));
   submitScore(wave);
-  grantMatchXp('wave', { wave });
-  const t = T();
-  $('title').textContent = t.over;
-  $('submsg').textContent = t.overSub(score, wave, roundCoins);
-  showPanel('panel-main'); msgEl.classList.remove('hidden'); $('topbar').style.visibility = 'hidden';
-  clearCoop(); closeNet();
-  updateCoinBar(); updateStats();
+  const t = T(), cCoins = roundCoins;
+  clearCoop(); closeNet(); updateStats();
+  showHarvest({ title: t.over, won: null, sub: t.overSub(score, wave, cCoins), xpKind: 'wave', xpOpts: { wave }, coins: cCoins, replay: null });
 }
 function coopPeerLeft(who) {
   if (!coop) return;
@@ -2914,12 +2909,15 @@ function teamReceiveHit(byPid) {
 }
 function teamEnd(won) {
   if (won) { profile.wins++; saveProfile(); questProgress('win', 1); }
-  grantMatchXp('pvp', { kills: team.scores[team.mine], won });
   const t = T();
   banner(won ? t.teamWin : t.teamLose);
   if (won) stingWin(); else stingLose();
   const sub = `<span style="color:${TEAM_COLOR_HEX[0]}">${t.teamRed} ${team.scores[0]}</span> — <span style="color:${TEAM_COLOR_HEX[1]}">${team.scores[1]} ${t.teamBlue}</span>`;
-  setTimeout(() => teamToMenu(won ? t.teamWin : t.teamLose, sub), 1900);
+  const kills = team.scores[team.mine];
+  setTimeout(() => {
+    closeNet(); clearTeam(); updateStats();
+    showHarvest({ title: won ? t.teamWin : t.teamLose, won, sub, xpKind: 'pvp', xpOpts: { kills, won }, coins: 0, replay: null });
+  }, 1900);
 }
 function teamToMenu(title, sub) {
   state = 'over';
