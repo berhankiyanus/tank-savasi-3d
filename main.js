@@ -231,6 +231,7 @@ const TANKS = [
   { id: 'sniper',   name: { tr: 'Nişancı',    en: 'Sniper'   }, price: 500,  color: 0x7a3aa0, scale: 1.00, health: 5, speed: 8.6,  turn: 2.8, cool: 0.30, bspeed: 42 },
   { id: 'phantom',  name: { tr: 'Hayalet',    en: 'Phantom'  }, price: 800,  color: 0x1aa37a, scale: 1.00, health: 6, speed: 9.6,  turn: 3.0, cool: 0.33, bspeed: 32, glow: true },
   { id: 'goldking', name: { tr: 'Altın Kral', en: 'Gold King'}, price: 1500, color: 0xffcc33, scale: 1.08, health: 9, speed: 9.2,  turn: 2.9, cool: 0.30, bspeed: 36, glow: true, metal: true },
+  { id: 'heavy',    name: { tr: 'Ağır Tank',   en: 'Heavy Tank'}, price: 2500, color: 0x6b6f4a, scale: 0.95, health: 12, speed: 5.6, turn: 1.8, cool: 0.50, bspeed: 30, model: 'heavy', metal: true },
 ];
 const tankById = id => TANKS.find(t => t.id === id) || TANKS[0];
 const STAT_MAX = { health: 14, speed: 13.6, fire: 1 / 0.16 };
@@ -431,6 +432,17 @@ const [tankGltf, envTex] = await Promise.all([
 envTex.mapping = THREE.EquirectangularReflectionMapping;
 scene.background = envTex;
 scene.environment = envTex;
+
+// ---------------------------------------------------------------- tank modelleri (tembel-yükleme)
+// farklı GLB gövde modelleri; ilk pakete girmez, seçilince/önizlenince yüklenir (performans bütçesi)
+const MODEL_PATHS = { heavy: 'assets/tank_heavy.glb' };
+const loadedModels = {}; // modelId -> gltf.scene
+const _modelLoader = new GLTFLoader();
+async function ensureModel(modelId) {
+  if (!modelId || loadedModels[modelId] || !MODEL_PATHS[modelId]) return;
+  try { const g = await _modelLoader.loadAsync(MODEL_PATHS[modelId]); loadedModels[modelId] = g.scene; }
+  catch (e) { console.warn('tank modeli yüklenemedi:', modelId, e); }
+}
 
 const groundMat = new THREE.MeshStandardMaterial({
   map: tex('assets/textures/ground_diff.jpg', true, 12),
@@ -826,7 +838,8 @@ buildArena(0);
 
 // ---------------------------------------------------------------- tank fabrikası
 function buildTank(def) {
-  const g = tankGltf.scene.clone(true);
+  const src = (def.model && loadedModels[def.model]) ? loadedModels[def.model] : tankGltf.scene;
+  const g = src.clone(true);
   g.traverse(o => {
     if (o.isMesh) {
       o.castShadow = o.receiveShadow = true;
@@ -1341,6 +1354,7 @@ function setPlayerTank(overrideDef) {
   player.stat = def;
   player.maxHealth = def.health;
 }
+await ensureModel(tankById(profile.selected).model); // seçili tank özel modelliyse açılışta yükle
 setPlayerTank();
 
 let enemies = [];
@@ -2167,8 +2181,9 @@ function enterShowroomView() {
   showPanel('panel-showroom');
   renderShowroomUI();
 }
-function openShowroom(tankId) {
+async function openShowroom(tankId) {
   ensureShowroom();
+  await ensureModel(tankById(tankId).model); // özel model tembel-yükle
   showroom.mode = 'tank'; showroom.tankId = tankId;
   showroom.accId = tankId === profile.selected ? profile.accessory : '';
   enterShowroomView();
@@ -2210,12 +2225,13 @@ function renderGarage() {
     const btn = document.createElement('button');
     btn.className = 'mbtn small' + (base.glow ? ' gold' : '');
     if (sel) { btn.textContent = t.selected; btn.disabled = true; }
-    else if (owned) { btn.textContent = t.owned; btn.onclick = () => { profile.selected = base.id; saveProfile(); setPlayerTank(); renderGarage(); }; }
+    else if (owned) { btn.textContent = t.owned; btn.onclick = async () => { await ensureModel(base.model); profile.selected = base.id; saveProfile(); setPlayerTank(); renderGarage(); }; }
     else {
       btn.innerHTML = `${t.buy} · 🪙${base.price}`;
       btn.disabled = profile.coins < base.price;
-      btn.onclick = () => {
+      btn.onclick = async () => {
         if (profile.coins < base.price) return;
+        await ensureModel(base.model);
         profile.coins -= base.price; profile.owned.push(base.id); profile.selected = base.id;
         saveProfile(); sfxCoin(); setPlayerTank(); updateCoinBar(); renderGarage();
       };
