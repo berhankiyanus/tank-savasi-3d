@@ -93,7 +93,7 @@ let lang = localStorage.getItem('tanklang') || ((navigator.language || 'tr').sta
 const T = () => L[lang];
 
 // ---------------------------------------------------------------- kalıcı profil
-const DEFAULT_PROFILE = { coins: 0, owned: ['recruit'], selected: 'recruit', bestWave: 1, upgrades: {}, kills: 0, wins: 0, games: 0, skins: ['default'], skin: 'default', achieved: [], lastDaily: '', streak: 0, name: '', gift1: false };
+const DEFAULT_PROFILE = { coins: 0, owned: ['recruit'], selected: 'recruit', bestWave: 1, upgrades: {}, kills: 0, wins: 0, games: 0, skins: ['default'], skin: 'default', achieved: [], lastDaily: '', streak: 0, name: '', gift1: false, level: 1, xp: 0 };
 let profile;
 try {
   profile = Object.assign({}, DEFAULT_PROFILE, JSON.parse(localStorage.getItem('tankprofile') || '{}'));
@@ -1358,6 +1358,46 @@ function hideFtueHint() {
   const el = $('ftuehint'); el.style.opacity = '0';
   setTimeout(() => { if (!ftueHintOn) el.style.display = 'none'; }, 500);
 }
+// ---------------------------------------------------------------- profil XP / seviye (retention omurgası)
+function xpForLevel(n) { return Math.round(100 * Math.pow(n, 1.35)); } // n→n+1 için gereken XP
+function grantXp(amount) {
+  if (!amount || amount <= 0) return;
+  profile.xp = (profile.xp || 0) + amount;
+  let leveled = 0;
+  while (profile.xp >= xpForLevel(profile.level || 1)) {
+    profile.xp -= xpForLevel(profile.level || 1);
+    profile.level = (profile.level || 1) + 1;
+    leveled++;
+    onLevelUp(profile.level);
+  }
+  saveProfile();
+  updateLevelBar();
+}
+function onLevelUp(lvl) {
+  const big = lvl % 5 === 0;
+  const reward = big ? (100 + lvl * 12) : (20 + lvl * 3);
+  addCoins(reward);
+  banner(`⭐ ${lang === 'tr' ? 'SEVİYE' : 'LEVEL'} ${lvl}!  +🪙${reward}`);
+  sfxPower();
+  track('level_up', { level: lvl });
+}
+// maç sonunda kazanılan XP (mod + performansa göre)
+function grantMatchXp(kind, opts) {
+  opts = opts || {};
+  let xp = 12; // katılım tabanı
+  if (kind === 'wave') xp += (opts.wave || 1) * 6;
+  else if (kind === 'pvp') xp += (opts.kills || 0) * 8 + (opts.won ? 30 : 8);
+  else if (kind === 'ball') xp += (opts.won ? 30 : 10);
+  grantXp(xp);
+  showToast(`+${xp} XP`, 2200);
+  return xp;
+}
+function updateLevelBar() {
+  const el = $('lvlnum'); if (!el) return;
+  const need = xpForLevel(profile.level || 1);
+  el.textContent = (lang === 'tr' ? 'Sv ' : 'Lv ') + (profile.level || 1);
+  $('lvlfill').style.width = Math.max(2, Math.min(100, ((profile.xp || 0) / need) * 100)) + '%';
+}
 function checkAchievements() {
   for (const a of ACHIEVEMENTS) {
     if (profile.achieved.includes(a.id)) continue;
@@ -1491,6 +1531,7 @@ function openMenu() {
   msgEl.classList.remove('hidden');
   $('topbar').style.visibility = 'hidden';
   updateCoinBar();
+  updateLevelBar();
   updateStats();
   checkAchievements();
 }
@@ -1721,6 +1762,7 @@ function gameOver() {
   state = 'over';
   clearPowerups();
   shieldBubble.visible = false;
+  grantMatchXp('wave', { wave });
   const t = T();
   $('title').textContent = t.over;
   $('submsg').textContent = t.overSub(score, wave, roundCoins);
@@ -1975,6 +2017,7 @@ function duelBotEnd(won) {
   if (!duel || duel.over) return;
   duel.over = true;
   if (won) { profile.wins++; saveProfile(); }
+  grantMatchXp('pvp', { kills: duel.myKills, won });
   const t = T();
   banner(won ? t.youWin : t.youLose);
   if (won) stingWin(); else stingLose();
@@ -1992,6 +2035,7 @@ function duelEnd(won) {
   if (!duel || duel.over) return;
   duel.over = true;
   if (won) { profile.wins++; saveProfile(); }
+  grantMatchXp('pvp', { kills: duel.myKills, won });
   const t = T(), a = duel.myKills, b = duel.myDeaths;
   banner(won ? t.youWin : t.youLose);
   if (won) stingWin(); else stingLose();
@@ -2215,6 +2259,7 @@ function endBall() {
   const won = winner === duel.you;
   ball.over = true;
   if (won) { profile.wins++; saveProfile(); }
+  grantMatchXp('ball', { won });
   banner(won ? t.youWin : t.youLose);
   if (won) stingWin(); else stingLose();
   const a = duel.you === 1 ? ball.g1 : ball.g2;
@@ -2321,6 +2366,7 @@ function coopNextWave() {
 function coopGameOver() {
   if (coop) coop.over = true;
   state = 'over';
+  grantMatchXp('wave', { wave });
   const t = T();
   $('title').textContent = t.over;
   $('submsg').textContent = t.overSub(score, wave, roundCoins);
@@ -2518,6 +2564,7 @@ function teamReceiveHit(byPid) {
 }
 function teamEnd(won) {
   if (won) { profile.wins++; saveProfile(); }
+  grantMatchXp('pvp', { kills: team.scores[team.mine], won });
   const t = T();
   banner(won ? t.teamWin : t.teamLose);
   if (won) stingWin(); else stingLose();

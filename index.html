@@ -99,7 +99,14 @@
   #duelstatus .code { font-size: 34px; letter-spacing: 8px; color: #ffd76a; font-weight: bold; }
   #langsw { position: absolute; top: calc(16px + env(safe-area-inset-top)); right: 18px; }
   #coinbar { position: absolute; top: calc(16px + env(safe-area-inset-top)); left: 18px;
-             font-size: 22px; font-weight: bold; color: #ffdd55; letter-spacing: 1px; }
+             font-size: 22px; font-weight: bold; color: #ffdd55; letter-spacing: 1px;
+             display: flex; align-items: center; gap: 14px; }
+  #levelwrap { display: flex; align-items: center; gap: 7px; }
+  #lvlnum { font-size: 15px; color: #7dff9b; letter-spacing: 0; min-width: 40px; }
+  #lvlbar { width: 92px; height: 9px; background: rgba(255,255,255,.15); border-radius: 5px;
+            overflow: hidden; border: 1px solid rgba(125,255,155,.4); }
+  #lvlfill { height: 100%; width: 2%; background: linear-gradient(90deg, #3f7d2f, #7dff9b);
+             border-radius: 5px; transition: width .6s ease; }
   #errbox { bottom: 8px; left: 8px; right: 8px; background: rgba(160,20,20,.92); color: #fff;
             font-size: 13px; padding: 10px; border-radius: 8px; z-index: 99; display: none;
             word-break: break-all; }
@@ -217,7 +224,10 @@
 </div>
 
 <div id="msg" class="hud">
-  <div id="coinbar">🪙 <span id="coins">0</span></div>
+  <div id="coinbar">
+    <div id="levelwrap"><span id="lvlnum">Sv 1</span><div id="lvlbar"><div id="lvlfill"></div></div></div>
+    🪙 <span id="coins">0</span>
+  </div>
   <div id="langsw">
     <button class="mbtn small" id="lang-tr">TR</button>
     <button class="mbtn small" id="lang-en">EN</button>
