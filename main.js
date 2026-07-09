@@ -36,6 +36,7 @@ const L = {
     peerLeft: 'Rakip oyundan ayrıldı',
     chooseMap: 'HARİTA SEÇ', garageTitle: 'GARAJ — Tank Al & Değiştir',
     buy: 'SATIN AL', owned: 'SEÇ', selected: '✓ SEÇİLİ', locked: w => `🔒 Dalga ${w}`,
+    accTab: 'AKSESUAR', accEquip: 'TAK', accRemove: '✓ ÇIKAR', accNone: 'Aksesuar yok',
     noMoney: 'Yetersiz 🪙!', sHealth: 'Can', sSpeed: 'Hız', sFire: 'Ateş',
     reward: '🪙', bestWave: w => `En iyi: Dalga ${w}`, maxLevel: 'MAKS',
     ballBtn: '1v1 TOP MAÇI', ballSub: t => `Topu ateşle karşı base'e sok! İlk ${t} gol kazanır.`,
@@ -87,6 +88,7 @@ const L = {
     peerLeft: 'Your rival left the game',
     chooseMap: 'CHOOSE MAP', garageTitle: 'GARAGE — Buy & Switch Tanks',
     buy: 'BUY', owned: 'SELECT', selected: '✓ SELECTED', locked: w => `🔒 Wave ${w}`,
+    accTab: 'ACCESSORY', accEquip: 'EQUIP', accRemove: '✓ REMOVE', accNone: 'No accessory',
     noMoney: 'Not enough 🪙!', sHealth: 'HP', sSpeed: 'Speed', sFire: 'Fire',
     reward: '🪙', bestWave: w => `Best: Wave ${w}`, maxLevel: 'MAX',
     ballBtn: '1v1 BALL MATCH', ballSub: t => `Shoot the ball into the rival base! First to ${t} goals wins.`,
@@ -840,6 +842,109 @@ function buildTank(def) {
   return g;
 }
 
+// ---------------------------------------------------------------- aksesuarlar (prosedürel; tanka takılır)
+// tank modeli yerel ölçüleri: genişlik x=±1.11, turret tepe ~y1.5 z0.12, arka +z~1.35, ön(namlu) -z
+function accMat(color, o) { o = o || {}; return new THREE.MeshStandardMaterial({ color, roughness: o.rough != null ? o.rough : 0.55, metalness: o.metal || 0, emissive: o.glow ? color : 0x000000, emissiveIntensity: o.glow || 0 }); }
+function aMesh(geo, mat, x, y, z, o) { const m = new THREE.Mesh(geo, mat); m.position.set(x || 0, y || 0, z || 0); m.castShadow = true; if (o) { if (o.rx) m.rotation.x = o.rx; if (o.ry) m.rotation.y = o.ry; if (o.rz) m.rotation.z = o.rz; if (o.sx || o.sy || o.sz) m.scale.set(o.sx || 1, o.sy || 1, o.sz || 1); } return m; }
+function buildSurf() {
+  const g = new THREE.Group();
+  const board = aMesh(new THREE.SphereGeometry(1, 18, 12), accMat(0xff7a2e, { rough: 0.35 }), 0, 0, 0, { sx: 0.30, sy: 0.10, sz: 1.05 });
+  g.add(board);
+  g.add(aMesh(new THREE.BoxGeometry(0.05, 0.03, 1.7), accMat(0xfff2e0, { rough: 0.4 }), 0, 0.11, 0));
+  g.add(aMesh(new THREE.ConeGeometry(0.12, 0.26, 4), accMat(0x1a2530), 0, -0.16, -0.7, { rx: Math.PI }));
+  return g;
+}
+function buildFlag() {
+  const g = new THREE.Group();
+  g.add(aMesh(new THREE.CylinderGeometry(0.035, 0.035, 1.35, 8), accMat(0xcfd6dd, { metal: 0.6, rough: 0.4 }), 0, 0.68, 0));
+  const cloth = aMesh(new THREE.BoxGeometry(0.62, 0.4, 0.03), accMat(0xe23b3b, { rough: 0.6 }), 0.33, 1.15, 0);
+  g.add(cloth);
+  g.add(aMesh(new THREE.BoxGeometry(0.62, 0.4, 0.02), accMat(0xffffff, { rough: 0.6 }), 0.33, 1.15, 0.02, { sx: 0.4, sy: 0.4 }));
+  return g;
+}
+function buildCone() {
+  const g = new THREE.Group();
+  g.add(aMesh(new THREE.ConeGeometry(0.34, 0.72, 20), accMat(0xff3d8b, { rough: 0.5 }), 0, 0.36, 0));
+  // çizgiler
+  g.add(aMesh(new THREE.TorusGeometry(0.22, 0.03, 8, 20), accMat(0xffe14d, { glow: 0.2 }), 0, 0.26, 0, { rx: Math.PI / 2 }));
+  g.add(aMesh(new THREE.SphereGeometry(0.1, 12, 10), accMat(0xffe14d, { glow: 0.25 }), 0, 0.76, 0));
+  return g;
+}
+function buildTophat() {
+  const g = new THREE.Group();
+  g.add(aMesh(new THREE.CylinderGeometry(0.42, 0.42, 0.06, 20), accMat(0x14161c, { rough: 0.35 }), 0, 0.03, 0)); // kenar
+  g.add(aMesh(new THREE.CylinderGeometry(0.28, 0.28, 0.6, 20), accMat(0x14161c, { rough: 0.3 }), 0, 0.33, 0)); // gövde
+  g.add(aMesh(new THREE.TorusGeometry(0.285, 0.045, 8, 22), accMat(0xd23b3b, { rough: 0.5 }), 0, 0.16, 0, { rx: Math.PI / 2 })); // bant
+  return g;
+}
+function buildSpoiler() {
+  const g = new THREE.Group();
+  g.add(aMesh(new THREE.BoxGeometry(1.5, 0.08, 0.34), accMat(0x1b1e24, { rough: 0.3, metal: 0.3 }), 0, 0.5, 0));
+  g.add(aMesh(new THREE.BoxGeometry(0.12, 0.5, 0.16), accMat(0x2a2f38, { metal: 0.4 }), -0.5, 0.25, 0));
+  g.add(aMesh(new THREE.BoxGeometry(0.12, 0.5, 0.16), accMat(0x2a2f38, { metal: 0.4 }), 0.5, 0.25, 0));
+  return g;
+}
+function buildDuck() {
+  const g = new THREE.Group();
+  g.add(aMesh(new THREE.SphereGeometry(0.32, 16, 12), accMat(0xffd21e, { rough: 0.4 }), 0, 0.28, 0, { sy: 0.85 })); // gövde
+  g.add(aMesh(new THREE.SphereGeometry(0.2, 14, 12), accMat(0xffd21e, { rough: 0.4 }), 0, 0.62, 0.12)); // baş
+  g.add(aMesh(new THREE.ConeGeometry(0.09, 0.2, 10), accMat(0xff7a1e), 0, 0.62, 0.32, { rx: Math.PI / 2 })); // gaga
+  g.add(aMesh(new THREE.SphereGeometry(0.03, 8, 8), accMat(0x101010), 0.08, 0.68, 0.26));
+  g.add(aMesh(new THREE.SphereGeometry(0.03, 8, 8), accMat(0x101010), -0.08, 0.68, 0.26));
+  return g;
+}
+function buildCrown() {
+  const g = new THREE.Group();
+  const gold = accMat(0xffcf3a, { metal: 0.9, rough: 0.2 });
+  g.add(aMesh(new THREE.CylinderGeometry(0.34, 0.36, 0.22, 20, 1, true), gold, 0, 0.11, 0));
+  for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2; g.add(aMesh(new THREE.ConeGeometry(0.09, 0.28, 5), gold, Math.cos(a) * 0.34, 0.33, Math.sin(a) * 0.34)); }
+  const jewels = [0xff3b5b, 0x3ba0ff, 0x54e07a];
+  for (let i = 0; i < 3; i++) { const a = i / 3 * Math.PI * 2 + 0.5; g.add(aMesh(new THREE.SphereGeometry(0.07, 12, 10), accMat(jewels[i], { glow: 0.35 }), Math.cos(a) * 0.35, 0.12, Math.sin(a) * 0.35)); }
+  return g;
+}
+function buildWings() {
+  const g = new THREE.Group();
+  const wm = accMat(0xf2f6ff, { glow: 0.12, rough: 0.5 });
+  for (const s of [-1, 1]) {
+    const w = new THREE.Group();
+    for (let i = 0; i < 3; i++) w.add(aMesh(new THREE.SphereGeometry(0.34 - i * 0.07, 12, 10), wm, s * (0.3 + i * 0.34), i * 0.16, -i * 0.12, { sx: 1.3, sy: 0.35, sz: 0.7 }));
+    w.rotation.z = s * -0.25; g.add(w);
+  }
+  return g;
+}
+function buildJetpack() {
+  const g = new THREE.Group();
+  const body = accMat(0xb8c0cc, { metal: 0.7, rough: 0.35 });
+  for (const s of [-1, 1]) {
+    g.add(aMesh(new THREE.CylinderGeometry(0.2, 0.2, 0.7, 14), body, s * 0.34, 0.55, 0));
+    g.add(aMesh(new THREE.ConeGeometry(0.16, 0.22, 12), body, s * 0.34, 0.15, 0, { rx: Math.PI }));
+    g.add(aMesh(new THREE.SphereGeometry(0.12, 12, 10), accMat(0x38c6ff, { glow: 0.7 }), s * 0.34, 0.05, 0)); // alev
+  }
+  return g;
+}
+const ACCESSORIES = [
+  { id: 'surf', name: { tr: 'Sörf Tahtası', en: 'Surfboard' }, icon: '🏄', price: 800, r: 'c', build: buildSurf, mount: { x: 0, y: 1.6, z: 0.12, rz: 0.1 } },
+  { id: 'flag', name: { tr: 'Bayrak', en: 'Flag' }, icon: '🚩', price: 500, r: 'c', build: buildFlag, mount: { x: -0.5, y: 0.86, z: 1.15 } },
+  { id: 'cone', name: { tr: 'Parti Şapkası', en: 'Party Hat' }, icon: '🎉', price: 450, r: 'c', build: buildCone, mount: { x: 0, y: 1.48, z: 0.12 } },
+  { id: 'tophat', name: { tr: 'Silindir Şapka', en: 'Top Hat' }, icon: '🎩', price: 750, r: 'c', build: buildTophat, mount: { x: 0, y: 1.48, z: 0.12 } },
+  { id: 'spoiler', name: { tr: 'Spoiler', en: 'Spoiler' }, icon: '🏁', price: 1000, r: 'r', build: buildSpoiler, mount: { x: 0, y: 0.72, z: 1.28 } },
+  { id: 'duck', name: { tr: 'Lastik Ördek', en: 'Rubber Duck' }, icon: '🦆', price: 600, r: 'r', build: buildDuck, mount: { x: 0, y: 1.46, z: 0.12 } },
+  { id: 'crown', name: { tr: 'Altın Taç', en: 'Golden Crown' }, icon: '👑', gem: 20, r: 'e', build: buildCrown, mount: { x: 0, y: 1.5, z: 0.12 } },
+  { id: 'wings', name: { tr: 'Melek Kanatları', en: 'Angel Wings' }, icon: '🪽', gem: 30, r: 'e', build: buildWings, mount: { x: 0, y: 0.75, z: 0.35 } },
+  { id: 'jetpack', name: { tr: 'Jetpack', en: 'Jetpack' }, icon: '🚀', gem: 25, r: 'e', build: buildJetpack, mount: { x: 0, y: 0.7, z: 1.15 } },
+];
+const accById = id => ACCESSORIES.find(a => a.id === id);
+function disposeSubtree(o) { o.traverse(n => { if (n.isMesh) { if (n.geometry) n.geometry.dispose(); if (n.material) (Array.isArray(n.material) ? n.material : [n.material]).forEach(m => m.dispose()); } }); }
+function applyAccessory(root, accId) {
+  if (root.userData.accMesh) { root.remove(root.userData.accMesh); disposeSubtree(root.userData.accMesh); root.userData.accMesh = null; }
+  const a = accById(accId); if (!a) return;
+  const g = a.build(), mt = a.mount;
+  g.position.set(mt.x || 0, mt.y || 0, mt.z || 0);
+  if (mt.rx) g.rotation.x = mt.rx; if (mt.ry) g.rotation.y = mt.ry; if (mt.rz) g.rotation.z = mt.rz;
+  if (mt.s) g.scale.setScalar(mt.s);
+  root.add(g); root.userData.accMesh = g;
+}
+
 // ---------------------------------------------------------------- yardımcılar
 function circleVsWalls(pos, radius) {
   for (const w of walls) {
@@ -1228,6 +1333,7 @@ function setPlayerTank(overrideDef) {
   if (player.mesh) scene.remove(player.mesh);
   player.mesh = buildTank(def);
   applySkin(player.mesh, profile.skin);
+  applyAccessory(player.mesh, profile.accessory);
   player.mesh.position.set(player.x, 0, player.z);
   scene.add(player.mesh);
   playerTurret = player.mesh.getObjectByName('TankTurret');
@@ -1928,7 +2034,7 @@ function barHTML(frac) {
 
 // ---------------------------------------------------------------- 3B garaj vitrini (döndürülebilir inceleme)
 let showroomScene = null, showroomCam = null, showroomTurn = null, showroomTankMesh = null;
-const showroom = { active: false, tankId: null, rot: 0, vel: 0, elev: 0.42, dragging: false, lastX: 0, lastY: 0, centerY: 0.9, radius: 8 };
+const showroom = { active: false, mode: 'tank', tankId: null, accId: '', rot: 0, vel: 0, elev: 0.42, dragging: false, lastX: 0, lastY: 0, centerY: 0.9, radius: 8 };
 const SHOWROOM_PIVOT_Y = 0.5; // platform üstü — tank tabanı (y=0) buraya oturur
 function ensureShowroom() {
   if (showroomScene) return;
@@ -1971,12 +2077,14 @@ function ensureShowroom() {
 function buildShowroomTank() {
   if (showroomTankMesh) {
     showroomTurn.remove(showroomTankMesh);
+    if (showroomTankMesh.userData.accMesh) disposeSubtree(showroomTankMesh.userData.accMesh);
     showroomTankMesh.traverse(o => { if (o.isMesh && o.material && o.material.name === 'TankPaint') o.material.dispose(); });
   }
   const def = effTank(showroom.tankId);
   const m = buildTank(def);
   // seçili tankta oyuncunun kaplaması, diğerlerinde varsayılan görünüm
   applySkin(m, showroom.tankId === profile.selected ? profile.skin : 'default');
+  applyAccessory(m, showroom.accId); // önizlenen/takılı aksesuar
   showroomTankMesh = m; showroomTurn.add(m);
   // kamerayı modelin boyutuna göre çerçevele
   const box = new THREE.Box3().setFromObject(m), size = new THREE.Vector3(); box.getSize(size);
@@ -1999,42 +2107,76 @@ function updateShowroom(dt) {
   frameShowroomCam();
 }
 function renderShowroomUI() {
-  const t = T(), base = tankById(showroom.tankId), def = effTank(showroom.tankId);
-  const owned = profile.owned.includes(base.id), sel = profile.selected === base.id;
-  $('sr-name').textContent = base.name[lang];
+  const t = T();
   $('sr-wallet').innerHTML = `🪙 ${profile.coins}&nbsp; 💎 ${profile.gems || 0}`;
   $('sr-hint').textContent = lang === 'tr' ? '↔ çevirmek için sürükle' : '↔ drag to rotate';
+  const act = $('sr-action');
+  if (showroom.mode === 'acc') return renderShowroomAcc(t, act);
+  const base = tankById(showroom.tankId), def = effTank(showroom.tankId);
+  const owned = profile.owned.includes(base.id), sel = profile.selected === base.id;
+  $('sr-name').textContent = base.name[lang];
   const fireRate = 1 / def.cool;
   $('sr-stats').innerHTML =
     `<div class="cstat">${t.sHealth}${barHTML(def.health / STAT_MAX.health)}</div>` +
     `<div class="cstat">${t.sSpeed}${barHTML(def.speed / STAT_MAX.speed)}</div>` +
     `<div class="cstat">${t.sFire}${barHTML(fireRate / STAT_MAX.fire)}</div>`;
-  const act = $('sr-action');
   act.className = 'mbtn sr-btn' + (base.glow ? ' gold' : '');
   if (sel) { act.textContent = t.selected; act.disabled = true; act.onclick = null; }
   else if (owned) {
     act.textContent = t.owned; act.disabled = false;
-    act.onclick = () => { profile.selected = base.id; saveProfile(); setPlayerTank(); buildShowroomTank(); renderShowroomUI(); };
+    act.onclick = () => { profile.selected = base.id; saveProfile(); setPlayerTank(); showroom.accId = profile.accessory; buildShowroomTank(); renderShowroomUI(); };
   } else {
     act.innerHTML = `${t.buy} · 🪙${base.price}`; act.disabled = profile.coins < base.price;
     act.className = 'mbtn sr-btn gold';
     act.onclick = () => {
       if (profile.coins < base.price) return;
       profile.coins -= base.price; profile.owned.push(base.id); profile.selected = base.id;
-      saveProfile(); sfxCoin(); setPlayerTank(); updateCoinBar(); buildShowroomTank(); renderShowroomUI();
+      saveProfile(); sfxCoin(); setPlayerTank(); updateCoinBar(); showroom.accId = profile.accessory; buildShowroomTank(); renderShowroomUI();
     };
   }
 }
-function openShowroom(tankId) {
-  ensureShowroom();
-  showroom.tankId = tankId; showroom.active = true;
-  showroom.rot = -0.5; showroom.vel = 0; showroom.elev = 0.42;
+function renderShowroomAcc(t, act) {
+  const a = accById(showroom.accId); if (!a) return;
+  const owned = (profile.accessories || []).includes(a.id), equipped = profile.accessory === a.id;
+  const rar = RARITY[a.r];
+  $('sr-name').textContent = `${a.icon} ${a.name[lang]}`;
+  $('sr-stats').innerHTML = `<div class="cstat" style="text-align:center;color:${rar.col};font-weight:bold">${rar[lang]}</div>`;
+  act.className = 'mbtn sr-btn' + (a.gem || a.r === 'e' ? ' gold' : '');
+  if (equipped) {
+    act.textContent = t.accRemove; act.disabled = false;
+    act.onclick = () => { profile.accessory = ''; saveProfile(); setPlayerTank(); renderShowroomUI(); };
+  } else if (owned) {
+    act.textContent = t.accEquip; act.disabled = false;
+    act.onclick = () => { profile.accessory = a.id; saveProfile(); setPlayerTank(); renderShowroomUI(); };
+  } else {
+    act.innerHTML = `${t.buy} · ${a.gem ? '💎' + a.gem : '🪙' + a.price}`;
+    act.disabled = a.gem ? (profile.gems || 0) < a.gem : profile.coins < a.price;
+    act.onclick = () => {
+      if (a.gem) { if ((profile.gems || 0) < a.gem) return; profile.gems -= a.gem; } else { if (profile.coins < a.price) return; profile.coins -= a.price; }
+      profile.accessories = profile.accessories || []; profile.accessories.push(a.id); profile.accessory = a.id;
+      saveProfile(); sfxCoin(); updateCoinBar(); setPlayerTank(); renderShowroomUI();
+    };
+  }
+}
+function enterShowroomView() {
+  showroom.active = true; showroom.rot = -0.5; showroom.vel = 0; showroom.elev = 0.42;
   buildShowroomTank();
   $('title').style.display = 'none'; $('submsg').style.display = 'none'; $('keys').style.display = 'none';
   $('coinbar').style.visibility = 'hidden'; $('langsw').style.visibility = 'hidden';
   const h = $('sr-hint'); if (h) h.style.opacity = '';
   showPanel('panel-showroom');
   renderShowroomUI();
+}
+function openShowroom(tankId) {
+  ensureShowroom();
+  showroom.mode = 'tank'; showroom.tankId = tankId;
+  showroom.accId = tankId === profile.selected ? profile.accessory : '';
+  enterShowroomView();
+}
+function openAccShowroom(accId) {
+  ensureShowroom();
+  showroom.mode = 'acc'; showroom.tankId = profile.selected; showroom.accId = accId;
+  enterShowroomView();
 }
 function closeShowroom() {
   showroom.active = false;
@@ -2115,7 +2257,8 @@ let garageTab = 'tanks';
 function renderGarageTabs() {
   $('gt-tanks').classList.toggle('on', garageTab === 'tanks');
   $('gt-skins').classList.toggle('on', garageTab === 'skins');
-  if (garageTab === 'tanks') renderGarage(); else renderSkins();
+  $('gt-acc').classList.toggle('on', garageTab === 'acc');
+  if (garageTab === 'tanks') renderGarage(); else if (garageTab === 'skins') renderSkins(); else renderAccessories();
 }
 function openGarage() {
   $('title').textContent = T().garage;
@@ -2144,6 +2287,42 @@ function renderSkins() {
       btn.innerHTML = `${t.buy} · 🪙${s.price}`;
       btn.disabled = profile.coins < s.price;
       btn.onclick = () => { if (profile.coins < s.price) return; profile.coins -= s.price; profile.skins.push(s.id); profile.skin = s.id; saveProfile(); sfxCoin(); setPlayerTank(); updateCoinBar(); renderSkins(); };
+    }
+    card.appendChild(btn); wrap.appendChild(card);
+  }
+}
+function renderAccessories() {
+  const t = T();
+  $('tokenmachine').innerHTML = '';
+  $('submsg').textContent = `🪙 ${profile.coins}  ·  💎 ${profile.gems || 0}`;
+  const wrap = $('cardwrap-garage');
+  wrap.style.cssText = 'display:flex;flex-wrap:wrap;justify-content:center;gap:12px;margin:12px 8px';
+  wrap.innerHTML = '';
+  // "aksesuar yok" (çıkar) kartı
+  const none = document.createElement('div'); none.className = 'card' + (!profile.accessory ? ' sel' : '');
+  none.innerHTML = `<div class="cname">${t.accNone}</div><div class="cswatch" style="background:linear-gradient(135deg,#2a3038,#14181e);display:flex;align-items:center;justify-content:center;font-size:26px">🚫</div>`;
+  const nb = document.createElement('button'); nb.className = 'mbtn small';
+  if (!profile.accessory) { nb.textContent = t.selected; nb.disabled = true; }
+  else { nb.textContent = t.accRemove; nb.onclick = () => { profile.accessory = ''; saveProfile(); setPlayerTank(); renderAccessories(); }; }
+  none.appendChild(nb); wrap.appendChild(none);
+  for (const a of ACCESSORIES) {
+    const owned = (profile.accessories || []).includes(a.id), equipped = profile.accessory === a.id;
+    const rar = RARITY[a.r];
+    const card = document.createElement('div'); card.className = 'card' + (equipped ? ' sel' : '');
+    card.innerHTML = `<div class="cname" style="color:${rar.col}">${a.name[lang]}</div>` +
+      `<div class="cswatch cswatch-3d" style="background:radial-gradient(circle at 50% 42%,#2b3440,#12161c);display:flex;align-items:center;justify-content:center;font-size:30px"><span>${a.icon}</span><span class="cs-3d">🔍 3B</span></div>`;
+    card.querySelector('.cswatch').onclick = () => openAccShowroom(a.id); // ikona dokun → 3B önizleme (tanka takılı hali)
+    const btn = document.createElement('button'); btn.className = 'mbtn small' + (a.gem || a.r === 'e' ? ' gold' : '');
+    if (equipped) { btn.textContent = t.accRemove; btn.onclick = () => { profile.accessory = ''; saveProfile(); setPlayerTank(); renderAccessories(); }; }
+    else if (owned) { btn.textContent = t.accEquip; btn.onclick = () => { profile.accessory = a.id; saveProfile(); setPlayerTank(); renderAccessories(); }; }
+    else {
+      btn.innerHTML = `${t.buy} · ${a.gem ? '💎' + a.gem : '🪙' + a.price}`;
+      btn.disabled = a.gem ? (profile.gems || 0) < a.gem : profile.coins < a.price;
+      btn.onclick = () => {
+        if (a.gem) { if ((profile.gems || 0) < a.gem) return; profile.gems -= a.gem; } else { if (profile.coins < a.price) return; profile.coins -= a.price; }
+        profile.accessories = profile.accessories || []; profile.accessories.push(a.id); profile.accessory = a.id;
+        saveProfile(); sfxCoin(); updateCoinBar(); setPlayerTank(); renderAccessories();
+      };
     }
     card.appendChild(btn); wrap.appendChild(card);
   }
@@ -3135,6 +3314,7 @@ $('btn-ball').addEventListener('click', () => { pendingMode = 'ball'; myRoomCode
 $('btn-garage').addEventListener('click', openGarage);
 $('gt-tanks').addEventListener('click', () => { garageTab = 'tanks'; renderGarageTabs(); });
 $('gt-skins').addEventListener('click', () => { garageTab = 'skins'; renderGarageTabs(); });
+$('gt-acc').addEventListener('click', () => { garageTab = 'acc'; renderGarageTabs(); });
 $('statsline').addEventListener('click', openProfile);
 $('playername').value = profile.name;
 $('playername').addEventListener('input', e => {
