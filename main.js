@@ -10,7 +10,7 @@ const L = {
     keysDesk: 'W / ↑ &nbsp;→&nbsp; ileri &nbsp;|&nbsp; S / ↓ &nbsp;→&nbsp; geri &nbsp;|&nbsp; A / D &nbsp;→&nbsp; dön &nbsp;|&nbsp; BOŞLUK &nbsp;→&nbsp; ateş',
     keysTouch: 'Soldaki joystick &nbsp;→&nbsp; sür ve dön &nbsp;|&nbsp; Sağdaki buton &nbsp;→&nbsp; ateş',
     quickPlay: '⚡ HIZLI OYNA', quickPlaySub: 'Tek tıkla bota karşı 1v1 — bekleme yok!',
-    againBtn: '↻ TEKRAR OYNA',
+    againBtn: '↻ TEKRAR OYNA', rewardedBtn: '📺 Reklam izle → x2 ödül', rewardedGot: '🎉 x2 ödül alındı!', adLoading: '📺 Yükleniyor...',
     questsBtn: '🎯 GÖREVLER', questsTitle: 'GÜNLÜK GÖREVLER', questsSub: 'Her gece yenilenir',
     lbBtn: '🏆 LİDER', lbTitle: 'LİDER TABLOSU', lbDaily: 'BUGÜN', lbWeekly: 'BU HAFTA', lbEmpty: 'Henüz skor yok — ilk sen ol!', lbLoad: 'Yükleniyor...', lbScore: 'Dalga',
     seasonBtn: '🎟️ SEZON', seasonWord: 'Sezon', seasonTier: 'Kademe', seasonTierUp: (n, r) => `🎟️ Sezon ${n}. kademe: ${r}`,
@@ -59,7 +59,7 @@ const L = {
     keysDesk: 'W / ↑ &nbsp;→&nbsp; forward &nbsp;|&nbsp; S / ↓ &nbsp;→&nbsp; back &nbsp;|&nbsp; A / D &nbsp;→&nbsp; turn &nbsp;|&nbsp; SPACE &nbsp;→&nbsp; fire',
     keysTouch: 'Left joystick &nbsp;→&nbsp; drive & turn &nbsp;|&nbsp; Right button &nbsp;→&nbsp; fire',
     quickPlay: '⚡ QUICK PLAY', quickPlaySub: 'One tap 1v1 vs a bot — no waiting!',
-    againBtn: '↻ PLAY AGAIN',
+    againBtn: '↻ PLAY AGAIN', rewardedBtn: '📺 Watch ad → 2x reward', rewardedGot: '🎉 2x reward claimed!', adLoading: '📺 Loading...',
     questsBtn: '🎯 QUESTS', questsTitle: 'DAILY QUESTS', questsSub: 'Refreshes every night',
     lbBtn: '🏆 RANKS', lbTitle: 'LEADERBOARD', lbDaily: 'TODAY', lbWeekly: 'THIS WEEK', lbEmpty: 'No scores yet — be the first!', lbLoad: 'Loading...', lbScore: 'Wave',
     seasonBtn: '🎟️ SEASON', seasonWord: 'Season', seasonTier: 'Tier', seasonTierUp: (n, r) => `🎟️ Season tier ${n}: ${r}`,
@@ -151,6 +151,42 @@ function nativeInit() {
       else if (P.App.minimizeApp) P.App.minimizeApp();
     });
   } catch {}
+}
+
+// ---------------------------------------------------------------- PlatformAdapter (GDD kuralı: oyun kodu platform API'sini
+// DOĞRUDAN çağırmaz; yalnızca bu soyut arayüzü kullanır. Web'de stub, native'de AdMob/StoreKit'e bağlanır — hesap sonrası).
+const Platform = {
+  // ödüllü reklam izlet → Promise<bool> (izlendi=ödül ver). Web/dev: reklam yok, kısa gecikmeyle true.
+  rewarded(placement) {
+    return new Promise(resolve => {
+      const P = capPlugins();
+      if (isNativeApp() && P.AdMob) {
+        // TODO(native): AdMob rewarded göster; kullanıcı tamamlarsa resolve(true), atlarsa resolve(false).
+        // SDK/hesap gelene kadar stub:
+        resolve(true);
+      } else {
+        setTimeout(() => resolve(true), 400); // web: simüle
+      }
+    });
+  },
+  // maç aralarında interstitial (asla maç İÇİNDE değil). Web: no-op. Native: AdMob interstitial (TODO).
+  interstitial() { /* native TODO: AdMob interstitial */ },
+  // IAP satın alma → Promise<bool>. Native: StoreKit/Play Billing (TODO). Web: yok.
+  purchase(sku) { return Promise.resolve(false); },
+};
+// ödüllü reklam sıklık sınırı (GDD: saatte ≤4, FTUE'nin ilk 3 maçında hiç)
+let rewardedTimes = [];
+function canOfferRewarded() {
+  if ((profile.games || 0) <= 3) return false;
+  const now = Date.now();
+  rewardedTimes = rewardedTimes.filter(t => now - t < 3600000);
+  return rewardedTimes.length < 4;
+}
+// maç aralarında interstitial (FTUE'den sonra, 3 maçta 1'den seyrek). Web'de no-op.
+let interstitialCount = 0;
+function maybeInterstitial() {
+  if ((profile.games || 0) <= 3) return;
+  if (++interstitialCount % 3 === 0) Platform.interstitial();
 }
 
 // ---------------------------------------------------------------- analitik (anonim huni ölçümü)
@@ -1502,7 +1538,7 @@ function grantMatchXp(kind, opts) {
   return xp;
 }
 // maç-sonu "hasat" ekranı — GDD retention hub'ı: XP çubuğu dolar → seviye → ödüller → tek tuş tekrar
-let harvestReplay = null;
+let harvestReplay = null, harvestReward = null;
 function showHarvest(opts) {
   state = 'over';
   const t = T();
@@ -1518,6 +1554,11 @@ function showHarvest(opts) {
   $('res-again').textContent = t.againBtn;
   $('res-menu').textContent = '‹ ' + t.toMenuW;
   harvestReplay = opts.replay || null;
+  // ödüllü reklam teklifi (x2) — FTUE'den sonra + sıklık sınırı
+  harvestReward = { xp: gained, coins: opts.coins || 0 };
+  const rb = $('res-rewarded');
+  if (canOfferRewarded()) { rb.style.display = ''; rb.disabled = false; rb.textContent = t.rewardedBtn; track('ad_offer', { placement: 'harvest' }); }
+  else rb.style.display = 'none';
   showPanel('panel-result');
   msgEl.classList.remove('hidden');
   $('topbar').style.visibility = 'hidden';
@@ -2906,8 +2947,23 @@ function handleTeamNet(m) {
 $('lang-tr').addEventListener('click', () => { lang = 'tr'; applyLang(); if ($('panel-garage').classList.contains('show')) renderGarage(); if ($('panel-maps').classList.contains('show')) renderMaps(); });
 $('lang-en').addEventListener('click', () => { lang = 'en'; applyLang(); if ($('panel-garage').classList.contains('show')) renderGarage(); if ($('panel-maps').classList.contains('show')) renderMaps(); });
 $('btn-quickplay').addEventListener('click', () => { track('quickplay_click'); duelMap = 0; startBotDuel(); });
-$('res-again').addEventListener('click', () => { const fn = harvestReplay; harvestReplay = null; if (fn) { track('retry_click', { mode: matchMode }); fn(); } else openMenu(); });
+$('res-again').addEventListener('click', () => { const fn = harvestReplay; harvestReplay = null; maybeInterstitial(); if (fn) { track('retry_click', { mode: matchMode }); fn(); } else openMenu(); });
 $('res-menu').addEventListener('click', () => { harvestReplay = null; openMenu(); });
+$('res-rewarded').addEventListener('click', async () => {
+  const rb = $('res-rewarded'); if (rb.disabled || !harvestReward) return;
+  rb.disabled = true; rb.textContent = T().adLoading;
+  track('ad_watch', { placement: 'harvest' });
+  const ok = await Platform.rewarded('harvest');
+  if (ok && harvestReward) {
+    rewardedTimes.push(Date.now());
+    grantXp(harvestReward.xp); grantSeasonXp(harvestReward.xp);
+    if (harvestReward.coins) addCoins(harvestReward.coins);
+    $('res-rewards').innerHTML = `+${harvestReward.xp * 2} XP` + (harvestReward.coins ? ` &nbsp;·&nbsp; +🪙${harvestReward.coins * 2}` : '') + ` <b style="color:#7dff9b">x2</b>`;
+    updateCoinBar(); updateLevelBar();
+    sfxPower(); haptic('HEAVY');
+    rb.textContent = T().rewardedGot;
+  } else { rb.disabled = false; rb.textContent = T().rewardedBtn; }
+});
 $('btn-quests').addEventListener('click', () => { const t = T(); $('title').textContent = t.questsTitle; $('submsg').textContent = t.questsSub; renderQuests(); showPanel('panel-quests'); });
 $('btn-back-quests').addEventListener('click', openMenu);
 $('btn-lb').addEventListener('click', () => { const t = T(); $('title').textContent = t.lbTitle; $('submsg').textContent = ''; showPanel('panel-lb'); renderLeaderboard('day'); });
