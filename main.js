@@ -13,6 +13,7 @@ const L = {
     againBtn: '↻ TEKRAR OYNA',
     questsBtn: '🎯 GÖREVLER', questsTitle: 'GÜNLÜK GÖREVLER', questsSub: 'Her gece yenilenir',
     lbBtn: '🏆 LİDER', lbTitle: 'LİDER TABLOSU', lbDaily: 'BUGÜN', lbWeekly: 'BU HAFTA', lbEmpty: 'Henüz skor yok — ilk sen ol!', lbLoad: 'Yükleniyor...', lbScore: 'Dalga',
+    seasonBtn: '🎟️ SEZON', seasonWord: 'Sezon', seasonTier: 'Kademe', seasonTierUp: (n, r) => `🎟️ Sezon ${n}. kademe: ${r}`,
     tmTitle: '🎰 Jeton Makinesi', tmCount: 'Jetonların', tmSpin: '🎲 ÇEVİR · 1 🎰', tmNeed: 'Jeton kazanmak için görev tamamla / seviye atla',
     buildTitle: 'YÜKSELTME SEÇ',
     gachaNew: s => `🎁 YENİ KAPLAMA! ${s}`, gachaDup: (s, c) => `🔁 ${s} zaten var → +🪙${c}`, tokenGot: n => `🎰 +${n} jeton!`,
@@ -61,6 +62,7 @@ const L = {
     againBtn: '↻ PLAY AGAIN',
     questsBtn: '🎯 QUESTS', questsTitle: 'DAILY QUESTS', questsSub: 'Refreshes every night',
     lbBtn: '🏆 RANKS', lbTitle: 'LEADERBOARD', lbDaily: 'TODAY', lbWeekly: 'THIS WEEK', lbEmpty: 'No scores yet — be the first!', lbLoad: 'Loading...', lbScore: 'Wave',
+    seasonBtn: '🎟️ SEASON', seasonWord: 'Season', seasonTier: 'Tier', seasonTierUp: (n, r) => `🎟️ Season tier ${n}: ${r}`,
     tmTitle: '🎰 Token Machine', tmCount: 'Your tokens', tmSpin: '🎲 SPIN · 1 🎰', tmNeed: 'Complete quests / level up to earn tokens',
     buildTitle: 'CHOOSE UPGRADE',
     gachaNew: s => `🎁 NEW SKIN! ${s}`, gachaDup: (s, c) => `🔁 ${s} already owned → +🪙${c}`, tokenGot: n => `🎰 +${n} tokens!`,
@@ -1495,6 +1497,7 @@ function computeMatchXp(kind, opts) {
 function grantMatchXp(kind, opts) {
   const xp = computeMatchXp(kind, opts);
   grantXp(xp);
+  grantSeasonXp(xp);
   showToast(`+${xp} XP`, 2200);
   return xp;
 }
@@ -1506,6 +1509,7 @@ function showHarvest(opts) {
   const preLvl = profile.level || 1, prePct = ((profile.xp || 0) / xpForLevel(preLvl)) * 100;
   const gained = computeMatchXp(opts.xpKind, opts.xpOpts);
   grantXp(gained); // seviye atlarsa onLevelUp banner+coin
+  grantSeasonXp(gained); // sezon rayı da oynayarak dolar
   $('res-title').textContent = opts.title;
   $('res-title').style.color = opts.won === false ? '#ff8a6a' : '#7dff9b';
   $('res-sub').innerHTML = opts.sub || '';
@@ -1583,6 +1587,59 @@ function questProgress(type, amount) {
     }
   }
   if (changed) { saveProfile(); if ($('panel-quests').classList.contains('show')) renderQuests(); }
+}
+// ---------------------------------------------------------------- sezon (30 kademe, ücretsiz ray, oynayarak dolar)
+const SEASON_TIER_XP = 120, SEASON_LEN = 30;
+const SEASON_THEMES = [
+  { tr: 'Lav Sezonu', en: 'Lava Season' }, { tr: 'Ayaz Sezonu', en: 'Frost Season' },
+  { tr: 'Uzay Sezonu', en: 'Space Season' }, { tr: 'Çöl Sezonu', en: 'Desert Season' },
+];
+const SEASON_SKINS = { 5: 'ember', 10: 'frost', 15: 'plasma', 20: 'void', 25: 'venom', 30: 'royal' };
+const SEASON_REWARDS = Array.from({ length: SEASON_LEN }, (_, i) => {
+  const tier = i + 1;
+  if (SEASON_SKINS[tier]) return { skin: SEASON_SKINS[tier] };
+  if (tier % 3 === 0) return { tokens: 1 };
+  return { coins: 30 + tier * 3 };
+});
+function seasonId() {
+  const epoch = Date.UTC(2026, 0, 1);
+  const weeks = Math.floor((Date.now() - epoch) / (7 * 86400000));
+  return Math.floor(weeks / 6) + 1; // 6 haftalık sezonlar
+}
+function seasonName(id) { const th = SEASON_THEMES[(id - 1) % SEASON_THEMES.length]; return `${T().seasonWord} ${id} · ${th[lang]}`; }
+function ensureSeason() {
+  const id = seasonId();
+  if (!profile.season || profile.season.id !== id) { profile.season = { id, xp: 0, tier: 0 }; saveProfile(); }
+  return profile.season;
+}
+function rewardText(r) { return r.coins ? `🪙 ${r.coins}` : r.tokens ? `🎰 ${r.tokens}` : r.skin ? `🎨 ${skinById(r.skin).name[lang]}` : ''; }
+function grantSeasonReward(tier) {
+  const r = SEASON_REWARDS[tier - 1]; if (!r) return;
+  if (r.coins) addCoins(r.coins);
+  if (r.tokens) { profile.tokens = (profile.tokens || 0) + r.tokens; updateTokenBar(); }
+  if (r.skin && !profile.skins.includes(r.skin)) profile.skins.push(r.skin);
+  saveProfile();
+  showToast(T().seasonTierUp(tier, rewardText(r)), 3200);
+  sfxCoin(); track('season_tier', { tier });
+}
+function grantSeasonXp(amount) {
+  if (!amount || amount <= 0) return;
+  const s = ensureSeason();
+  if (s.tier >= SEASON_LEN) return;
+  s.xp += amount;
+  while (s.tier < SEASON_LEN && s.xp >= SEASON_TIER_XP) { s.xp -= SEASON_TIER_XP; s.tier++; grantSeasonReward(s.tier); }
+  saveProfile();
+}
+function renderSeason() {
+  const s = ensureSeason(), t = T();
+  const pct = s.tier >= SEASON_LEN ? 100 : (s.xp / SEASON_TIER_XP * 100);
+  $('season-head').innerHTML = `<div class="sh-name">${seasonName(s.id)}</div>` +
+    `<div class="sh-sub">${t.seasonTier} ${s.tier}/${SEASON_LEN}</div>` +
+    `<div class="sh-bar"><div class="sh-fill" style="width:${pct}%"></div></div>`;
+  $('season-track').innerHTML = SEASON_REWARDS.map((r, i) => {
+    const tier = i + 1, got = tier <= s.tier, cur = tier === s.tier + 1;
+    return `<div class="strow${got ? ' got' : cur ? ' cur' : ''}"><span class="st-t">${tier}</span><span class="st-r">${rewardText(r)}</span><span class="st-s">${got ? '✅' : cur ? '▶' : '🔒'}</span></div>`;
+  }).join('');
 }
 let lbPeriod = 'day';
 async function renderLeaderboard(period) {
@@ -1728,7 +1785,7 @@ function updateHUD() {
 
 // panel yönetimi
 function showPanel(id) {
-  for (const p of ['panel-main', 'panel-maps', 'panel-garage', 'panel-duel', 'panel-coop', 'panel-profile', 'panel-rematch', 'panel-result', 'panel-quests', 'panel-lb'])
+  for (const p of ['panel-main', 'panel-maps', 'panel-garage', 'panel-duel', 'panel-coop', 'panel-profile', 'panel-rematch', 'panel-result', 'panel-quests', 'panel-lb', 'panel-season'])
     $(p).classList.toggle('show', p === id);
 }
 function openMenu() {
@@ -1764,6 +1821,8 @@ function applyLang() {
   $('btn-back-quests').textContent = t.back;
   $('btn-lb').textContent = t.lbBtn;
   $('btn-back-lb').textContent = t.back;
+  $('btn-season').textContent = t.seasonBtn;
+  $('btn-back-season').textContent = t.back;
   $('lbt-day').textContent = t.lbDaily;
   $('lbt-week').textContent = t.lbWeekly;
   $('btn-coop-share').textContent = t.shareBtn;
@@ -2852,6 +2911,8 @@ $('res-menu').addEventListener('click', () => { harvestReplay = null; openMenu()
 $('btn-quests').addEventListener('click', () => { const t = T(); $('title').textContent = t.questsTitle; $('submsg').textContent = t.questsSub; renderQuests(); showPanel('panel-quests'); });
 $('btn-back-quests').addEventListener('click', openMenu);
 $('btn-lb').addEventListener('click', () => { const t = T(); $('title').textContent = t.lbTitle; $('submsg').textContent = ''; showPanel('panel-lb'); renderLeaderboard('day'); });
+$('btn-season').addEventListener('click', () => { $('title').textContent = ''; $('submsg').textContent = ''; renderSeason(); showPanel('panel-season'); });
+$('btn-back-season').addEventListener('click', openMenu);
 $('lbt-day').addEventListener('click', () => renderLeaderboard('day'));
 $('lbt-week').addEventListener('click', () => renderLeaderboard('week'));
 $('btn-back-lb').addEventListener('click', openMenu);
