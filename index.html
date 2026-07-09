@@ -211,6 +211,24 @@
   .card .cname { font-size: 19px; font-weight: bold; letter-spacing: 1px; }
   .card .cswatch { width: 100%; height: 46px; border-radius: 8px; margin: 8px 0;
                    border: 1px solid rgba(0,0,0,.4); }
+  .card .cswatch.cswatch-3d { position: relative; cursor: pointer; transition: transform .12s, box-shadow .12s; }
+  .card .cswatch.cswatch-3d:hover { transform: translateY(-1px); box-shadow: 0 0 12px rgba(120,255,180,.5); }
+  .card .cs-3d { position: absolute; right: 5px; bottom: 4px; font-size: 10px; font-weight: bold;
+                 background: rgba(0,0,0,.55); color: #bff; padding: 2px 6px; border-radius: 6px; letter-spacing: .5px; }
+  /* 3B tank vitrini overlay */
+  .panel.showroom { position: fixed; inset: 0; width: 100%; max-width: none; padding: 0; margin: 0;
+                    justify-content: space-between; pointer-events: none; z-index: 40; }
+  .panel.showroom .sr-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px;
+                    width: 100%; box-sizing: border-box; padding: calc(14px + env(safe-area-inset-top)) 16px 0; }
+  .sr-name { flex: 1; text-align: center; font-size: 26px; font-weight: bold; color: #ffdd77; text-shadow: 0 2px 10px #000; }
+  .sr-wallet { min-width: 78px; text-align: right; font-size: 15px; font-weight: bold; color: #ffdd55; white-space: nowrap; text-shadow: 0 1px 4px #000; }
+  .sr-btn { pointer-events: auto; }
+  .sr-hint { text-align: center; color: #dff; opacity: .55; font-size: 13px; letter-spacing: 1px; transition: opacity .4s; text-shadow: 0 1px 4px #000; }
+  .sr-bottom { width: 100%; max-width: 460px; align-self: center; box-sizing: border-box;
+               padding: 0 16px calc(18px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 10px; }
+  .sr-stats { background: rgba(10,14,20,.6); border: 1px solid rgba(255,255,255,.12); border-radius: 12px;
+              padding: 11px 14px; backdrop-filter: blur(5px); }
+  .sr-bottom .mbtn { width: 100%; }
   .card .cstat { font-size: 12px; color: #cfe6bf; text-align: left; margin: 3px 0; line-height: 1.5; }
   .bar { display: inline-block; height: 8px; background: #7dff9b; border-radius: 4px;
          vertical-align: middle; margin-left: 5px; }
@@ -341,6 +359,20 @@
     <div id="tokenmachine"></div>
     <div id="cardwrap-garage" class="card-list"></div>
     <button class="mbtn small" id="btn-back-garage">‹ GERİ</button>
+  </div>
+
+  <!-- 3B tank vitrini (döndürülebilir inceleme) -->
+  <div id="panel-showroom" class="panel showroom">
+    <div class="sr-top">
+      <button id="sr-back" class="mbtn small sr-btn">‹ GERİ</button>
+      <div id="sr-name" class="sr-name"></div>
+      <div id="sr-wallet" class="sr-wallet"></div>
+    </div>
+    <div id="sr-hint" class="sr-hint">↔ sürükle</div>
+    <div class="sr-bottom">
+      <div id="sr-stats" class="sr-stats"></div>
+      <button id="sr-action" class="mbtn sr-btn"></button>
+    </div>
   </div>
 
   <!-- profil & başarımlar -->

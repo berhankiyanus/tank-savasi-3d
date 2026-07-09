@@ -1851,12 +1851,13 @@ function updateHUD() {
 
 // panel yönetimi
 function showPanel(id) {
-  for (const p of ['panel-main', 'panel-maps', 'panel-garage', 'panel-duel', 'panel-coop', 'panel-profile', 'panel-rematch', 'panel-result', 'panel-quests', 'panel-lb', 'panel-season'])
+  for (const p of ['panel-main', 'panel-maps', 'panel-garage', 'panel-duel', 'panel-coop', 'panel-profile', 'panel-rematch', 'panel-result', 'panel-quests', 'panel-lb', 'panel-season', 'panel-showroom'])
     $(p).classList.toggle('show', p === id);
 }
 function openMenu() {
   state = 'menu';
   mode = 'solo';
+  if (showroom.active) { showroom.active = false; $('title').style.display = ''; $('submsg').style.display = ''; $('keys').style.display = ''; $('coinbar').style.visibility = ''; $('langsw').style.visibility = ''; }
   clearBallMode(); clearCoop(); clearTeam(); clearPowerups();
   hideFtueHint();
   $('buildchoice').classList.add('hidden'); buildChoosing = false;
@@ -1924,6 +1925,124 @@ function applyLang() {
 function barHTML(frac) {
   return `<span class="bar bg"><i style="width:${Math.round(Math.max(0.08, Math.min(1, frac)) * 100)}%"></i></span>`;
 }
+
+// ---------------------------------------------------------------- 3B garaj vitrini (döndürülebilir inceleme)
+let showroomScene = null, showroomCam = null, showroomTurn = null, showroomTankMesh = null;
+const showroom = { active: false, tankId: null, rot: 0, vel: 0, elev: 0.42, dragging: false, lastX: 0, lastY: 0, centerY: 0.9, radius: 8 };
+const SHOWROOM_PIVOT_Y = 0.5; // platform üstü — tank tabanı (y=0) buraya oturur
+function ensureShowroom() {
+  if (showroomScene) return;
+  showroomScene = new THREE.Scene();
+  showroomScene.background = new THREE.Color(0x0a0f16);
+  showroomScene.environment = envTex; // metal/parlak kaplamalarda yansıma
+  showroomCam = new THREE.PerspectiveCamera(42, innerWidth / innerHeight, 0.1, 120);
+  // zemin (gölge alan koyu disk)
+  const floor = new THREE.Mesh(new THREE.CircleGeometry(16, 48), new THREE.MeshStandardMaterial({ color: 0x0e131a, roughness: 0.9, metalness: 0.1 }));
+  floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; showroomScene.add(floor);
+  // döner platform + parlayan halka
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(3.1, 3.4, 0.5, 56), new THREE.MeshStandardMaterial({ color: 0x1a222c, roughness: 0.45, metalness: 0.7 }));
+  base.position.y = 0.25; base.castShadow = base.receiveShadow = true; showroomScene.add(base);
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(3.08, 0.05, 12, 64), new THREE.MeshStandardMaterial({ color: 0x1ec8b0, emissive: 0x1ec8b0, emissiveIntensity: 1.5, toneMapped: false }));
+  ring.rotation.x = Math.PI / 2; ring.position.y = 0.5; showroomScene.add(ring);
+  showroomTurn = new THREE.Group(); showroomTurn.position.y = SHOWROOM_PIVOT_Y; showroomScene.add(showroomTurn);
+  // stüdyo ışıkları — hero aydınlatma
+  const key = new THREE.DirectionalLight(0xffffff, 3.0); key.position.set(4, 9, 6); key.castShadow = true;
+  key.shadow.mapSize.set(1024, 1024); const sc = key.shadow.camera; sc.left = -6; sc.right = 6; sc.top = 6; sc.bottom = -6; sc.near = 1; sc.far = 34; key.shadow.bias = -0.0006;
+  showroomScene.add(key);
+  showroomScene.add(new THREE.HemisphereLight(0x9fc0ff, 0x241d2e, 0.55));
+  const rim = new THREE.DirectionalLight(0x66aaff, 2.4); rim.position.set(-6, 4, -7); showroomScene.add(rim);
+  const accent = new THREE.PointLight(0xff9a3c, 26, 20, 2); accent.position.set(-4, 2.6, 3.5); showroomScene.add(accent);
+  // sürükle-çevir kontrolleri (yalnızca vitrin açıkken)
+  renderer.domElement.addEventListener('pointerdown', e => {
+    if (!showroom.active) return;
+    showroom.dragging = true; showroom.vel = 0; showroom.lastX = e.clientX; showroom.lastY = e.clientY;
+    const h = $('sr-hint'); if (h) h.style.opacity = '0';
+  });
+  addEventListener('pointermove', e => {
+    if (!showroom.active || !showroom.dragging) return;
+    const dx = e.clientX - showroom.lastX, dy = e.clientY - showroom.lastY;
+    showroom.lastX = e.clientX; showroom.lastY = e.clientY;
+    const d = dx * 0.01; showroom.rot += d; showroom.vel = d;
+    showroom.elev = Math.max(0.06, Math.min(1.15, showroom.elev + dy * 0.005));
+  });
+  addEventListener('pointerup', () => { showroom.dragging = false; });
+  addEventListener('pointercancel', () => { showroom.dragging = false; });
+}
+function buildShowroomTank() {
+  if (showroomTankMesh) {
+    showroomTurn.remove(showroomTankMesh);
+    showroomTankMesh.traverse(o => { if (o.isMesh && o.material && o.material.name === 'TankPaint') o.material.dispose(); });
+  }
+  const def = effTank(showroom.tankId);
+  const m = buildTank(def);
+  // seçili tankta oyuncunun kaplaması, diğerlerinde varsayılan görünüm
+  applySkin(m, showroom.tankId === profile.selected ? profile.skin : 'default');
+  showroomTankMesh = m; showroomTurn.add(m);
+  // kamerayı modelin boyutuna göre çerçevele
+  const box = new THREE.Box3().setFromObject(m), size = new THREE.Vector3(); box.getSize(size);
+  showroom.centerY = SHOWROOM_PIVOT_Y + (box.min.y + box.max.y) / 2;
+  const portrait = innerWidth < innerHeight;
+  showroom.radius = Math.max(size.x, size.z, size.y) * (portrait ? 2.5 : 1.95) + 1.6;
+}
+function frameShowroomCam() {
+  const R = showroom.radius, e = showroom.elev, ty = showroom.centerY;
+  showroomCam.aspect = innerWidth / innerHeight; showroomCam.updateProjectionMatrix();
+  showroomCam.position.set(0, ty + R * Math.sin(e), R * Math.cos(e));
+  showroomCam.lookAt(0, ty - R * 0.06, 0); // hedefi biraz aşağı al → tank çerçevede yukarı otursun (alt boşluğu stat paneli örter)
+}
+function updateShowroom(dt) {
+  if (!showroom.dragging) {
+    showroom.rot += showroom.vel; showroom.vel *= 0.90;
+    if (Math.abs(showroom.vel) < 0.002) { showroom.vel = 0; showroom.rot += dt * 0.35; } // boşta yavaş oto-dönüş
+  }
+  showroomTurn.rotation.y = showroom.rot;
+  frameShowroomCam();
+}
+function renderShowroomUI() {
+  const t = T(), base = tankById(showroom.tankId), def = effTank(showroom.tankId);
+  const owned = profile.owned.includes(base.id), sel = profile.selected === base.id;
+  $('sr-name').textContent = base.name[lang];
+  $('sr-wallet').innerHTML = `🪙 ${profile.coins}&nbsp; 💎 ${profile.gems || 0}`;
+  $('sr-hint').textContent = lang === 'tr' ? '↔ çevirmek için sürükle' : '↔ drag to rotate';
+  const fireRate = 1 / def.cool;
+  $('sr-stats').innerHTML =
+    `<div class="cstat">${t.sHealth}${barHTML(def.health / STAT_MAX.health)}</div>` +
+    `<div class="cstat">${t.sSpeed}${barHTML(def.speed / STAT_MAX.speed)}</div>` +
+    `<div class="cstat">${t.sFire}${barHTML(fireRate / STAT_MAX.fire)}</div>`;
+  const act = $('sr-action');
+  act.className = 'mbtn sr-btn' + (base.glow ? ' gold' : '');
+  if (sel) { act.textContent = t.selected; act.disabled = true; act.onclick = null; }
+  else if (owned) {
+    act.textContent = t.owned; act.disabled = false;
+    act.onclick = () => { profile.selected = base.id; saveProfile(); setPlayerTank(); buildShowroomTank(); renderShowroomUI(); };
+  } else {
+    act.innerHTML = `${t.buy} · 🪙${base.price}`; act.disabled = profile.coins < base.price;
+    act.className = 'mbtn sr-btn gold';
+    act.onclick = () => {
+      if (profile.coins < base.price) return;
+      profile.coins -= base.price; profile.owned.push(base.id); profile.selected = base.id;
+      saveProfile(); sfxCoin(); setPlayerTank(); updateCoinBar(); buildShowroomTank(); renderShowroomUI();
+    };
+  }
+}
+function openShowroom(tankId) {
+  ensureShowroom();
+  showroom.tankId = tankId; showroom.active = true;
+  showroom.rot = -0.5; showroom.vel = 0; showroom.elev = 0.42;
+  buildShowroomTank();
+  $('title').style.display = 'none'; $('submsg').style.display = 'none'; $('keys').style.display = 'none';
+  $('coinbar').style.visibility = 'hidden'; $('langsw').style.visibility = 'hidden';
+  const h = $('sr-hint'); if (h) h.style.opacity = '';
+  showPanel('panel-showroom');
+  renderShowroomUI();
+}
+function closeShowroom() {
+  showroom.active = false;
+  $('title').style.display = ''; $('submsg').style.display = ''; $('keys').style.display = '';
+  $('coinbar').style.visibility = ''; $('langsw').style.visibility = '';
+  openGarage();
+}
+
 function renderGarage() {
   const t = T();
   $('tokenmachine').innerHTML = ''; // makine sadece kaplama sekmesinde
@@ -1941,10 +2060,11 @@ function renderGarage() {
     const fireRate = 1 / def.cool;
     card.innerHTML =
       `<div class="cname">${base.name[lang]}</div>` +
-      `<div class="cswatch" style="background:linear-gradient(135deg,${hex},#1a1a1a)"></div>` +
+      `<div class="cswatch cswatch-3d" style="background:linear-gradient(135deg,${hex},#1a1a1a)"><span class="cs-3d">🔍 3B</span></div>` +
       `<div class="cstat">${t.sHealth}${barHTML(def.health / STAT_MAX.health)}</div>` +
       `<div class="cstat">${t.sSpeed}${barHTML(def.speed / STAT_MAX.speed)}</div>` +
       `<div class="cstat">${t.sFire}${barHTML(fireRate / STAT_MAX.fire)}</div>`;
+    card.querySelector('.cswatch').onclick = () => openShowroom(base.id); // renk örneğine dokun → 3B inceleme
     const btn = document.createElement('button');
     btn.className = 'mbtn small' + (base.glow ? ' gold' : '');
     if (sel) { btn.textContent = t.selected; btn.disabled = true; }
@@ -3025,6 +3145,7 @@ $('playername').addEventListener('input', e => {
 $('btn-back-profile').addEventListener('click', openMenu);
 $('btn-back-maps').addEventListener('click', openMenu);
 $('btn-back-garage').addEventListener('click', openMenu);
+$('sr-back').addEventListener('click', closeShowroom);
 $('btn-back-duel').addEventListener('click', () => { closeNet(); openMenu(); });
 
 // kooperatif menü
@@ -3298,6 +3419,8 @@ function tick() {
   const dt = Math.min(clock.getDelta(), 0.05);
   monitorPerf(dt, state === 'play' && !paused);
   trackTransitions();
+
+  if (showroom.active) { updateShowroom(dt); renderer.render(showroomScene, showroomCam); return; }
 
   if (state === 'play' && !paused && !buildChoosing) {
     if (player.alive) {
