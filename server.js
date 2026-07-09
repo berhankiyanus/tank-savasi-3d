@@ -118,6 +118,12 @@ wss.on('connection', ws => {
     } else {
       const room = roomOf(ws);
       if (!room) return;
+      // ---- temel hile/flood önleme (yanlış-pozitif üretmeyen hafif doğrulama) ----
+      const now = Date.now();
+      if (now > (ws.rlReset || 0)) { ws.rlReset = now + 1000; ws.rlCount = 0; } // 1sn pencere
+      if (++ws.rlCount > 90) return;                                            // mesaj-sel/DoS: sn'de 90+ → at
+      if (m.t === 'fire') { if (now - (ws.lastFire || 0) < 150) return; ws.lastFire = now; } // rapid-fire hilesi (min atış ~300ms)
+      if (m.t === 'state' && (Math.abs(+m.x) > 80 || Math.abs(+m.z) > 80)) return;           // arena-dışı ışınlanma/hile
       m.from = ws.pid;
       bcast(room, m, ws);
     }
