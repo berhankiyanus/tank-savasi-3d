@@ -9,6 +9,7 @@ const L = {
     sub: 'Duvarların arkasına saklanan düşman tankları yok et!',
     keysDesk: 'W / ↑ &nbsp;→&nbsp; ileri &nbsp;|&nbsp; S / ↓ &nbsp;→&nbsp; geri &nbsp;|&nbsp; A / D &nbsp;→&nbsp; dön &nbsp;|&nbsp; BOŞLUK &nbsp;→&nbsp; ateş',
     keysTouch: 'Soldaki joystick &nbsp;→&nbsp; sür ve dön &nbsp;|&nbsp; Sağdaki buton &nbsp;→&nbsp; ateş',
+    quickPlay: '⚡ HIZLI OYNA', quickPlaySub: 'Tek tıkla bota karşı 1v1 — bekleme yok!',
     single: 'TEK OYUNCU', duel: 'ARKADAŞLA DÜELLO', garage: 'GARAJ', back: '‹ GERİ',
     create: 'ODA KUR', join: 'KATIL', codePh: 'KOD',
     waiting: 'Arkadaşın bekleniyor...', roomLbl: 'ODA KODU:',
@@ -45,6 +46,7 @@ const L = {
     sub: 'Destroy the enemy tanks hiding behind the walls!',
     keysDesk: 'W / ↑ &nbsp;→&nbsp; forward &nbsp;|&nbsp; S / ↓ &nbsp;→&nbsp; back &nbsp;|&nbsp; A / D &nbsp;→&nbsp; turn &nbsp;|&nbsp; SPACE &nbsp;→&nbsp; fire',
     keysTouch: 'Left joystick &nbsp;→&nbsp; drive & turn &nbsp;|&nbsp; Right button &nbsp;→&nbsp; fire',
+    quickPlay: '⚡ QUICK PLAY', quickPlaySub: 'One tap 1v1 vs a bot — no waiting!',
     single: 'SINGLE PLAYER', duel: 'DUEL WITH A FRIEND', garage: 'GARAGE', back: '‹ BACK',
     create: 'CREATE ROOM', join: 'JOIN', codePh: 'CODE',
     waiting: 'Waiting for your friend...', roomLbl: 'ROOM CODE:',
@@ -1428,6 +1430,7 @@ function applyLang() {
   $('btn-single').textContent = t.single;
   $('btn-duel').textContent = t.duel;
   $('btn-ball').textContent = t.ballBtn;
+  $('btn-quickplay').textContent = t.quickPlay;
   $('btn-coop').textContent = t.coopBtn;
   $('btn-team').textContent = t.teamBtn;
   $('btn-garage').textContent = t.garage;
@@ -1798,6 +1801,96 @@ function duelReceiveHit() {
     player.a = headingTo(cell.x, cell.z, duel.tx, duel.tz);
     player.alive = true; player.inv = 1.5; player.mesh.visible = true;
   }, 2000);
+}
+// ---------------------------------------------------------------- BOTLAR: hızlı oyna (bota karşı 1v1, tamamen yerel)
+const BOT_NAMES = ['Kaplan', 'Yıldırım', 'Panzer', 'Volkan', 'Şahin', 'Bora', 'Demir', 'Atlas', 'Zafer', 'Kobra', 'Tayfun', 'Ejder', 'Fırtına', 'Çelik', 'Reis', 'Alpay', 'Doruk', 'Yağız'];
+function botName() { return BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)]; }
+function startBotDuel() {
+  mode = 'duel'; state = 'play';
+  isAuthority = true;
+  profile.games++; saveProfile();
+  closeNet();
+  buildArena(duelMap);
+  msgEl.classList.add('hidden');
+  $('topbar').style.visibility = 'visible';
+  $('healthwrap').style.visibility = 'hidden';
+  clearEnemies(); clearBullets(); clearPowerups();
+  powerupT = 6; puIdCounter = 0;
+  player.speedT = 0; player.tripleT = 0; player.shieldT = 0; shieldBubble.visible = false;
+  setPlayerTank(DUEL_TANK);
+  clearDuelMeshes();
+  const SX = cellX(4), SZ = cellZ(11), nm = botName();
+  const rm = buildTank({ color: 0xc23a2a, scale: 1 }); scene.add(rm);
+  rm.position.set(-SX, 0, -SZ); rm.rotation.y = Math.PI;
+  duel = {
+    you: 1, code: null, myKills: 0, myDeaths: 0, over: false, bot: true,
+    x: -SX, z: -SZ, a: Math.PI, remoteAlive: true, remoteMesh: rm, oppName: nm, nameLabel: makeNameLabel(nm),
+    botE: { x: -SX, z: -SZ, a: Math.PI, cool: 1.6, thinkT: 0, turn: 2.2, speed: 7.0, keep: 10, sight: 55, type: 'normal', bspeed: 24, mesh: rm, baseScale: 1, alive: true, respawn: 0 },
+  };
+  player.x = SX; player.z = SZ; player.a = 0; player.vx = 0; player.vz = 0;
+  player.alive = true; player.inv = 1.0;
+  player.mesh.position.set(SX, 0, SZ); player.mesh.visible = true;
+  updateHUD();
+  banner(T().duelStart);
+  audio(); startEngine();
+}
+function updateDuelBot(dt) {
+  const b = duel.botE;
+  if (!b.alive) {
+    b.respawn -= dt;
+    if (b.respawn <= 0) {
+      const c = randOpenCell(player.x, player.z, 16);
+      b.x = c.x; b.z = c.z; b.a = headingTo(c.x, c.z, player.x, player.z); b.cool = 1.2;
+      b.alive = true; duel.remoteAlive = true; duel.remoteMesh.visible = true;
+      duel.remoteMesh.position.set(b.x, 0, b.z);
+    }
+    duel.x = b.x; duel.z = b.z;
+    if (duel.nameLabel) duel.nameLabel.visible = false;
+    return;
+  }
+  updateEnemy(b, dt, player);
+  duel.x = b.x; duel.z = b.z; duel.a = b.a;
+  if (duel.nameLabel) { duel.nameLabel.visible = true; duel.nameLabel.position.set(b.x, 3.4, b.z); }
+}
+function botDuelBotDies() {
+  const b = duel.botE;
+  b.alive = false; b.respawn = 1.4;
+  duel.remoteAlive = false; duel.remoteMesh.visible = false;
+  explode(duel.x, 1.2, duel.z, true);
+  duel.myKills++; profile.kills++; saveProfile(); updateHUD();
+  killFeed(`<b>${profile.name}</b> ⚔️ ${duel.oppName}`);
+  if (duel.myKills >= KILL_TARGET) duelBotEnd(true);
+}
+function botDuelPlayerDies() {
+  player.alive = false; player.mesh.visible = false;
+  explode(player.x, 1.2, player.z, true); hitFlash();
+  duel.myDeaths++; updateHUD();
+  killFeed(`<b>${duel.oppName}</b> ⚔️ ${profile.name}`);
+  if (duel.over) return;
+  setTimeout(() => {
+    if (!duel || duel.over || mode !== 'duel') return;
+    const cell = randOpenCell(duel.x, duel.z, 16);
+    player.x = cell.x; player.z = cell.z; player.vx = 0; player.vz = 0;
+    player.a = headingTo(cell.x, cell.z, duel.x, duel.z);
+    player.alive = true; player.inv = 1.5; player.mesh.visible = true;
+  }, 2000);
+}
+function duelBotEnd(won) {
+  if (!duel || duel.over) return;
+  duel.over = true;
+  if (won) { profile.wins++; saveProfile(); }
+  const t = T();
+  banner(won ? t.youWin : t.youLose);
+  if (won) stingWin(); else stingLose();
+  setTimeout(() => {
+    const mk = duel.myKills, md = duel.myDeaths;
+    clearDuelMeshes(); duel = null;
+    state = 'over';
+    $('title').textContent = won ? t.youWin : t.youLose;
+    $('submsg').textContent = t.duelOverSub(mk, md);
+    showPanel('panel-main'); msgEl.classList.remove('hidden'); $('topbar').style.visibility = 'hidden';
+    updateCoinBar();
+  }, 1800);
 }
 function duelEnd(won) {
   if (!duel || duel.over) return;
@@ -2380,6 +2473,7 @@ function handleTeamNet(m) {
 // ---------------------------------------------------------------- menü olayları
 $('lang-tr').addEventListener('click', () => { lang = 'tr'; applyLang(); if ($('panel-garage').classList.contains('show')) renderGarage(); if ($('panel-maps').classList.contains('show')) renderMaps(); });
 $('lang-en').addEventListener('click', () => { lang = 'en'; applyLang(); if ($('panel-garage').classList.contains('show')) renderGarage(); if ($('panel-maps').classList.contains('show')) renderMaps(); });
+$('btn-quickplay').addEventListener('click', () => { duelMap = 0; startBotDuel(); });
 $('btn-single').addEventListener('click', () => { $('title').textContent = T().chooseMap; $('submsg').textContent = T().bestWave(profile.bestWave); renderMaps(); showPanel('panel-maps'); });
 function renderMapPicker(containerId, rerender) {
   const wrap = $(containerId);
@@ -2654,6 +2748,8 @@ function tick() {
 
     if (mode === 'solo') {
       for (const e of enemies) updateEnemy(e, dt);
+    } else if (duel && duel.bot) {
+      updateDuelBot(dt);
     } else if (duel) {
       const k = 1 - Math.exp(-12 * dt);
       duel.x += (duel.tx - duel.x) * k;
@@ -2753,6 +2849,19 @@ function tick() {
           }
         }
       }
+      // BOT DÜELLO: tamamen yerel → isabet doğrudan (interpolasyon yok, favor-the-shooter gerekmez)
+      if (!dead && mode === 'duel' && duel && duel.bot) {
+        const bx = b.mesh.position.x, bz = b.mesh.position.z;
+        if (b.fromPlayer) {
+          if (duel.remoteAlive && duel.botE.alive && Math.hypot(bx - duel.x, bz - duel.z) < 1.75) {
+            explode(bx, 1.0, bz, false); dead = true; botDuelBotDies();
+          }
+        } else if (player.alive && player.inv <= 0 && Math.hypot(bx - player.x, bz - player.z) < 1.75) {
+          dead = true;
+          if (player.shieldT > 0) { player.inv = 0.3; explode(bx, 1.0, bz, false); sfxBounce(); }
+          else botDuelPlayerDies();
+        }
+      }
       if (!dead && mode !== 'coop' && mode !== 'team' && b.fromPlayer) {
         if (mode === 'solo') {
           for (const e of enemies) {
@@ -2767,7 +2876,7 @@ function tick() {
               dead = true; break;
             }
           }
-        } else if (mode === 'duel' && duel && duel.remoteAlive && Math.hypot(b.mesh.position.x - duel.x, b.mesh.position.z - duel.z) < 1.9) {
+        } else if (mode === 'duel' && duel && !duel.bot && duel.remoteAlive && Math.hypot(b.mesh.position.x - duel.x, b.mesh.position.z - duel.z) < 1.9) {
           // ATICI OTORİTELİ: gördüğüm rakip konumuna isabet → "vuruldun" (thit) yolla; ölümü o onaylar
           explode(b.mesh.position.x, 1.0, b.mesh.position.z, false); dead = true;
           netSend({ t: 'thit' });

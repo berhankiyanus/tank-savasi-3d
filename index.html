@@ -49,6 +49,14 @@
   .mbtn.alt { background: linear-gradient(180deg, #8a4a1f, #5a2c0e); border-color: #ffd76a;
               box-shadow: 0 4px 14px rgba(0,0,0,.5), 0 0 14px rgba(255,215,106,.25); }
   .mbtn.gold { background: linear-gradient(180deg, #b8892a, #6e4e11); border-color: #ffdd55; }
+  .mbtn.play { display: block; width: min(92%, 420px); margin: 8px auto 14px; font-size: 26px;
+               padding: 20px 26px; letter-spacing: 3px;
+               background: linear-gradient(180deg, #ffb733, #e8631a); border-color: #ffe08a; color: #2a1600;
+               text-shadow: 0 1px 2px rgba(255,255,255,.35);
+               box-shadow: 0 6px 22px rgba(0,0,0,.55), 0 0 26px rgba(255,170,60,.5);
+               animation: playpulse 1.8s ease-in-out infinite; }
+  @keyframes playpulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.035); } }
+  .mbtn.play:active { transform: scale(.96); animation: none; }
   .mbtn.small { font-size: 14px; padding: 8px 14px; margin: 4px; }
   .mbtn.on { outline: 3px solid #fff; }
   .mbtn:disabled { opacity: .4; cursor: not-allowed; filter: grayscale(.6); }
@@ -219,6 +227,7 @@
   <div id="panel-main" class="panel show">
     <div id="namerow">🎖 <input id="playername" maxlength="12" placeholder="İsmin" autocomplete="off"></div>
     <div id="menubtns">
+      <button class="mbtn play" id="btn-quickplay">⚡ HIZLI OYNA</button>
       <button class="mbtn" id="btn-single">TEK OYUNCU</button>
       <button class="mbtn alt" id="btn-duel">ARKADAŞLA DÜELLO</button>
       <button class="mbtn alt" id="btn-ball">1v1 TOP MAÇI</button>
