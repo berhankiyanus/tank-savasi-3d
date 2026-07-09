@@ -12,6 +12,8 @@ const L = {
     quickPlay: '⚡ HIZLI OYNA', quickPlaySub: 'Tek tıkla bota karşı 1v1 — bekleme yok!',
     againBtn: '↻ TEKRAR OYNA',
     questsBtn: '🎯 GÖREVLER', questsTitle: 'GÜNLÜK GÖREVLER', questsSub: 'Her gece yenilenir',
+    tmTitle: '🎰 Jeton Makinesi', tmCount: 'Jetonların', tmSpin: '🎲 ÇEVİR · 1 🎰', tmNeed: 'Jeton kazanmak için görev tamamla / seviye atla',
+    gachaNew: s => `🎁 YENİ KAPLAMA! ${s}`, gachaDup: (s, c) => `🔁 ${s} zaten var → +🪙${c}`, tokenGot: n => `🎰 +${n} jeton!`,
     ftueGift: s => `🎁 İlk düşmanını yok ettin! "${s}" kaplaması hediye!`,
     ftueHintDesk: 'W/↑ ilerle · S/↓ geri · A/D dön · BOŞLUK ateş 🔫',
     ftueHintTouch: 'Sol joystick: sür & dön · Sağ buton: ateş 🔫',
@@ -56,6 +58,8 @@ const L = {
     quickPlay: '⚡ QUICK PLAY', quickPlaySub: 'One tap 1v1 vs a bot — no waiting!',
     againBtn: '↻ PLAY AGAIN',
     questsBtn: '🎯 QUESTS', questsTitle: 'DAILY QUESTS', questsSub: 'Refreshes every night',
+    tmTitle: '🎰 Token Machine', tmCount: 'Your tokens', tmSpin: '🎲 SPIN · 1 🎰', tmNeed: 'Complete quests / level up to earn tokens',
+    gachaNew: s => `🎁 NEW SKIN! ${s}`, gachaDup: (s, c) => `🔁 ${s} already owned → +🪙${c}`, tokenGot: n => `🎰 +${n} tokens!`,
     ftueGift: s => `🎁 First enemy down! "${s}" skin unlocked!`,
     ftueHintDesk: 'W/↑ move · S/↓ back · A/D turn · SPACE fire 🔫',
     ftueHintTouch: 'Left stick: drive & turn · Right button: fire 🔫',
@@ -97,7 +101,7 @@ let lang = localStorage.getItem('tanklang') || ((navigator.language || 'tr').sta
 const T = () => L[lang];
 
 // ---------------------------------------------------------------- kalıcı profil
-const DEFAULT_PROFILE = { coins: 0, owned: ['recruit'], selected: 'recruit', bestWave: 1, upgrades: {}, kills: 0, wins: 0, games: 0, skins: ['default'], skin: 'default', achieved: [], lastDaily: '', streak: 0, name: '', gift1: false, level: 1, xp: 0 };
+const DEFAULT_PROFILE = { coins: 0, owned: ['recruit'], selected: 'recruit', bestWave: 1, upgrades: {}, kills: 0, wins: 0, games: 0, skins: ['default'], skin: 'default', achieved: [], lastDaily: '', streak: 0, name: '', gift1: false, level: 1, xp: 0, tokens: 0 };
 let profile;
 try {
   profile = Object.assign({}, DEFAULT_PROFILE, JSON.parse(localStorage.getItem('tankprofile') || '{}'));
@@ -175,19 +179,46 @@ const UPGRADES = [
 const UP_MAX = 5;
 const upCost = lvl => 60 * (lvl + 1);
 // kozmetik kaplamalar (oyuncunun kendi tankına uygulanır)
+// r: nadirlik (c=yaygın, r=nadir, e=efsanevi) — jeton makinesi ağırlığı + fiyat için
 const SKINS = [
   { id: 'default', name: { tr: 'Varsayılan', en: 'Default' }, price: 0 },
-  { id: 'camo', name: { tr: 'Kamuflaj', en: 'Camo' }, price: 120, color: 0x4b5320, rough: 0.9 },
-  { id: 'crimson', name: { tr: 'Kızıl', en: 'Crimson' }, price: 150, color: 0xb01818 },
-  { id: 'ocean', name: { tr: 'Okyanus', en: 'Ocean' }, price: 150, color: 0x1b6fa8 },
-  { id: 'gold', name: { tr: 'Altın', en: 'Gold' }, price: 400, color: 0xffcc33, metal: 0.85, rough: 0.25 },
-  { id: 'chrome', name: { tr: 'Krom', en: 'Chrome' }, price: 500, color: 0xcfd6e0, metal: 0.95, rough: 0.12 },
-  { id: 'neon', name: { tr: 'Neon', en: 'Neon' }, price: 450, color: 0x18e0ff, glow: 0.6 },
-  { id: 'inferno', name: { tr: 'Ateş', en: 'Inferno' }, price: 450, color: 0xff5a1e, glow: 0.6 },
-  { id: 'phantom', name: { tr: 'Hayalet', en: 'Phantom' }, price: 600, color: 0xa040ff, glow: 0.5, metal: 0.4 },
-  { id: 'toxic', name: { tr: 'Zehir', en: 'Toxic' }, price: 500, color: 0x8aff2a, glow: 0.5 },
+  // yaygın (renk varyasyonları)
+  { id: 'camo', name: { tr: 'Kamuflaj', en: 'Camo' }, price: 150, color: 0x4b5320, rough: 0.9, r: 'c' },
+  { id: 'crimson', name: { tr: 'Kızıl', en: 'Crimson' }, price: 150, color: 0xb01818, r: 'c' },
+  { id: 'ocean', name: { tr: 'Okyanus', en: 'Ocean' }, price: 150, color: 0x1b6fa8, r: 'c' },
+  { id: 'forest', name: { tr: 'Orman', en: 'Forest' }, price: 150, color: 0x2f5d34, r: 'c' },
+  { id: 'sand', name: { tr: 'Kum', en: 'Sand' }, price: 150, color: 0xc2a76a, r: 'c' },
+  { id: 'navy', name: { tr: 'Lacivert', en: 'Navy' }, price: 150, color: 0x24304f, r: 'c' },
+  { id: 'plum', name: { tr: 'Erik', en: 'Plum' }, price: 150, color: 0x6a2d5a, r: 'c' },
+  { id: 'rose', name: { tr: 'Gül', en: 'Rose' }, price: 150, color: 0xd85a7a, r: 'c' },
+  { id: 'teal', name: { tr: 'Ördek Başı', en: 'Teal' }, price: 150, color: 0x1f8a7a, r: 'c' },
+  { id: 'orange', name: { tr: 'Turuncu', en: 'Orange' }, price: 150, color: 0xe07a1e, r: 'c' },
+  { id: 'slate', name: { tr: 'Arduvaz', en: 'Slate' }, price: 150, color: 0x556070, rough: 0.7, r: 'c' },
+  { id: 'wine', name: { tr: 'Şarap', en: 'Wine' }, price: 150, color: 0x7a1f2b, r: 'c' },
+  { id: 'olive', name: { tr: 'Zeytin', en: 'Olive' }, price: 150, color: 0x7a7a2a, r: 'c' },
+  // nadir (metal)
+  { id: 'gold', name: { tr: 'Altın', en: 'Gold' }, price: 400, color: 0xffcc33, metal: 0.85, rough: 0.25, r: 'r' },
+  { id: 'chrome', name: { tr: 'Krom', en: 'Chrome' }, price: 400, color: 0xcfd6e0, metal: 0.95, rough: 0.12, r: 'r' },
+  { id: 'bronze', name: { tr: 'Bronz', en: 'Bronze' }, price: 400, color: 0xa9702e, metal: 0.8, rough: 0.3, r: 'r' },
+  { id: 'copper', name: { tr: 'Bakır', en: 'Copper' }, price: 400, color: 0xc0642a, metal: 0.85, rough: 0.28, r: 'r' },
+  { id: 'gunmetal', name: { tr: 'Silah Çeliği', en: 'Gunmetal' }, price: 400, color: 0x3a4048, metal: 0.9, rough: 0.35, r: 'r' },
+  { id: 'silver', name: { tr: 'Gümüş', en: 'Silver' }, price: 400, color: 0xb8c0c8, metal: 0.9, rough: 0.2, r: 'r' },
+  { id: 'rosegold', name: { tr: 'Roz Altın', en: 'Rose Gold' }, price: 400, color: 0xe6a58a, metal: 0.85, rough: 0.24, r: 'r' },
+  { id: 'obsidian', name: { tr: 'Obsidyen', en: 'Obsidian' }, price: 400, color: 0x1a1a22, metal: 0.7, rough: 0.15, r: 'r' },
+  // efsanevi (parlayan)
+  { id: 'neon', name: { tr: 'Neon', en: 'Neon' }, price: 700, color: 0x18e0ff, glow: 0.6, r: 'e' },
+  { id: 'inferno', name: { tr: 'Ateş', en: 'Inferno' }, price: 700, color: 0xff5a1e, glow: 0.6, r: 'e' },
+  { id: 'phantom', name: { tr: 'Hayalet', en: 'Phantom' }, price: 700, color: 0xa040ff, glow: 0.5, metal: 0.4, r: 'e' },
+  { id: 'toxic', name: { tr: 'Zehir', en: 'Toxic' }, price: 700, color: 0x8aff2a, glow: 0.5, r: 'e' },
+  { id: 'frost', name: { tr: 'Ayaz', en: 'Frost' }, price: 700, color: 0x7fe8ff, glow: 0.55, r: 'e' },
+  { id: 'void', name: { tr: 'Boşluk', en: 'Void' }, price: 700, color: 0x7a2dff, glow: 0.5, metal: 0.5, r: 'e' },
+  { id: 'plasma', name: { tr: 'Plazma', en: 'Plasma' }, price: 700, color: 0xff3aa0, glow: 0.6, r: 'e' },
+  { id: 'ember', name: { tr: 'Kor', en: 'Ember' }, price: 700, color: 0xffb02a, glow: 0.6, r: 'e' },
+  { id: 'venom', name: { tr: 'Panzehir', en: 'Venom' }, price: 700, color: 0x2affa0, glow: 0.55, r: 'e' },
+  { id: 'royal', name: { tr: 'Kraliyet', en: 'Royal' }, price: 900, color: 0x3a4dff, glow: 0.5, metal: 0.6, r: 'e' },
 ];
 const skinById = id => SKINS.find(s => s.id === id) || SKINS[0];
+const RARITY = { c: { w: 100, coin: 40, tr: 'Yaygın', en: 'Common', col: '#c8d0d8' }, r: { w: 34, coin: 120, tr: 'Nadir', en: 'Rare', col: '#5ad0ff' }, e: { w: 10, coin: 260, tr: 'Efsanevi', en: 'Epic', col: '#ffcc33' } };
 // başarımlar (koşul sağlanınca coin ödülü)
 const ACHIEVEMENTS = [
   { id: 'kill50', name: { tr: 'Acemi Avcı', en: 'Rookie' }, desc: { tr: '50 düşman yok et', en: 'Destroy 50 enemies' }, stat: 'kills', goal: 50, reward: 100 },
@@ -1328,7 +1359,52 @@ const healthEl = $('health'), scoreEl = $('score'), waveEl = $('wave');
 const msgEl = $('msg'), flashEl = $('flash'), bannerEl = $('wavebanner');
 const duelStatusEl = $('duelstatus'), coinsEl = $('coins');
 
-function updateCoinBar() { coinsEl.textContent = profile.coins; }
+function updateCoinBar() { coinsEl.textContent = profile.coins; updateTokenBar(); }
+function updateTokenBar() { const el = $('tokens'); if (el) el.textContent = profile.tokens || 0; }
+function grantTokens(n) {
+  if (!n || n <= 0) return;
+  profile.tokens = (profile.tokens || 0) + n;
+  saveProfile(); updateTokenBar();
+  showToast(T().tokenGot(n), 2600);
+}
+// jeton makinesi (gacha) — ağırlıklı rastgele kaplama; kopya çıkarsa coin'e döner (GDD kuralı)
+function tokenOdds() {
+  const pool = SKINS.filter(s => s.id !== 'default');
+  const sum = { c: 0, r: 0, e: 0 }; let total = 0;
+  for (const s of pool) { sum[s.r] += RARITY[s.r].w; total += RARITY[s.r].w; }
+  return { c: sum.c / total * 100, r: sum.r / total * 100, e: sum.e / total * 100 };
+}
+function spinToken() {
+  if ((profile.tokens || 0) < 1) return;
+  profile.tokens--;
+  const pool = SKINS.filter(s => s.id !== 'default');
+  let total = 0; for (const s of pool) total += RARITY[s.r].w;
+  let roll = Math.random() * total, pick = pool[pool.length - 1];
+  for (const s of pool) { roll -= RARITY[s.r].w; if (roll <= 0) { pick = s; break; } }
+  const t = T();
+  if (profile.skins.includes(pick.id)) {
+    const coins = RARITY[pick.r].coin;
+    addCoins(coins); saveProfile();
+    banner(t.gachaDup(pick.name[lang], coins)); sfxCoin();
+    track('gacha', { result: 'dup', rarity: pick.r });
+  } else {
+    profile.skins.push(pick.id); saveProfile();
+    banner(t.gachaNew(pick.name[lang])); sfxPower(); haptic('HEAVY');
+    track('gacha', { result: 'new', rarity: pick.r });
+  }
+  updateCoinBar();
+  if ($('panel-garage').classList.contains('show')) renderSkins();
+}
+function renderMachine() {
+  const t = T(), o = tokenOdds();
+  $('tokenmachine').innerHTML = `<div class="tm-box">
+    <div class="tm-title">${t.tmTitle}</div>
+    <div class="tm-count">${t.tmCount}: <b>${profile.tokens || 0}</b></div>
+    <button id="tm-spin" class="mbtn"${(profile.tokens || 0) < 1 ? ' disabled' : ''}>${t.tmSpin}</button>
+    <div class="tm-odds">${RARITY.c[lang]} %${o.c.toFixed(0)} · ${RARITY.r[lang]} %${o.r.toFixed(0)} · ${RARITY.e[lang]} %${o.e.toFixed(0)}</div>
+  </div>`;
+  const sp = $('tm-spin'); if (sp) sp.onclick = spinToken;
+}
 function updateStats() {
   $('statsline').innerHTML = `🏆 D.${profile.bestWave} &nbsp;·&nbsp; ⚔️ ${profile.kills} &nbsp;·&nbsp; 🥇 ${profile.wins} &nbsp;·&nbsp; 🏅`;
 }
@@ -1382,6 +1458,7 @@ function onLevelUp(lvl) {
   const big = lvl % 5 === 0;
   const reward = big ? (100 + lvl * 12) : (20 + lvl * 3);
   addCoins(reward);
+  if (big) grantTokens(2); // her 5. seviye → 2 jeton
   banner(`⭐ ${lang === 'tr' ? 'SEVİYE' : 'LEVEL'} ${lvl}!  +🪙${reward}`);
   sfxPower();
   track('level_up', { level: lvl });
@@ -1480,7 +1557,7 @@ function questProgress(type, amount) {
     changed = true;
     if (q.prog >= def.goal) {
       q.claimed = true;
-      addCoins(def.reward); grantXp(25);
+      addCoins(def.reward); grantXp(25); grantTokens(1); // görev → 1 jeton
       showToast(`✅ ${def.text[lang]}  +🪙${def.reward}`, 3400);
       track('quest_complete', { id: q.id });
     }
@@ -1683,6 +1760,7 @@ function barHTML(frac) {
 }
 function renderGarage() {
   const t = T();
+  $('tokenmachine').innerHTML = ''; // makine sadece kaplama sekmesinde
   const wrap = $('cardwrap-garage');
   wrap.className = 'card-list';
   wrap.style.cssText = 'display:flex;flex-wrap:wrap;justify-content:center;gap:12px;margin:12px 8px';
@@ -1761,6 +1839,7 @@ function openGarage() {
 }
 function renderSkins() {
   const t = T();
+  renderMachine();
   const wrap = $('cardwrap-garage');
   wrap.style.cssText = 'display:flex;flex-wrap:wrap;justify-content:center;gap:12px;margin:12px 8px';
   wrap.innerHTML = '';
