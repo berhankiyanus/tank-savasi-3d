@@ -20,6 +20,7 @@ const L = {
     ftueGift: s => `🎁 İlk düşmanını yok ettin! "${s}" kaplaması hediye!`,
     ftueHintDesk: 'W/↑ ilerle · S/↓ geri · A/D dön · BOŞLUK ateş 🔫',
     ftueHintTouch: 'Sol joystick: sür & dön · Sağ buton: ateş 🔫',
+    ftueWelcome: 'Hoş geldin! Sür ve ateş et 🔫',
     single: 'TEK OYUNCU', duel: 'ARKADAŞLA DÜELLO', garage: 'GARAJ', back: '‹ GERİ',
     create: 'ODA KUR', join: 'KATIL', codePh: 'KOD',
     shareBtn: '🔗 DAVET LİNKİ', linkCopied: '🔗 Davet linki kopyalandı!', shareText: 'Tank Savaşı 3D — bana katıl!',
@@ -69,6 +70,7 @@ const L = {
     ftueGift: s => `🎁 First enemy down! "${s}" skin unlocked!`,
     ftueHintDesk: 'W/↑ move · S/↓ back · A/D turn · SPACE fire 🔫',
     ftueHintTouch: 'Left stick: drive & turn · Right button: fire 🔫',
+    ftueWelcome: 'Welcome! Drive and shoot 🔫',
     single: 'SINGLE PLAYER', duel: 'DUEL WITH A FRIEND', garage: 'GARAGE', back: '‹ BACK',
     create: 'CREATE ROOM', join: 'JOIN', codePh: 'CODE',
     shareBtn: '🔗 INVITE LINK', linkCopied: '🔗 Invite link copied!', shareText: 'Tank Battle 3D — join me!',
@@ -3194,6 +3196,9 @@ checkDaily();
   if (/^[A-Z0-9]{4}$/.test(jc)) {
     history.replaceState(null, '', location.pathname); // linki URL'den temizle (yeniden yüklemede tekrar katılmasın)
     autoJoinFromLink(jc, validMode);
+  } else if ((profile.games || 0) === 0) {
+    // FTUE: ilk kez gelen oyuncu menü yerine DOĞRUDAN dalga moduna düşer (GDD: ≤5sn oyna, girişsiz, kontrolleri güvenle öğren)
+    setTimeout(() => { if (state === 'menu' && !ws) { startSolo(0); banner(T().ftueWelcome); } }, 600);
   }
 }
 
