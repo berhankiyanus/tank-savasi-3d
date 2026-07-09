@@ -334,7 +334,9 @@
   setTimeout(function () {
     if (!window.__gameLoaded) window.__showErr('Oyun yüklenemedi — tarayıcı çok eski olabilir / Game failed to load.');
   }, 15000);
-  if ('serviceWorker' in navigator) {
+  // service worker sadece web'de (native app'te varlıklar zaten cihazda gömülü — SW gereksiz/sorunlu)
+  var __native = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+  if ('serviceWorker' in navigator && !__native) {
     window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });
   }
 </script>

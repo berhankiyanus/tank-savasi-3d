@@ -117,13 +117,36 @@ catch { settings = { muted: false, quality: 'high', music: true }; }
 if (typeof settings.music !== 'boolean') settings.music = true;
 function saveSettings() { localStorage.setItem('tanksettings', JSON.stringify(settings)); }
 
+// ---------------------------------------------------------------- sunucu adresi (web vs native app)
+// Capacitor (App Store/Play) paketinde sayfa localhost'tan servis edilir → çok-oyunculu + analitik
+// canlı Render sunucusuna gitmeli. Web'de (Render/dev) göreli/location.host kullanılır.
+const REMOTE_HOST = 'tank-savasi-3d.onrender.com';
+function isNativeApp() { return !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()); }
+function apiBase() { return isNativeApp() ? 'https://' + REMOTE_HOST : ''; }
+function wsBase() { return isNativeApp() ? 'wss://' + REMOTE_HOST : (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host; }
+function capPlugins() { return (window.Capacitor && window.Capacitor.Plugins) || {}; }
+function haptic(style) { try { const H = capPlugins().Haptics; if (isNativeApp() && H) H.impact({ style: style || 'MEDIUM' }); } catch {} }
+function nativeInit() {
+  if (!isNativeApp()) return;
+  const P = capPlugins();
+  try { P.SplashScreen && P.SplashScreen.hide(); } catch {}
+  try { P.StatusBar && P.StatusBar.hide(); } catch {}          // tam ekran
+  try {
+    P.App && P.App.addListener('backButton', () => {           // Android geri tuşu → menüye dön (uygulamadan çıkma)
+      if (state !== 'menu') { closeNet(); clearBallMode(); clearCoop(); clearTeam(); buildArena(0); openMenu(); }
+      else if (P.App.minimizeApp) P.App.minimizeApp();
+    });
+  } catch {}
+}
+
 // ---------------------------------------------------------------- analitik (anonim huni ölçümü)
 const SESSION_ID = Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
 function track(ev, data) {
   try {
     const payload = JSON.stringify(Object.assign({ ev, sid: SESSION_ID, t: Date.now() }, data || {}));
-    if (navigator.sendBeacon) navigator.sendBeacon('/ev', payload);
-    else fetch('/ev', { method: 'POST', body: payload, keepalive: true }).catch(() => {});
+    const url = apiBase() + '/ev';
+    if (navigator.sendBeacon) navigator.sendBeacon(url, payload);
+    else fetch(url, { method: 'POST', body: payload, keepalive: true }).catch(() => {});
   } catch {}
 }
 let paused = false;
@@ -1428,6 +1451,7 @@ function banner(text) {
 function hitFlash() {
   flashEl.style.transition = 'none'; flashEl.style.opacity = 1;
   requestAnimationFrame(() => { flashEl.style.transition = 'opacity .5s'; flashEl.style.opacity = 0; });
+  haptic('MEDIUM'); // native app'te titreşimli vuruş geri bildirimi
 }
 function updateHUD() {
   const t = T();
@@ -1710,7 +1734,8 @@ let ws = null, duel = null, myRoomCode = null;
 // tıklanabilir davet linki: <origin>/?j=KOD&m=MOD → arkadaş tek tıkla lobiye düşer (kod yazmaya gerek yok)
 function shareLink() {
   if (!myRoomCode) return;
-  const url = `${location.origin}/?j=${myRoomCode}&m=${pendingMode}`;
+  const base = isNativeApp() ? ('https://' + REMOTE_HOST) : location.origin;
+  const url = `${base}/?j=${myRoomCode}&m=${pendingMode}`;
   const t = T();
   track('share_click', { mode: pendingMode });
   if (navigator.share) navigator.share({ title: 'Tank Savaşı 3D', text: t.shareText, url }).catch(() => {});
@@ -1741,8 +1766,7 @@ function closeNet() {
 function netSend(obj) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(obj)); }
 function connectNet(onOpen) {
   netYou = null; netMode = null; netBegun = false; netMapIdx = null;
-  const proto = location.protocol === 'https:' ? 'wss://' : 'ws://';
-  try { ws = new WebSocket(proto + location.host); }
+  try { ws = new WebSocket(wsBase()); }
   catch { duelStatusEl.textContent = T().connFail; return; }
   ws.onopen = onOpen;
   ws.onerror = () => { duelStatusEl.textContent = T().connFail; };
@@ -3091,5 +3115,6 @@ tick();
 window.__gameLoaded = true;
 { const ls = document.getElementById('loading'); if (ls) { ls.classList.add('gone'); setTimeout(() => ls.remove(), 600); } }
 // analitik: yükleme tamam + oturum çıkışı
-track('load_end', { touch: IS_TOUCH, lang });
+track('load_end', { touch: IS_TOUCH, lang, native: isNativeApp() });
 addEventListener('pagehide', () => track('quit', { atState: state, mode: matchMode }));
+nativeInit(); // native app cilası (splash gizle, tam ekran, geri tuşu, haptik)

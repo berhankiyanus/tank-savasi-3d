@@ -3,3 +3,6 @@ korku/
 .DS_Store
 .claude/
 *.log
+www/
+ios/
+android/
