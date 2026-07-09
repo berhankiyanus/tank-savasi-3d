@@ -15,6 +15,7 @@ const L = {
     ftueHintTouch: 'Sol joystick: sür & dön · Sağ buton: ateş 🔫',
     single: 'TEK OYUNCU', duel: 'ARKADAŞLA DÜELLO', garage: 'GARAJ', back: '‹ GERİ',
     create: 'ODA KUR', join: 'KATIL', codePh: 'KOD',
+    shareBtn: '🔗 DAVET LİNKİ', linkCopied: '🔗 Davet linki kopyalandı!', shareText: 'Tank Savaşı 3D — bana katıl!',
     waiting: 'Arkadaşın bekleniyor...', roomLbl: 'ODA KODU:',
     joinFail: 'Oda bulunamadı!', connFail: 'Bağlantı kurulamadı!',
     health: 'CAN', wave: 'DALGA', score: 'SKOR', you: 'SEN', opp: 'RAKİP',
@@ -56,6 +57,7 @@ const L = {
     ftueHintTouch: 'Left stick: drive & turn · Right button: fire 🔫',
     single: 'SINGLE PLAYER', duel: 'DUEL WITH A FRIEND', garage: 'GARAGE', back: '‹ BACK',
     create: 'CREATE ROOM', join: 'JOIN', codePh: 'CODE',
+    shareBtn: '🔗 INVITE LINK', linkCopied: '🔗 Invite link copied!', shareText: 'Tank Battle 3D — join me!',
     waiting: 'Waiting for your friend...', roomLbl: 'ROOM CODE:',
     joinFail: 'Room not found!', connFail: 'Connection failed!',
     health: 'HP', wave: 'WAVE', score: 'SCORE', you: 'YOU', opp: 'RIVAL',
@@ -1478,6 +1480,8 @@ function applyLang() {
   $('btn-duel').textContent = t.duel;
   $('btn-ball').textContent = t.ballBtn;
   $('btn-quickplay').textContent = t.quickPlay;
+  $('btn-coop-share').textContent = t.shareBtn;
+  $('btn-duel-share').textContent = t.shareBtn;
   $('btn-coop').textContent = t.coopBtn;
   $('btn-team').textContent = t.teamBtn;
   $('btn-garage').textContent = t.garage;
@@ -1702,7 +1706,25 @@ function gameOver() {
 }
 
 // ---------------------------------------------------------------- düello
-let ws = null, duel = null;
+let ws = null, duel = null, myRoomCode = null;
+// tıklanabilir davet linki: <origin>/?j=KOD&m=MOD → arkadaş tek tıkla lobiye düşer (kod yazmaya gerek yok)
+function shareLink() {
+  if (!myRoomCode) return;
+  const url = `${location.origin}/?j=${myRoomCode}&m=${pendingMode}`;
+  const t = T();
+  track('share_click', { mode: pendingMode });
+  if (navigator.share) navigator.share({ title: 'Tank Savaşı 3D', text: t.shareText, url }).catch(() => {});
+  else if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(() => showToast(t.linkCopied)).catch(() => prompt('', url));
+  else prompt('', url);
+}
+function autoJoinFromLink(code, mode) {
+  pendingMode = mode; coopIsHost = false; coopCode = code;
+  msgEl.classList.remove('hidden');
+  if (mode === 'coop' || mode === 'team') { $('coopstatus').textContent = '...'; renderCoopMaps(); showPanel('panel-coop'); }
+  else { duelStatusEl.textContent = '...'; showPanel('panel-duel'); }
+  track('link_join', { mode });
+  connectNet(() => netSend({ t: 'join', code }));
+}
 function clearDuelMeshes() {
   if (!duel) return;
   if (duel.remoteMesh) scene.remove(duel.remoteMesh);
@@ -1743,8 +1765,9 @@ function handleNet(m) {
   const t = T();
   const lobbyMode = (pendingMode === 'coop' || pendingMode === 'team');
   if (m.t === 'room') {
-    if (lobbyMode) { coopCode = m.code; coopYou = m.you; updateLobby(1, [m.you]); }
-    else { if (duel) duel.code = m.code; duelStatusEl.innerHTML = `${t.roomLbl} <span class="code">${m.code}</span><br>${t.waiting}`; }
+    myRoomCode = m.code;
+    if (lobbyMode) { coopCode = m.code; coopYou = m.you; updateLobby(1, [m.you]); $('btn-coop-share').style.display = 'block'; }
+    else { if (duel) duel.code = m.code; duelStatusEl.innerHTML = `${t.roomLbl} <span class="code">${m.code}</span><br>${t.waiting}`; $('btn-duel-share').style.display = 'inline-block'; }
   }
   else if (m.t === 'err') { (lobbyMode ? $('coopstatus') : duelStatusEl).textContent = t.joinFail; }
   else if (m.t === 'lobby') { updateLobby(m.count, m.players); }
@@ -2538,8 +2561,8 @@ function renderMapPicker(containerId, rerender) {
 }
 function renderDuelMaps() { renderMapPicker('duelmapsrow', renderDuelMaps); }
 function renderCoopMaps() { renderMapPicker('coopmapsrow', renderCoopMaps); }
-$('btn-duel').addEventListener('click', () => { pendingMode = 'duel'; duelStatusEl.textContent = ''; $('title').textContent = T().duel; $('submsg').textContent = T().duelSub(KILL_TARGET); $('duelmapsrow').style.display = 'flex'; renderDuelMaps(); showPanel('panel-duel'); });
-$('btn-ball').addEventListener('click', () => { pendingMode = 'ball'; duelStatusEl.textContent = ''; $('title').textContent = T().ballBtn; $('submsg').textContent = T().ballSub(BALL_TARGET); $('duelmapsrow').style.display = 'none'; showPanel('panel-duel'); });
+$('btn-duel').addEventListener('click', () => { pendingMode = 'duel'; myRoomCode = null; $('btn-duel-share').style.display = 'none'; duelStatusEl.textContent = ''; $('title').textContent = T().duel; $('submsg').textContent = T().duelSub(KILL_TARGET); $('duelmapsrow').style.display = 'flex'; renderDuelMaps(); showPanel('panel-duel'); });
+$('btn-ball').addEventListener('click', () => { pendingMode = 'ball'; myRoomCode = null; $('btn-duel-share').style.display = 'none'; duelStatusEl.textContent = ''; $('title').textContent = T().ballBtn; $('submsg').textContent = T().ballSub(BALL_TARGET); $('duelmapsrow').style.display = 'none'; showPanel('panel-duel'); });
 $('btn-garage').addEventListener('click', openGarage);
 $('gt-tanks').addEventListener('click', () => { garageTab = 'tanks'; renderGarageTabs(); });
 $('gt-skins').addEventListener('click', () => { garageTab = 'skins'; renderGarageTabs(); });
@@ -2567,15 +2590,15 @@ function updateLobby(count, players) {
   $('btn-coop-start').style.display = (coopIsHost && count >= need) ? 'inline-block' : 'none';
 }
 $('btn-coop').addEventListener('click', () => {
-  pendingMode = 'coop'; coopCode = null; coopIsHost = false;
+  pendingMode = 'coop'; coopCode = null; coopIsHost = false; myRoomCode = null;
   $('title').textContent = T().coopBtn; $('submsg').textContent = T().coopSub;
-  $('coopstatus').textContent = ''; $('btn-coop-start').style.display = 'none';
+  $('coopstatus').textContent = ''; $('btn-coop-start').style.display = 'none'; $('btn-coop-share').style.display = 'none';
   renderCoopMaps(); showPanel('panel-coop');
 });
 $('btn-team').addEventListener('click', () => {
-  pendingMode = 'team'; coopCode = null; coopIsHost = false;
+  pendingMode = 'team'; coopCode = null; coopIsHost = false; myRoomCode = null;
   $('title').textContent = T().teamBtn; $('submsg').textContent = T().teamSub;
-  $('coopstatus').textContent = ''; $('btn-coop-start').style.display = 'none';
+  $('coopstatus').textContent = ''; $('btn-coop-start').style.display = 'none'; $('btn-coop-share').style.display = 'none';
   renderCoopMaps(); showPanel('panel-coop');
 });
 $('btn-coop-create').addEventListener('click', () => {
@@ -2591,6 +2614,8 @@ $('btn-coop-join').addEventListener('click', () => {
   connectNet(() => netSend({ t: 'join', code }));
 });
 $('btn-coop-start').addEventListener('click', () => { netSend({ t: 'startgame', map: duelMap, gm: pendingMode }); });
+$('btn-coop-share').addEventListener('click', shareLink);
+$('btn-duel-share').addEventListener('click', shareLink);
 $('btn-back-coop').addEventListener('click', () => { closeNet(); openMenu(); });
 $('btn-rematch').addEventListener('click', () => {
   if (myReady || !matchOverMode) return;
@@ -2734,6 +2759,17 @@ const clock = new THREE.Clock();
 applyLang();
 openMenu();
 checkDaily();
+// davet linkiyle gelindiyse (?j=KOD&m=MOD) doğrudan lobiye katıl
+{
+  const params = new URLSearchParams(location.search);
+  const jc = (params.get('j') || '').trim().toUpperCase();
+  const jm = params.get('m');
+  const validMode = ['coop', 'team', 'duel', 'ball'].includes(jm) ? jm : 'coop';
+  if (/^[A-Z0-9]{4}$/.test(jc)) {
+    history.replaceState(null, '', location.pathname); // linki URL'den temizle (yeniden yüklemede tekrar katılmasın)
+    autoJoinFromLink(jc, validMode);
+  }
+}
 
 // oto-kalite: oyun sırasında FPS ölçülür; sürekli düşükse (zayıf cihaz) kalite bir kez otomatik düşürülür
 let perfAccum = 0, perfFrames = 0, perfChecked = false;
