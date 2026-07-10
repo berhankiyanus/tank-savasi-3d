@@ -22,7 +22,8 @@ const L = {
     ftueHintDesk: 'W/↑ ilerle · S/↓ geri · A/D dön · BOŞLUK ateş 🔫',
     ftueHintTouch: 'Sol joystick: sür & dön · Sağ buton: ateş 🔫',
     ftueWelcome: 'Hoş geldin! Sür ve ateş et 🔫',
-    single: 'TEK OYUNCU', duel: 'ARKADAŞLA DÜELLO', garage: 'GARAJ', back: '‹ GERİ',
+    single: '🌊 TEK OYUNCU', duel: '⚔️ ARKADAŞLA DÜELLO', garage: 'GARAJ', back: '‹ GERİ',
+    navQuests: 'GÖREVLER', navLb: 'LİDER', navSeason: 'SEZON', navShop: 'DÜKKAN',
     create: 'ODA KUR', join: 'KATIL', codePh: 'KOD',
     shareBtn: '🔗 DAVET LİNKİ', linkCopied: '🔗 Davet linki kopyalandı!', shareText: 'Tank Savaşı 3D — bana katıl!',
     waiting: 'Arkadaşın bekleniyor...', roomLbl: 'ODA KODU:',
@@ -39,7 +40,7 @@ const L = {
     accTab: 'AKSESUAR', accEquip: 'TAK', accRemove: '✓ ÇIKAR', accNone: 'Aksesuar yok', shopTitle: 'ELMAS DÜKKÂNI',
     noMoney: 'Yetersiz 🪙!', sHealth: 'Can', sSpeed: 'Hız', sFire: 'Ateş',
     reward: '🪙', bestWave: w => `En iyi: Dalga ${w}`, maxLevel: 'MAKS',
-    ballBtn: '1v1 TOP MAÇI', ballSub: t => `Topu ateşle karşı base'e sok! İlk ${t} gol kazanır.`,
+    ballBtn: '⚽ 1v1 TOP MAÇI', ballSub: t => `Topu ateşle karşı base'e sok! İlk ${t} gol kazanır.`,
     golYou: 'GOL! 🎉', golOpp: 'Gol yediniz!', ballScore: 'GOL',
     rematchBtn: 'TEKRAR OYNA', leaveBtn: 'ÇIKIŞ',
     rematchWait: 'Rakip bekleniyor...', rematchPeerReady: 'Rakip tekrar oynamak istiyor!',
@@ -47,9 +48,9 @@ const L = {
     setTitle: 'AYARLAR', setSound: 'Ses', setMusic: 'Müzik', setQuality: 'Kalite', onW: 'AÇIK', offW: 'KAPALI',
     qHigh: 'YÜKSEK', qLow: 'DÜŞÜK', resumeW: 'DEVAM ET', toMenuW: 'ANA MENÜ', closeW: 'KAPAT', pausedW: 'DURAKLADI',
     autoLow: '⚙️ Akıcılık için kalite otomatik düşürüldü',
-    coopBtn: 'KOOPERATİF', coopSub: '2-4 kişi birlikte dalgalara karşı! Oda kur veya kod ile katıl.',
+    coopBtn: '🤝 KOOPERATİF', coopSub: '2-4 kişi birlikte dalgalara karşı! Oda kur veya kod ile katıl.',
     startW: 'BAŞLAT', playersW: 'oyuncu', waitHost: 'Host başlatmasını bekle...',
-    teamBtn: '2v2 TAKIM', teamSub: '2v2 takım savaşı — tam 4 oyuncu! Oda kur (3 kişi daha) ya da kod ile katıl.',
+    teamBtn: '🛡️ 2v2 TAKIM', teamSub: '2v2 takım savaşı — tam 4 oyuncu! Oda kur (3 kişi daha) ya da kod ile katıl.',
     teamStart: 'TAKIM SAVAŞI!', teamSubB: k => `İlk ${k} vuruşa ulaşan takım kazanır — tek atış öldürür!`,
     teamNeed: '4 oyuncu gerekli', teamRed: 'KIRMIZI', teamBlue: 'MAVİ',
     teamWin: 'TAKIMIN KAZANDI! 🏆', teamLose: 'TAKIMIN KAYBETTİ', teamMate: 'Takım arkadaşın', teamFell: 'düştü',
@@ -74,7 +75,8 @@ const L = {
     ftueHintDesk: 'W/↑ move · S/↓ back · A/D turn · SPACE fire 🔫',
     ftueHintTouch: 'Left stick: drive & turn · Right button: fire 🔫',
     ftueWelcome: 'Welcome! Drive and shoot 🔫',
-    single: 'SINGLE PLAYER', duel: 'DUEL WITH A FRIEND', garage: 'GARAGE', back: '‹ BACK',
+    single: '🌊 SINGLE PLAYER', duel: '⚔️ DUEL WITH A FRIEND', garage: 'GARAGE', back: '‹ BACK',
+    navQuests: 'QUESTS', navLb: 'RANKS', navSeason: 'SEASON', navShop: 'SHOP',
     create: 'CREATE ROOM', join: 'JOIN', codePh: 'CODE',
     shareBtn: '🔗 INVITE LINK', linkCopied: '🔗 Invite link copied!', shareText: 'Tank Battle 3D — join me!',
     waiting: 'Waiting for your friend...', roomLbl: 'ROOM CODE:',
@@ -91,7 +93,7 @@ const L = {
     accTab: 'ACCESSORY', accEquip: 'EQUIP', accRemove: '✓ REMOVE', accNone: 'No accessory', shopTitle: 'GEM SHOP',
     noMoney: 'Not enough 🪙!', sHealth: 'HP', sSpeed: 'Speed', sFire: 'Fire',
     reward: '🪙', bestWave: w => `Best: Wave ${w}`, maxLevel: 'MAX',
-    ballBtn: '1v1 BALL MATCH', ballSub: t => `Shoot the ball into the rival base! First to ${t} goals wins.`,
+    ballBtn: '⚽ 1v1 BALL MATCH', ballSub: t => `Shoot the ball into the rival base! First to ${t} goals wins.`,
     golYou: 'GOAL! 🎉', golOpp: 'They scored!', ballScore: 'GOAL',
     rematchBtn: 'PLAY AGAIN', leaveBtn: 'LEAVE',
     rematchWait: 'Waiting for opponent...', rematchPeerReady: 'Opponent wants a rematch!',
@@ -99,9 +101,9 @@ const L = {
     setTitle: 'SETTINGS', setSound: 'Sound', setMusic: 'Music', setQuality: 'Quality', onW: 'ON', offW: 'OFF',
     qHigh: 'HIGH', qLow: 'LOW', resumeW: 'RESUME', toMenuW: 'MAIN MENU', closeW: 'CLOSE', pausedW: 'PAUSED',
     autoLow: '⚙️ Quality auto-lowered for smoother play',
-    coopBtn: 'CO-OP', coopSub: '2-4 players together vs waves! Create a room or join with a code.',
+    coopBtn: '🤝 CO-OP', coopSub: '2-4 players together vs waves! Create a room or join with a code.',
     startW: 'START', playersW: 'players', waitHost: 'Waiting for host to start...',
-    teamBtn: '2v2 TEAM', teamSub: '2v2 team battle — exactly 4 players! Create a room (3 more) or join with a code.',
+    teamBtn: '🛡️ 2v2 TEAM', teamSub: '2v2 team battle — exactly 4 players! Create a room (3 more) or join with a code.',
     teamStart: 'TEAM BATTLE!', teamSubB: k => `First team to ${k} kills wins — one hit destroys!`,
     teamNeed: '4 players required', teamRed: 'RED', teamBlue: 'BLUE',
     teamWin: 'YOUR TEAM WINS! 🏆', teamLose: 'YOUR TEAM LOST', teamMate: 'Your teammate', teamFell: 'fell',
@@ -2084,14 +2086,16 @@ function updateHUD() {
 }
 
 // panel yönetimi
+const NAV_MAP = { 'panel-garage': 'btn-garage', 'panel-quests': 'btn-quests', 'panel-shop': 'btn-shop-nav', 'panel-lb': 'btn-lb', 'panel-season': 'btn-season' };
 function showPanel(id) {
   for (const p of ['panel-main', 'panel-maps', 'panel-garage', 'panel-duel', 'panel-coop', 'panel-profile', 'panel-rematch', 'panel-result', 'panel-quests', 'panel-lb', 'panel-season', 'panel-showroom', 'panel-shop'])
     $(p).classList.toggle('show', p === id);
+  for (const [p, b] of Object.entries(NAV_MAP)) $(b).classList.toggle('on', p === id); // alt nav aktif sekme
 }
 function openMenu() {
   state = 'menu';
   mode = 'solo';
-  if (showroom.active) { showroom.active = false; $('title').style.display = ''; $('submsg').style.display = ''; $('keys').style.display = ''; $('coinbar').style.visibility = ''; $('langsw').style.visibility = ''; }
+  if (showroom.active) { showroom.active = false; $('title').style.display = ''; $('submsg').style.display = ''; $('keys').style.display = ''; $('coinbar').style.visibility = ''; $('langsw').style.visibility = ''; $('bottomnav').style.display = ''; msgEl.classList.remove('sr'); }
   clearBallMode(); clearCoop(); clearTeam(); clearPowerups();
   hideFtueHint();
   $('buildchoice').classList.add('hidden'); buildChoosing = false;
@@ -2118,19 +2122,21 @@ function applyLang() {
   $('btn-duel').textContent = t.duel;
   $('btn-ball').textContent = t.ballBtn;
   $('btn-quickplay').textContent = t.quickPlay;
-  $('btn-quests').textContent = t.questsBtn;
+  // alt nav etiketleri (ikon sabit, .nlbl metni dile göre)
+  $('btn-quests').querySelector('.nlbl').textContent = t.navQuests;
   $('btn-back-quests').textContent = t.back;
-  $('btn-lb').textContent = t.lbBtn;
+  $('btn-lb').querySelector('.nlbl').textContent = t.navLb;
   $('btn-back-lb').textContent = t.back;
-  $('btn-season').textContent = t.seasonBtn;
+  $('btn-season').querySelector('.nlbl').textContent = t.navSeason;
   $('btn-back-season').textContent = t.back;
+  $('btn-shop-nav').querySelector('.nlbl').textContent = t.navShop;
   $('lbt-day').textContent = t.lbDaily;
   $('lbt-week').textContent = t.lbWeekly;
   $('btn-coop-share').textContent = t.shareBtn;
   $('btn-duel-share').textContent = t.shareBtn;
   $('btn-coop').textContent = t.coopBtn;
   $('btn-team').textContent = t.teamBtn;
-  $('btn-garage').textContent = t.garage;
+  $('btn-garage').querySelector('.nlbl').textContent = t.garage;
   $('btn-coop-create').textContent = t.create;
   $('btn-coop-join').textContent = t.join;
   $('btn-coop-start').textContent = t.startW;
@@ -2294,6 +2300,7 @@ function enterShowroomView() {
   buildShowroomTank();
   $('title').style.display = 'none'; $('submsg').style.display = 'none'; $('keys').style.display = 'none';
   $('coinbar').style.visibility = 'hidden'; $('langsw').style.visibility = 'hidden';
+  $('bottomnav').style.display = 'none'; msgEl.classList.add('sr');
   const h = $('sr-hint'); if (h) h.style.opacity = '';
   showPanel('panel-showroom');
   renderShowroomUI();
@@ -2314,6 +2321,7 @@ function closeShowroom() {
   showroom.active = false;
   $('title').style.display = ''; $('submsg').style.display = ''; $('keys').style.display = '';
   $('coinbar').style.visibility = ''; $('langsw').style.visibility = '';
+  $('bottomnav').style.display = ''; msgEl.classList.remove('sr');
   openGarage();
 }
 
@@ -3507,6 +3515,7 @@ $('btn-back-maps').addEventListener('click', openMenu);
 $('btn-back-garage').addEventListener('click', openMenu);
 $('sr-back').addEventListener('click', closeShowroom);
 $('gembar').addEventListener('click', openShop);
+$('btn-shop-nav').addEventListener('click', openShop);
 $('btn-back-shop').addEventListener('click', () => shopFromGarage ? openGarage() : openMenu());
 $('btn-back-duel').addEventListener('click', () => { closeNet(); openMenu(); });
 

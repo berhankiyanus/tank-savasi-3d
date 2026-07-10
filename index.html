@@ -10,6 +10,13 @@
 <link rel="apple-touch-icon" href="assets/icon-192.png">
 <title>TANK SAVAŞI 3D</title>
 <style>
+  /* oyun fontu (yerel — native pakette de çalışır, CDN yok) */
+  @font-face { font-family: 'Russo One'; font-style: normal; font-weight: 400; font-display: swap;
+    src: url(assets/fonts/russo-latin-ext.woff2) format('woff2');
+    unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0; }
+  @font-face { font-family: 'Russo One'; font-style: normal; font-weight: 400; font-display: swap;
+    src: url(assets/fonts/russo-latin.woff2) format('woff2');
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+2000-206F, U+20AC, U+2122; }
   html, body { margin: 0; padding: 0; overflow: hidden; background: #000; height: 100%;
                touch-action: none; overscroll-behavior: none;
                -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
@@ -18,13 +25,13 @@
              align-items: center; justify-content: center; gap: 22px;
              background: radial-gradient(circle at 50% 40%, #1b2a14, #070a05); }
   #loading.gone { opacity: 0; pointer-events: none; transition: opacity .5s; }
-  .ldtitle { font-family: "Courier New", monospace; font-weight: bold; letter-spacing: 5px; font-size: 34px;
+  .ldtitle { font-family: 'Russo One', "Courier New", monospace; font-weight: bold; letter-spacing: 5px; font-size: 34px;
              color: #ffd76a; text-shadow: 0 0 26px rgba(255,160,40,.7), 0 4px 0 #7a4a00; }
   .ldspin { width: 52px; height: 52px; border: 5px solid rgba(125,255,155,.25); border-top-color: #7dff9b;
             border-radius: 50%; animation: ldsp 0.9s linear infinite; }
   @keyframes ldsp { to { transform: rotate(360deg); } }
   .ldtext { font-family: "Courier New", monospace; color: #cfe6bf; letter-spacing: 2px; font-size: 15px; }
-  .hud { position: fixed; font-family: "Courier New", monospace; color: #fff; z-index: 10;
+  .hud { position: fixed; font-family: 'Russo One', "Courier New", monospace; color: #fff; z-index: 10;
          text-shadow: 0 2px 6px rgba(0,0,0,.8); user-select: none; pointer-events: none; }
   #topbar { top: 14px; left: 0; right: 0; display: flex; justify-content: space-between;
             padding: 0 22px; font-size: 20px; font-weight: bold; letter-spacing: 1px; }
@@ -34,17 +41,20 @@
   .hp.off { background: rgba(255,255,255,.15); box-shadow: none; }
   #msg { top: 0; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column;
          align-items: center; justify-content: safe center; text-align: center;
-         background: rgba(0,0,0,.6); transition: opacity .4s; pointer-events: auto;
-         overflow-y: auto; padding: 20px 0; box-sizing: border-box; }
+         background: radial-gradient(ellipse at 50% 28%, rgba(10,16,10,.42), rgba(3,6,4,.82));
+         transition: opacity .4s; pointer-events: auto;
+         overflow-y: auto; padding: calc(56px + env(safe-area-inset-top)) 0 calc(86px + env(safe-area-inset-bottom)); box-sizing: border-box; }
+  #msg.sr { padding-bottom: 18px; } /* vitrin açıkken alt nav yok */
   #msg h1 { font-size: 56px; margin: 0 0 6px; letter-spacing: 6px; color: #ffd76a;
             text-shadow: 0 0 30px rgba(255,160,40,.8), 0 4px 0 #7a4a00; }
   #msg h2 { font-size: 22px; margin: 4px 0; color: #fff; font-weight: normal; }
   #msg .keys { font-size: 15px; color: #b8e6ff; line-height: 1.8; margin-top: 8px; }
-  .mbtn { font-family: "Courier New", monospace; font-weight: bold; letter-spacing: 2px;
-          font-size: 19px; color: #fff; background: linear-gradient(180deg, #3f7d2f, #244d1a);
-          border: 2px solid #7dff9b; border-radius: 10px; padding: 13px 26px; margin: 7px;
-          cursor: pointer; text-shadow: 0 1px 3px rgba(0,0,0,.6);
-          box-shadow: 0 4px 14px rgba(0,0,0,.5), 0 0 14px rgba(125,255,155,.25); }
+  .mbtn { font-family: 'Russo One', "Courier New", monospace; font-weight: normal; letter-spacing: 1.5px;
+          font-size: 18px; color: #fff; background: linear-gradient(180deg, #4a8c38, #275420 55%, #1c3d16);
+          border: 1px solid rgba(125,255,155,.65); border-radius: 14px; padding: 13px 24px; margin: 7px;
+          cursor: pointer; text-shadow: 0 1px 3px rgba(0,0,0,.6); transition: transform .08s, filter .15s;
+          box-shadow: 0 4px 14px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.22), 0 0 14px rgba(125,255,155,.18); }
+  .mbtn:hover { filter: brightness(1.12); }
   .mbtn:active { transform: scale(.95); }
   .mbtn.alt { background: linear-gradient(180deg, #8a4a1f, #5a2c0e); border-color: #ffd76a;
               box-shadow: 0 4px 14px rgba(0,0,0,.5), 0 0 14px rgba(255,215,106,.25); }
@@ -60,7 +70,27 @@
   .mbtn.small { font-size: 14px; padding: 8px 14px; margin: 4px; }
   .mbtn.on { outline: 3px solid #fff; }
   .mbtn:disabled { opacity: .4; cursor: not-allowed; filter: grayscale(.6); }
-  #menubtns { margin-top: 18px; display: flex; flex-wrap: wrap; justify-content: center; }
+  #menubtns { margin-top: 14px; display: grid; grid-template-columns: repeat(2, minmax(150px, 208px));
+              gap: 10px; justify-content: center; width: 100%; padding: 0 14px; box-sizing: border-box; }
+  #menubtns .mbtn { margin: 0; font-size: 15px; padding: 10px 8px; letter-spacing: 1px;
+                    display: flex; align-items: center; justify-content: center; min-height: 54px; box-sizing: border-box; }
+  #menubtns .mbtn.play { grid-column: 1 / -1; width: 100%; font-size: 25px; padding: 19px 10px; min-height: 66px; }
+  #menubtns .mbtn:last-child { grid-column: 1 / -1; } /* tek kalan mod butonu tam genişlik */
+  /* alt gezinme çubuğu (mobil oyun tarzı) */
+  #bottomnav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; display: flex;
+               justify-content: center; align-items: stretch; gap: clamp(2px, 3vw, 34px);
+               padding: 7px 8px calc(7px + env(safe-area-inset-bottom));
+               background: linear-gradient(180deg, rgba(10,16,10,.88), rgba(5,9,5,.96));
+               border-top: 1px solid rgba(125,255,155,.28); backdrop-filter: blur(8px); }
+  .navbtn { flex: 1; max-width: 96px; display: flex; flex-direction: column; align-items: center; gap: 3px;
+            background: none; border: none; border-radius: 12px; padding: 6px 4px 5px; cursor: pointer;
+            font-family: 'Russo One', "Courier New", monospace; color: #9fb8a4;
+            transition: color .15s, background .15s, transform .08s; }
+  .navbtn .nicon { font-size: 23px; line-height: 1; filter: grayscale(.35) brightness(.9); transition: filter .15s, transform .15s; }
+  .navbtn .nlbl { font-size: 10.5px; letter-spacing: 1px; }
+  .navbtn:active { transform: scale(.92); }
+  .navbtn.on { color: #7dff9b; background: rgba(125,255,155,.10); }
+  .navbtn.on .nicon { filter: none; transform: translateY(-1px) scale(1.12); }
   .panel { display: none; flex-direction: column; align-items: center; width: 100%;
            max-width: 760px; }
   .panel.show { display: flex; }
@@ -98,9 +128,13 @@
   .setbox h2 { color: #ffd76a; margin: 0 0 8px; letter-spacing: 3px; }
   #duelstatus .code { font-size: 34px; letter-spacing: 8px; color: #ffd76a; font-weight: bold; }
   #langsw { position: absolute; top: calc(16px + env(safe-area-inset-top)); right: 18px; }
-  #coinbar { position: absolute; top: calc(16px + env(safe-area-inset-top)); left: 18px;
-             font-size: 22px; font-weight: bold; color: #ffdd55; letter-spacing: 1px;
-             display: flex; align-items: center; gap: 14px; }
+  #coinbar { position: absolute; top: calc(14px + env(safe-area-inset-top)); left: 14px;
+             font-size: 18px; font-weight: bold; color: #ffdd55; letter-spacing: 1px;
+             display: flex; align-items: center; gap: 8px; }
+  .pill { display: inline-flex; align-items: center; gap: 6px; padding: 5px 13px;
+          background: rgba(6,12,8,.68); border: 1px solid rgba(125,255,155,.24);
+          border-radius: 999px; backdrop-filter: blur(5px);
+          box-shadow: 0 2px 8px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.07); }
   #levelwrap { display: flex; align-items: center; gap: 7px; }
   #lvlnum { font-size: 15px; color: #7dff9b; letter-spacing: 0; min-width: 40px; }
   #lvlbar { width: 92px; height: 9px; background: rgba(255,255,255,.15); border-radius: 5px;
@@ -264,13 +298,20 @@
     #msg h2 { font-size: 15px; padding: 0 14px; }
     #msg .keys { font-size: 12px; }
     .mbtn { font-size: 16px; padding: 11px 18px; }
+    #menubtns { grid-template-columns: repeat(2, minmax(140px, 1fr)); max-width: 430px; }
+    #menubtns .mbtn { font-size: 13px; padding: 13px 6px; }
+    #menubtns .mbtn.play { font-size: 21px; padding: 17px 8px; }
     #topbar { font-size: 13px; padding: 0 12px; top: calc(10px + env(safe-area-inset-top)); }
     .hp { width: 15px; height: 10px; }
     #wavebanner { font-size: 28px; }
     .card { width: 150px; }
     #langsw { font-size: 16px; }
-    /* dar ekranda üst-sol para çubuğu langsw ile çakışmasın → kompakt sarmalanan yığın */
-    #coinbar { font-size: 15px; flex-wrap: wrap; max-width: 135px; gap: 4px 8px; }
+    /* dar ekranda üst-sol para çubuğu langsw ile çakışmasın → kompakt sarmalanan pill yığını */
+    #coinbar { font-size: 13px; flex-wrap: wrap; max-width: 168px; gap: 4px 5px; }
+    .pill { padding: 3px 9px; gap: 4px; }
+    #lvlbar { width: 62px; }
+    .navbtn .nlbl { font-size: 9.5px; letter-spacing: .5px; }
+    .navbtn .nicon { font-size: 21px; }
   }
 </style>
 </head>
@@ -314,10 +355,10 @@
 
 <div id="msg" class="hud">
   <div id="coinbar">
-    <div id="levelwrap"><span id="lvlnum">Sv 1</span><div id="lvlbar"><div id="lvlfill"></div></div></div>
-    🪙 <span id="coins">0</span>
-    <span id="tokenbar">🎰 <span id="tokens">0</span></span>
-    <span id="gembar" title="Elmas al">💎 <span id="gems">0</span><span class="gem-plus">＋</span></span>
+    <div id="levelwrap" class="pill"><span id="lvlnum">Sv 1</span><div id="lvlbar"><div id="lvlfill"></div></div></div>
+    <span class="pill">🪙 <span id="coins">0</span></span>
+    <span id="tokenbar" class="pill">🎰 <span id="tokens">0</span></span>
+    <span id="gembar" class="pill" title="Elmas al">💎 <span id="gems">0</span><span class="gem-plus">＋</span></span>
   </div>
   <div id="langsw">
     <button class="mbtn small" id="lang-tr">TR</button>
@@ -338,10 +379,6 @@
       <button class="mbtn alt" id="btn-ball">1v1 TOP MAÇI</button>
       <button class="mbtn alt" id="btn-coop">KOOPERATİF</button>
       <button class="mbtn alt" id="btn-team">2v2 TAKIM</button>
-      <button class="mbtn gold" id="btn-quests">🎯 GÖREVLER</button>
-      <button class="mbtn gold" id="btn-lb">🏆 LİDER</button>
-      <button class="mbtn gold" id="btn-season">🎟️ SEZON</button>
-      <button class="mbtn gold" id="btn-garage">GARAJ</button>
     </div>
     <div id="statsline"></div>
   </div>
@@ -465,6 +502,15 @@
     <button class="mbtn play" id="res-again">↻ TEKRAR OYNA</button>
     <button class="mbtn small" id="res-menu">‹ ANA MENÜ</button>
   </div>
+
+  <!-- alt gezinme çubuğu (menüde her panelde görünür; vitrinde gizli) -->
+  <nav id="bottomnav">
+    <button class="navbtn" id="btn-garage"><span class="nicon">🔧</span><span class="nlbl">GARAJ</span></button>
+    <button class="navbtn" id="btn-quests"><span class="nicon">🎯</span><span class="nlbl">GÖREVLER</span></button>
+    <button class="navbtn" id="btn-shop-nav"><span class="nicon">💎</span><span class="nlbl">DÜKKAN</span></button>
+    <button class="navbtn" id="btn-lb"><span class="nicon">🏆</span><span class="nlbl">LİDER</span></button>
+    <button class="navbtn" id="btn-season"><span class="nicon">🎟️</span><span class="nlbl">SEZON</span></button>
+  </nav>
 </div>
 
 <div id="toast" class="hud"></div>
