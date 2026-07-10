@@ -358,6 +358,21 @@ const MAPS = [
     '#############','#...........#','#.#####.....#','#.....#####.#','#.#####.....#',
     '#.....#####.#','#.#####.....#','#.....#####.#','#.#####.....#','#.....#####.#',
     '#.......###.#','#...........#','#############' ] },
+  // caddeler + merkez meydan (180° dönel simetri: koridor + chokepoint)
+  { name: { tr: 'Şehir Harabesi', en: 'City Ruins' }, req: 8, theme: 'city', grid: [
+    '#############','#...........#','#.####.####.#','#...........#','#.#.#####.#.#',
+    '#.#.......#.#','#....###....#','#.#.......#.#','#.#.#####.#.#','#...........#',
+    '#.####.####.#','#...........#','#############' ] },
+  // konteyner sıraları → şeritler; orta rıhtım hattı
+  { name: { tr: 'Liman', en: 'Harbor' }, req: 10, theme: 'harbor', grid: [
+    '#############','#...........#','#.#..###..#.#','#.#.......#.#','#...##.##...#',
+    '#.#.......#.#','#..#..#..#..#','#.#.......#.#','#...##.##...#','#.#.......#.#',
+    '#.#..###..#.#','#...........#','#############' ] },
+  // kıvrımlı kanyon geçitleri (organik dağınık kayalar, dönel simetri)
+  { name: { tr: 'Kanyon', en: 'Canyon' }, req: 12, theme: 'canyon', grid: [
+    '#############','#...........#','#..##....#..#','#.....##....#','#.##......#.#',
+    '#....#.#....#','#..#.....#..#','#....#.#....#','#.#......##.#','#....##.....#',
+    '#..#....##..#','#...........#','#############' ] },
 ];
 const mapUnlocked = i => profile.bestWave >= MAPS[i].req;
 
@@ -457,6 +472,22 @@ async function ensureModel(modelId) {
   try { const g = await _modelLoader.loadAsync(MODEL_PATHS[modelId]); loadedModels[modelId] = g.scene; }
   catch (e) { console.warn('tank modeli yüklenemedi:', modelId, e); }
 }
+// tema dekor GLB'leri (Blender'da modellendi; harita seçilince tembel yüklenir)
+const DECOR_PATHS = { city: 'assets/decor_city.glb', harbor: 'assets/decor_harbor.glb', canyon: 'assets/decor_canyon.glb' };
+const loadedDecor = {};
+async function ensureDecor(type) {
+  if (!type || loadedDecor[type] || !DECOR_PATHS[type]) return;
+  try {
+    const g = await _modelLoader.loadAsync(DECOR_PATHS[type]);
+    // Glow* malzemeler: glTF emissive export'una güvenme, oyunda parlat (bir kez, klonlar paylaşır)
+    g.scene.traverse(n => {
+      if (n.isMesh) (Array.isArray(n.material) ? n.material : [n.material]).forEach(m => {
+        if (m && /^Glow/.test(m.name)) { m.emissive.copy(m.color); m.emissiveIntensity = 1.2; m.toneMapped = false; }
+      });
+    });
+    loadedDecor[type] = g.scene;
+  } catch (e) { console.warn('dekor yüklenemedi:', type, e); }
+}
 
 const groundMat = new THREE.MeshStandardMaterial({
   map: tex('assets/textures/ground_diff.jpg', true, 12),
@@ -546,6 +577,21 @@ const lavaWallMat = wallMat.clone(); lavaWallMat.color.setHex(0x5a342a); lavaWal
 // uzay: metalik koyu paneller
 const spaceGroundMat = groundMat.clone(); spaceGroundMat.color.setHex(0x424a60); spaceGroundMat.metalness = 0.6; spaceGroundMat.roughness = 0.45;
 const spaceWallMat = wallMat.clone(); spaceWallMat.color.setHex(0x5a6478); spaceWallMat.metalness = 0.7; spaceWallMat.roughness = 0.4; spaceWallMat.emissive.setHex(0x101830); spaceWallMat.emissiveIntensity = 0.5;
+// şehir: asfalt zemin + gri beton duvar (yeni doku: Poly Haven asphalt_03, CC0)
+const asphaltMat = new THREE.MeshStandardMaterial({
+  map: tex('assets/textures/asphalt_diff.jpg', true, 12),
+  normalMap: tex('assets/textures/asphalt_nor.jpg', false, 12),
+  roughnessMap: tex('assets/textures/asphalt_rough.jpg', false, 12),
+  aoMap: tex('assets/textures/asphalt_ao.jpg', false, 12),
+});
+asphaltMat.aoMap.channel = 0;
+const cityWallMat = wallMat.clone(); cityWallMat.color.setHex(0xc8ccd4);
+// liman: açık beton zemin (asfalt tonlu) + rıhtım beton duvarı (koyu doku → güçlü açık tint)
+const harborGroundMat = asphaltMat.clone(); harborGroundMat.color.setHex(0x9fb4c0);
+const harborWallMat = wallMat.clone(); harborWallMat.color.setHex(0xd0dae2); harborWallMat.metalness = 0.2; harborWallMat.roughness = 0.6;
+// kanyon: kızıl kum zemin + kızıl kaya duvar
+const canyonGroundMat = sandMat.clone(); canyonGroundMat.color.setHex(0xd8845a);
+const canyonWallMat = wallMat.clone(); canyonWallMat.color.setHex(0xd8885a); canyonWallMat.roughness = 1.0;
 
 // dekoratif obje malzeme + geometrileri (paylaşımlı, bir kez oluşturulur)
 const dMat = {
@@ -627,7 +673,44 @@ function buildDecor(type) {
       decorGroup.add(m);
     }
   }
+  else if (DECOR_PATHS[type]) buildGlbDecor(type, decorGroup);
   scene.add(decorGroup);
+}
+// GLB tabanlı tema dekorları (şehir/liman/kanyon) — arena çevresine yerleştirilir
+function buildGlbDecor(type, grp) {
+  const place = () => {
+    const src = loadedDecor[type];
+    if (!src || decorGroup !== grp) return; // harita değiştiyse eski gruba ekleme
+    const put = (name, ang, r, s, face) => {
+      const o = src.getObjectByName(name); if (!o) return null;
+      const c = o.clone(true);
+      c.traverse(n => { if (n.isMesh) { n.castShadow = n.receiveShadow = false; } });
+      c.position.set(Math.cos(ang) * r, 0, Math.sin(ang) * r);
+      if (face === 'center') c.lookAt(0, 0, 0);           // ön yüz (+Z) arenaya dönük
+      else if (face === 'tangent') c.rotation.y = -ang;   // uzun ekseni çembere teğet
+      else c.rotation.y = Math.random() * 6.28;
+      c.scale.setScalar(s);
+      grp.add(c); return c;
+    };
+    const J = () => (Math.random() - 0.5) * 0.35; // açı seğirmesi
+    if (type === 'city') {
+      for (let i = 0; i < 12; i++) put(i % 2 ? 'Bina2' : 'Bina1', (i / 12) * 6.283 + J(), 40 + Math.random() * 12, 1.15 + Math.random() * 0.9, 'center');
+      for (let i = 0; i < 6; i++) put('Lamba', (i / 6) * 6.283 + 0.26, 33.5, 1, 'center');
+      for (let i = 0; i < 4; i++) put('Enkaz', (i / 4) * 6.283 + 0.8 + J(), 34 + Math.random() * 4, 1);
+      for (let i = 0; i < 5; i++) put('Bariyer', (i / 5) * 6.283 + 0.5 + J(), 33 + Math.random() * 3, 1, 'tangent');
+    } else if (type === 'harbor') {
+      const variants = ['KonteynerK', 'KonteynerM', 'KonteynerY'];
+      for (let i = 0; i < 9; i++) put(variants[i % 3], (i / 9) * 6.283 + J(), 35 + Math.random() * 8, 1 + Math.random() * 0.25, 'tangent');
+      for (let i = 0; i < 3; i++) put('KonteynerCift', (i / 3) * 6.283 + 1.1 + J(), 42 + Math.random() * 6, 1.05, 'tangent');
+      for (let i = 0; i < 2; i++) put('Vinc', (i / 2) * 6.283 + 2.2, 47, 1.35, 'center');
+      for (let i = 0; i < 5; i++) put('Kasa', (i / 5) * 6.283 + 0.35 + J(), 33 + Math.random() * 4, 1);
+    } else if (type === 'canyon') {
+      for (let i = 0; i < 7; i++) put(i % 2 ? 'Mesa2' : 'Mesa1', (i / 7) * 6.283 + J(), 42 + Math.random() * 14, 1.4 + Math.random() * 1.3);
+      put('Kemer', 1.9, 50, 1.8); put('Kemer', 4.6, 55, 2.2);
+      for (let i = 0; i < 6; i++) put('KuruAgac', (i / 6) * 6.283 + 0.4 + J(), 33 + Math.random() * 6, 0.9 + Math.random() * 0.5);
+    }
+  };
+  if (loadedDecor[type]) place(); else ensureDecor(type).then(place); // yüklü değilse yüklenince belirir
 }
 const B_DAY = [0xffe08a, 0xff7a5a, 0xffc070]; // varsayılan mermi/mermi2/namlu renkleri
 const THEMES = {
@@ -638,6 +721,9 @@ const THEMES = {
   night: { ground: nightGroundMat, wall: nightWallMat, fog: [0x0a0e1a, 42, 135], sun: [0x9fb4ff, 1.1], hemi: [0x2a3350, 0x101522, 0.5], decor: 'night', bg: 0x0a0e1a, env: false, stars: true, bullet: [0xaef0ff, 0xff7ad0, 0xaef0ff] },
   lava: { ground: lavaGroundMat, wall: lavaWallMat, fog: [0x2a0a04, 40, 120], sun: [0xff7a2e, 2.2], hemi: [0x5a1e10, 0x2a0a04, 0.7], decor: 'lava', bg: 0x1a0805, env: false, bullet: [0xff8a2a, 0xffd23a, 0xff7a1e] },
   space: { ground: spaceGroundMat, wall: spaceWallMat, fog: [0x05060f, 70, 220], sun: [0xcfe0ff, 2.4], hemi: [0x3a2a5a, 0x101020, 0.5], decor: 'space', bg: 0x05060f, env: false, stars: true, bullet: [0x6be7ff, 0xc07bff, 0x8be8ff] },
+  city:   { ground: asphaltMat, wall: cityWallMat, fog: [0x8a94a8, 62, 155], sun: [0xffd9a8, 3.0], hemi: [0xaebfd8, 0x3a3f4a, 0.75], decor: 'city', bullet: B_DAY },
+  harbor: { ground: harborGroundMat, wall: harborWallMat, fog: [0xaac6d6, 72, 175], sun: [0xfff4e0, 3.5], hemi: [0xcfe2ee, 0x4a5560, 0.85], decor: 'harbor', bullet: B_DAY },
+  canyon: { ground: canyonGroundMat, wall: canyonWallMat, fog: [0xe2aa7a, 60, 160], sun: [0xffd090, 2.9], hemi: [0xffd9b0, 0x8a4a30, 0.6], decor: 'canyon', bullet: [0xffd27a, 0xff8a5a, 0xffb060] },
 };
 function applyTheme(name) {
   const th = THEMES[name] || THEMES.default;
@@ -698,6 +784,9 @@ const HAZARD_SPEC = {
   night: { barrel: 3 },
   lava: { lava: 4, barrel: 2 },
   space: { teleport: 4, barrel: 2 },
+  city: { barrel: 4 },
+  harbor: { barrel: 4 },
+  canyon: { barrel: 3 },
 };
 
 function addCover(cell, id) {
