@@ -220,6 +220,17 @@
   #ftuehint { display: none; bottom: 15%; left: 0; right: 0; text-align: center; font-size: 17px; font-weight: bold;
               letter-spacing: 1px; color: #fff; text-shadow: 0 2px 6px #000; transition: opacity .5s;
               pointer-events: none; padding: 0 14px; }
+  /* adım-adım eğitim kartı (ilk maç): hedef + ilerleme, tamamlanınca sıradaki adım */
+  #tutcard { display: none; top: calc(58px + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%);
+             background: rgba(8, 14, 6, 0.78); border: 1px solid rgba(125, 255, 155, 0.5); border-radius: 14px;
+             padding: 9px 16px; align-items: center; gap: 10px; pointer-events: none; max-width: 88vw;
+             box-shadow: 0 4px 18px rgba(0,0,0,.45); }
+  #tutcard.on { display: flex; }
+  #tut-step { font-size: 12px; font-weight: bold; opacity: .7; color: #d6ffde; }
+  #tut-ic { font-size: 22px; line-height: 1; }
+  #tut-txt { font-size: 15px; font-weight: bold; color: #d6ffde; white-space: nowrap; }
+  #tut-bar { height: 5px; background: rgba(255,255,255,.16); border-radius: 3px; margin-top: 5px; overflow: hidden; }
+  #tut-fill { height: 100%; width: 0%; background: #7dff9b; border-radius: 3px; transition: width .25s; }
   #killfeed { top: 182px; right: 12px; display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
   .kfrow { font-size: 14px; color: #fff; background: rgba(0,0,0,.5); border-radius: 6px; padding: 3px 8px;
            transition: opacity .5s; text-shadow: 0 1px 2px #000; }
@@ -336,6 +347,7 @@
 <div id="coophud" class="hud"></div>
 <div id="killfeed" class="hud"></div>
 <div id="ftuehint" class="hud"></div>
+<div id="tutcard" class="hud"><span id="tut-step">1/4</span><span id="tut-ic">🕹️</span><div><div id="tut-txt"></div><div id="tut-bar"><div id="tut-fill"></div></div></div></div>
 <canvas id="minimap" class="hud" width="118" height="118"></canvas>
 <div id="wavebanner" class="hud"></div>
 <div id="bossbar" class="hud">
@@ -500,6 +512,7 @@
     <div id="res-rewards"></div>
     <button class="mbtn" id="res-rewarded" style="display:none">📺 Reklam izle → x2 ödül</button>
     <button class="mbtn play" id="res-again">↻ TEKRAR OYNA</button>
+    <button class="mbtn alt" id="res-endless" style="display:none">∞ SONSUZ DEVAM</button>
     <button class="mbtn small" id="res-menu">‹ ANA MENÜ</button>
   </div>
 

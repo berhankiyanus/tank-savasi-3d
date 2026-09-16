@@ -9,7 +9,12 @@ const L = {
     sub: 'Duvarların arkasına saklanan düşman tankları yok et!',
     keysDesk: 'W / ↑ &nbsp;→&nbsp; ileri &nbsp;|&nbsp; S / ↓ &nbsp;→&nbsp; geri &nbsp;|&nbsp; A / D &nbsp;→&nbsp; dön &nbsp;|&nbsp; BOŞLUK &nbsp;→&nbsp; ateş',
     keysTouch: 'Soldaki joystick &nbsp;→&nbsp; sür ve dön &nbsp;|&nbsp; Sağdaki buton &nbsp;→&nbsp; ateş',
-    quickPlay: '⚡ HIZLI OYNA', quickPlaySub: 'Tek tıkla bota karşı 1v1 — bekleme yok!',
+    quickPlay: '⚡ HIZLI OYNA', quickPlaySub: 'Tek dokunuş — dalga savaşına anında gir!',
+    victoryTitle: '🏆 ZAFER!', victorySub: (s, c) => `Görev tamam — 10 dalga temizlendi!<br>Skor ${s} · +🪙${c}`, endlessBtn: '∞ SONSUZ DEVAM',
+    connLostTitle: '📡 BAĞLANTI KOPTU', connLostSub: 'Sunucuyla bağlantı kesildi — kazanımların kaydedildi.',
+    vulnTxt: 'SAVUNMASIZ!',
+    tutTitle: 'EĞİTİM', tutSteps: ['Tankı sür', 'Ateş et', 'Mermiyi duvardan sektir', 'Varili patlat'],
+    tutDone: '🎓 Eğitim tamam! +🪙100',
     againBtn: '↻ TEKRAR OYNA', rewardedBtn: '📺 Reklam izle → x2 ödül', rewardedGot: '🎉 x2 ödül alındı!', adLoading: '📺 Yükleniyor...',
     questsBtn: '🎯 GÖREVLER', questsTitle: 'GÜNLÜK GÖREVLER', questsSub: 'Her gece yenilenir',
     lbBtn: '🏆 LİDER', lbTitle: 'LİDER TABLOSU', lbDaily: 'BUGÜN', lbWeekly: 'BU HAFTA', lbEmpty: 'Henüz skor yok — ilk sen ol!', lbLoad: 'Yükleniyor...', lbScore: 'Dalga',
@@ -63,7 +68,12 @@ const L = {
     sub: 'Destroy the enemy tanks hiding behind the walls!',
     keysDesk: 'W / ↑ &nbsp;→&nbsp; forward &nbsp;|&nbsp; S / ↓ &nbsp;→&nbsp; back &nbsp;|&nbsp; A / D &nbsp;→&nbsp; turn &nbsp;|&nbsp; SPACE &nbsp;→&nbsp; fire',
     keysTouch: 'Left joystick &nbsp;→&nbsp; drive & turn &nbsp;|&nbsp; Right button &nbsp;→&nbsp; fire',
-    quickPlay: '⚡ QUICK PLAY', quickPlaySub: 'One tap 1v1 vs a bot — no waiting!',
+    quickPlay: '⚡ QUICK PLAY', quickPlaySub: 'One tap — straight into wave battle!',
+    victoryTitle: '🏆 VICTORY!', victorySub: (s, c) => `Mission complete — 10 waves cleared!<br>Score ${s} · +🪙${c}`, endlessBtn: '∞ CONTINUE ENDLESS',
+    connLostTitle: '📡 CONNECTION LOST', connLostSub: 'Lost connection to the server — your rewards were saved.',
+    vulnTxt: 'VULNERABLE!',
+    tutTitle: 'TUTORIAL', tutSteps: ['Drive the tank', 'Fire your cannon', 'Bounce a shot off a wall', 'Blow up a barrel'],
+    tutDone: '🎓 Tutorial complete! +🪙100',
     againBtn: '↻ PLAY AGAIN', rewardedBtn: '📺 Watch ad → 2x reward', rewardedGot: '🎉 2x reward claimed!', adLoading: '📺 Loading...',
     questsBtn: '🎯 QUESTS', questsTitle: 'DAILY QUESTS', questsSub: 'Refreshes every night',
     lbBtn: '🏆 RANKS', lbTitle: 'LEADERBOARD', lbDaily: 'TODAY', lbWeekly: 'THIS WEEK', lbEmpty: 'No scores yet — be the first!', lbLoad: 'Loading...', lbScore: 'Wave',
@@ -163,6 +173,9 @@ function saveSettings() { localStorage.setItem('tanksettings', JSON.stringify(se
 const REMOTE_HOST = 'tank-savasi-3d.onrender.com';
 function isNativeApp() { return !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()); }
 function apiBase() { return isNativeApp() ? 'https://' + REMOTE_HOST : ''; }
+// v1 kapsam daraltma: çekirdek döngü (solo koşu + düello) öne — koop/2v2/top/lider UI'da gizli.
+// Kod ve sunucu yolları duruyor; davet linkleri (?j=KOD&m=MOD) gizli modlara da çalışmaya devam eder.
+const V1_SIMPLE = true;
 function wsBase() { return isNativeApp() ? 'wss://' + REMOTE_HOST : (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host; }
 function capPlugins() { return (window.Capacitor && window.Capacitor.Plugins) || {}; }
 function haptic(style) { try { const H = capPlugins().Haptics; if (isNativeApp() && H) H.impact({ style: style || 'MEDIUM' }); } catch {} }
@@ -261,6 +274,7 @@ async function fetchLeaderboard(period) {
 }
 let paused = false;
 let matchSeq = 0; // gecikmiş timer'ların eski maça ait sonuç üretmesini önler
+let matchEndReason = ''; // analitik: maç neden bitti (death/victory/win/lose/disconnect/quit) — D1/D7 huni analizi için
 
 // ---------------------------------------------------------------- tanklar
 const TANKS = [
@@ -404,6 +418,8 @@ const MAPS = [
     '#..#....##..#','#...........#','#############' ] },
 ];
 const mapUnlocked = i => profile.bestWave >= MAPS[i].req;
+// v1 içerik küratörlüğü: öne çıkan üçlü (Klasik / Şehir Harabesi / Kanyon) — HIZLI OYNA rotasyonu + harita listesinde ⭐
+const QUICK_MAPS = [0, 9, 11];
 
 // ---------------------------------------------------------------- sabitler
 const CELL = 4.5;
@@ -1676,6 +1692,18 @@ function spawnEnemies(types) {
       cool: d.cool[0] + Math.random() * (d.cool[1] - d.cool[0]),
       alive: true, turnDir: 1, thinkT: 0,
     };
+    if (type === 'boss') {
+      // rapor: boss "okunabilir" olmalı — atış öncesi TELEGRAF halkası (turuncu), atış sonrası SAVUNMASIZ an halkası (yeşil, 2x hasar)
+      e.windup = 0; e.vulnT = 0;
+      const mkRing = col => {
+        const r = new THREE.Mesh(new THREE.RingGeometry(1.12, 1.34, 40),
+          new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.85, side: THREE.DoubleSide, toneMapped: false, depthWrite: false }));
+        r.rotation.x = -Math.PI / 2; r.position.y = 0.05; r.visible = false;
+        r.userData.ownGeo = true; r.material.userData.owned = true; // örnek-başına kaynak: temizlikte dispose edilebilir
+        e.mesh.add(r); return r;
+      };
+      e.teleRing = mkRing(0xff8c1a); e.vulnRing = mkRing(0x54ff7a);
+    }
     e.mesh.position.set(e.x, 0, e.z);
     scene.add(e.mesh); enemies.push(e);
   }
@@ -1767,6 +1795,58 @@ function hideFtueHint() {
   const el = $('ftuehint'); el.style.opacity = '0';
   setTimeout(() => { if (!ftueHintOn) el.style.display = 'none'; }, 500);
 }
+// ---- adım-adım eğitim (rapor bulgusu: kaybolan ipucu yazısı öğretmiyor — hedefli adımlar öğretir) ----
+// hareket → ateş → sektirme → varil; her adım oyun içi eylemle tamamlanır, bitince tek seferlik ödül
+const TUT_STEPS = [
+  { id: 'move', icon: '🕹️', goal: 6 },   // 6 birim yol al
+  { id: 'fire', icon: '🔫', goal: 3 },   // 3 atış yap
+  { id: 'bounce', icon: '↩️', goal: 1 }, // mermiyi duvardan sektir
+  { id: 'barrel', icon: '🛢️', goal: 1 }, // varil patlat
+];
+let tut = null; // { step, prog, lastX, lastZ }
+function tutActive() { return !!tut && state === 'play' && mode === 'solo'; }
+function startTutorial() {
+  tut = { step: 0, prog: 0, lastX: player.x, lastZ: player.z };
+  renderTut();
+  $('tutcard').classList.add('on');
+  track('tutorial_start');
+}
+function abortTutorial() { if (tut) { tut = null; $('tutcard').classList.remove('on'); } } // maç bitti/menüye dönüldü; sıradaki maçta baştan
+function renderTut() {
+  const s = TUT_STEPS[tut.step];
+  $('tut-step').textContent = (tut.step + 1) + '/' + TUT_STEPS.length;
+  $('tut-ic').textContent = s.icon;
+  $('tut-txt').textContent = T().tutSteps[tut.step];
+  $('tut-fill').style.width = Math.min(100, (tut.prog / s.goal) * 100) + '%';
+}
+function tutEvent(id, amt) {
+  if (!tutActive()) return;
+  const s = TUT_STEPS[tut.step];
+  if (s.id !== id) return;
+  tut.prog += (amt == null ? 1 : amt); // dikkat: `amt || 1` olmaz — 0 birim hareket 1 saymamalı (falsy-sıfır)
+  if (tut.prog >= s.goal) {
+    sfxPower(); haptic('LIGHT');
+    if (tut.step + 1 >= TUT_STEPS.length) { tutFinish(); return; }
+    tut.step++; tut.prog = 0;
+  }
+  renderTut();
+}
+function tutFinish() {
+  $('tutcard').classList.remove('on');
+  tut = null;
+  profile.tutorialDone = 1;
+  addCoins(100);
+  saveProfile();
+  showToast(T().tutDone, 4200);
+  track('tutorial_done');
+}
+function tutUpdate() {
+  if (!tutActive()) return;
+  if (TUT_STEPS[tut.step].id === 'move') tutEvent('move', Math.hypot(player.x - tut.lastX, player.z - tut.lastZ));
+  if (tut) { tut.lastX = player.x; tut.lastZ = player.z; }
+  // haritadaki tüm variller (başkası patlatıp) bittiyse adım kilitlenmesin
+  if (tut && TUT_STEPS[tut.step].id === 'barrel' && covers.length === 0) tutEvent('barrel');
+}
 // ---------------------------------------------------------------- profil XP / seviye (retention omurgası)
 function xpForLevel(n) { return Math.round(100 * Math.pow(n, 1.35)); } // n→n+1 için gereken XP
 function grantXp(amount) {
@@ -1809,9 +1889,10 @@ function grantMatchXp(kind, opts) {
   return xp;
 }
 // maç-sonu "hasat" ekranı — GDD retention hub'ı: XP çubuğu dolar → seviye → ödüller → tek tuş tekrar
-let harvestReplay = null, harvestReward = null;
+let harvestReplay = null, harvestReward = null, harvestEndless = null;
 function showHarvest(opts) {
   state = 'over';
+  abortTutorial();
   const t = T();
   const preLvl = profile.level || 1, prePct = ((profile.xp || 0) / xpForLevel(preLvl)) * 100;
   const gained = computeMatchXp(opts.xpKind, opts.xpOpts);
@@ -1824,6 +1905,9 @@ function showHarvest(opts) {
   $('res-lvl').textContent = (lang === 'tr' ? 'Sv ' : 'Lv ') + preLvl;
   if (opts.replay) { $('res-again').style.display = ''; $('res-again').textContent = t.againBtn; harvestReplay = opts.replay; }
   else { $('res-again').style.display = 'none'; harvestReplay = null; } // ağ modları: tekrar-oyna yok (koordinasyon gerekir), menü
+  const eb = $('res-endless'); // zafer ekranı: aynı koşuyu sonsuz modda sürdürme
+  if (opts.endless) { eb.style.display = ''; eb.textContent = t.endlessBtn; harvestEndless = opts.endless; }
+  else { eb.style.display = 'none'; harvestEndless = null; }
   $('res-menu').textContent = '‹ ' + t.toMenuW;
   // ödüllü reklam teklifi (x2) — FTUE'den sonra + sıklık sınırı
   harvestReward = { xp: gained, coins: opts.coins || 0 };
@@ -2109,7 +2193,8 @@ function updateHUD() {
     waveEl.textContent = team.code ? `${t.roomLbl} ${team.code}` : '';
     scoreEl.innerHTML = `<span style="color:${TEAM_COLOR_HEX[0]}">${t.teamRed} ${team.scores[0]}</span> — <span style="color:${TEAM_COLOR_HEX[1]}">${team.scores[1]} ${t.teamBlue}</span>`;
   } else {
-    waveEl.textContent = `${t.wave} ${wave}`;
+    // solo sonlu koşu: hedefi görünür kıl (DALGA 3/10); sonsuz devamda ve koopta sade sayı
+    waveEl.textContent = `${t.wave} ${wave}${mode === 'solo' && !soloEndless ? '/' + RUN_WAVES : ''}`;
     scoreEl.textContent = `${t.score} ${score}`;
   }
 }
@@ -2126,6 +2211,7 @@ function openMenu() {
   state = 'menu';
   mode = 'solo';
   if (showroom.active) { showroom.active = false; $('title').style.display = ''; $('submsg').style.display = ''; $('keys').style.display = ''; $('coinbar').style.visibility = ''; $('langsw').style.visibility = ''; $('bottomnav').style.display = ''; msgEl.classList.remove('sr'); }
+  abortTutorial();
   clearBallMode(); clearCoop(); clearTeam(); clearPowerups();
   hideFtueHint();
   $('buildchoice').classList.add('hidden'); buildChoosing = false;
@@ -2588,7 +2674,7 @@ function renderMaps() {
       mini += '<br>';
     }
     mini += '</div>';
-    card.innerHTML = `<div class="cname">${mp.name[lang]}</div>${mini}`;
+    card.innerHTML = `<div class="cname">${QUICK_MAPS.includes(idx) ? '⭐ ' : ''}${mp.name[lang]}</div>${mini}`;
     const btn = document.createElement('button');
     btn.className = 'mbtn small';
     if (unlocked) { btn.textContent = t.single; btn.onclick = () => startSolo(idx); }
@@ -2600,8 +2686,12 @@ function renderMaps() {
 
 // ---------------------------------------------------------------- tek oyunculu
 let lastSoloMap = 0;
+// sonlu koşu formatı: solo = 10 dalgalık görev (boss finali) → ZAFER ekranı; oradan sonsuz moda devam seçilebilir
+const RUN_WAVES = 10;
+let soloEndless = false;
 function startSolo(mapIdx) {
   matchSeq++;
+  soloEndless = false;
   mode = 'solo'; state = 'play';
   lastSoloMap = mapIdx;
   resetBuild();
@@ -2626,10 +2716,13 @@ function startSolo(mapIdx) {
   spawnEnemies(waveComposition(1));
   renderHealth(); updateHUD();
   banner(`${T().wave} 1`);
+  // yeni oyuncu: hedefli adım-adım eğitim; eğitim bitmişse yalnız kısa kontrol ipucu
+  if (!profile.tutorialDone && (profile.games || 0) <= 3) startTutorial(); else abortTutorial();
   showFtueHint();
   audio(); startEngine();
 }
 function gameOver() {
+  matchEndReason = 'death';
   state = 'over';
   clearPowerups();
   shieldBubble.visible = false;
@@ -2642,6 +2735,43 @@ function gameOver() {
     xpKind: 'wave', xpOpts: { wave }, coins: roundCoins,
     replay: () => startSolo(lastSoloMap),
   });
+}
+// sonlu koşu zaferi: 10 dalga bitti → tören + bonus (+günde 1 kez 💎) + sonsuz moda devam seçeneği
+function soloVictory() {
+  matchEndReason = 'victory';
+  state = 'over';
+  clearPowerups();
+  shieldBubble.visible = false;
+  questProgress('wave', RUN_WAVES);
+  submitScore(wave);
+  const t = T();
+  const bonus = 150; roundCoins += bonus; addCoins(bonus);
+  let gemTxt = '';
+  const today = new Date().toISOString().slice(0, 10);
+  if (profile.lastVictoryDay !== today) { profile.lastVictoryDay = today; addGems(1); gemTxt = ' &nbsp;·&nbsp; +💎1'; }
+  saveProfile();
+  sfxPower();
+  track('run_victory', { map: lastSoloMap });
+  showHarvest({
+    title: t.victoryTitle, won: true,
+    sub: t.victorySub(score, roundCoins) + gemTxt,
+    xpKind: 'wave', xpOpts: { wave }, coins: roundCoins,
+    replay: () => startSolo(lastSoloMap),
+    endless: () => resumeEndless(),
+  });
+}
+function resumeEndless() {
+  soloEndless = true;
+  roundCoins = 0; // zafer hasadı verildi; devam bölümü kendi kazancını sayar (çifte ödül olmasın)
+  state = 'play';
+  msgEl.classList.add('hidden');
+  $('topbar').style.visibility = 'visible';
+  player.health = player.maxHealth; renderHealth();
+  banner(`${T().wave} ${wave}`);
+  stingWave();
+  spawnEnemies(waveComposition(wave));
+  updateHUD();
+  track('endless_continue', { map: lastSoloMap });
 }
 
 // ---------------------------------------------------------------- düello
@@ -3505,9 +3635,17 @@ function handleTeamNet(m) {
 // ---------------------------------------------------------------- menü olayları
 $('lang-tr').addEventListener('click', () => { lang = 'tr'; applyLang(); if ($('panel-garage').classList.contains('show')) renderGarage(); if ($('panel-maps').classList.contains('show')) renderMaps(); });
 $('lang-en').addEventListener('click', () => { lang = 'en'; applyLang(); if ($('panel-garage').classList.contains('show')) renderGarage(); if ($('panel-maps').classList.contains('show')) renderMaps(); });
-$('btn-quickplay').addEventListener('click', () => { track('quickplay_click'); duelMap = 0; startBotDuel(); });
+// HIZLI OYNA = solo dalga koşusu (FTUE ile tutarlı; bot düellosu ARKADAŞLA DÜELLO menüsünden hâlâ erişilir).
+// Öne çıkan haritalar arasında döner (kilitliler atlanır).
+$('btn-quickplay').addEventListener('click', () => {
+  track('quickplay_click');
+  const pool = QUICK_MAPS.filter(mapUnlocked);
+  startSolo(pool.length ? pool[(profile.games || 0) % pool.length] : 0);
+});
+if (V1_SIMPLE) for (const id of ['btn-ball', 'btn-coop', 'btn-team', 'btn-lb']) $(id).style.display = 'none';
 $('res-again').addEventListener('click', () => { const fn = harvestReplay; harvestReplay = null; maybeInterstitial(); if (fn) { track('retry_click', { mode: matchMode }); fn(); } else openMenu(); });
-$('res-menu').addEventListener('click', () => { harvestReplay = null; openMenu(); });
+$('res-menu').addEventListener('click', () => { harvestReplay = null; harvestEndless = null; openMenu(); });
+$('res-endless').addEventListener('click', () => { const fn = harvestEndless; harvestEndless = null; harvestReplay = null; if (fn) fn(); });
 $('res-rewarded').addEventListener('click', async () => {
   const rb = $('res-rewarded'); if (rb.disabled || !harvestReward) return;
   rb.disabled = true; rb.textContent = T().adLoading;
@@ -3722,10 +3860,15 @@ function updateEnemy(e, dt, tgt) {
     const diff = angNorm(target - e.a);
     e.a += Math.max(-et * dt, Math.min(et * dt, diff));
     if (Math.abs(diff) < 0.09 && e.cool <= 0) {
-      if (e.triple) { fire(e, -0.2); fire(e, 0); fire(e, 0.2); } else fire(e);
-      if (mode === 'coop') netSend({ t: 'efire', x: e.x, z: e.z, a: e.a, trip: e.triple });
-      const c = ENEMY_TYPES[e.type] ? ENEMY_TYPES[e.type].cool : [2.2, 3.8];
-      e.cool = c[0] + Math.random() * (c[1] - c[0]);
+      if (e.type === 'boss') {
+        // boss anında ateş etmez: önce 0.9sn şarj telegrafı (aşağıdaki windup bloğu ateşler)
+        if (!e.windup) { e.windup = 0.9; if (e.teleRing) e.teleRing.visible = true; }
+      } else {
+        if (e.triple) { fire(e, -0.2); fire(e, 0); fire(e, 0.2); } else fire(e);
+        if (mode === 'coop') netSend({ t: 'efire', x: e.x, z: e.z, a: e.a, trip: e.triple });
+        const c = ENEMY_TYPES[e.type] ? ENEMY_TYPES[e.type].cool : [2.2, 3.8];
+        e.cool = c[0] + Math.random() * (c[1] - c[0]);
+      }
     }
     if (Math.abs(diff) < 0.5) { if (distP > keep + 3) wantMove = 1; else if (distP < keep - 3) wantMove = -1; }
   } else {
@@ -3741,6 +3884,27 @@ function updateEnemy(e, dt, tgt) {
       const target = headingTo(e.x, e.z, tp.x, tp.z);
       const diff = angNorm(target - e.a);
       e.a += Math.max(-0.5 * et * dt, Math.min(0.5 * et * dt, diff));
+    }
+  }
+  if (e.type === 'boss') {
+    if (e.windup > 0) {
+      e.windup -= dt;
+      wantMove = 0; // şarj sırasında durur — oyuncuya kaçma/konum alma fırsatı
+      if (e.teleRing) { const p = Math.max(0, e.windup) / 0.9; e.teleRing.scale.setScalar(0.6 + p * 1.2); e.teleRing.material.opacity = 0.4 + (1 - p) * 0.5; }
+      if (e.windup <= 0) {
+        e.windup = 0;
+        if (e.teleRing) e.teleRing.visible = false;
+        fire(e, -0.2); fire(e, 0); fire(e, 0.2);
+        if (mode === 'coop') netSend({ t: 'efire', x: e.x, z: e.z, a: e.a, trip: true });
+        const c = ENEMY_TYPES.boss.cool;
+        e.cool = c[0] + Math.random() * (c[1] - c[0]);
+        e.vulnT = 2.2; // salvo sonrası savunmasız pencere: 2x hasar alır
+        if (e.vulnRing) { e.vulnRing.visible = true; e.vulnRing.scale.setScalar(1); }
+        popFloater(e.x, 3.6, e.z, T().vulnTxt, '#54ff7a');
+      }
+    } else if (e.vulnT > 0) {
+      e.vulnT -= dt;
+      if (e.vulnRing) { e.vulnRing.material.opacity = 0.35 + Math.abs(Math.sin(clock.elapsedTime * 8)) * 0.5; if (e.vulnT <= 0) e.vulnRing.visible = false; }
     }
   }
   if (wantMove !== 0) { e.x += fwdX(e.a) * es * wantMove * dt; e.z += fwdZ(e.a) * es * wantMove * dt; }
@@ -3891,6 +4055,7 @@ function tick() {
         if (player.tripleT > 0 || bMulti()) { fire(player, -0.17); fire(player, 0); fire(player, 0.17); }
         else fire(player);
         player.cool = player.stat.cool * bFire();
+        tutEvent('fire');
         if (mode === 'duel' || mode === 'ball' || mode === 'coop' || mode === 'team') netSend({ t: 'fire', x: player.x, z: player.z, a: player.a, bs: player.stat.bspeed, trip: player.tripleT > 0 });
       }
       if (Math.abs(player.speed) > 3) { dustT -= dt; if (dustT <= 0) { dustT = 0.06; spawnDust(player.x - fwdX(player.a) * 1.3, player.z - fwdZ(player.a) * 1.3); } }
@@ -3943,6 +4108,7 @@ function tick() {
           const inX = b.mesh.position.x > w.minX && b.mesh.position.x < w.maxX;
           if (inX) b.vz = -b.vz; else b.vx = -b.vx;
           b.bounces--; sfxBounce();
+          if (b.playerShot) tutEvent('bounce');
         } else { explode(b.mesh.position.x, 1.0, b.mesh.position.z, false); dead = true; }
       } else { b.mesh.position.x = nx; b.mesh.position.z = nz; }
       if (!dead) b.mesh.rotation.y = Math.atan2(-b.vx, -b.vz);
@@ -3952,7 +4118,7 @@ function tick() {
           if (Math.hypot(b.mesh.position.x - cv.x, b.mesh.position.z - cv.z) < cv.r + 0.25) {
             explode(b.mesh.position.x, 1.0, b.mesh.position.z, false);
             dead = true;
-            if (mode === 'solo' || (mode === 'coop' && isAuthority)) damageCover(cv);
+            if (mode === 'solo' || (mode === 'coop' && isAuthority)) { damageCover(cv); if (cv.hp <= 0 && b.playerShot) tutEvent('barrel'); }
             break;
           }
         }
@@ -3975,7 +4141,9 @@ function tick() {
             for (const e of enemies) {
               const hr = 1.4 * (e.type === 'boss' ? 1.7 : 1);
               if (e.alive && Math.hypot(b.mesh.position.x - e.x, b.mesh.position.z - e.z) < hr) {
-                e.hp -= 1 + bDmg();
+                const vuln = e.type === 'boss' && e.vulnT > 0; // savunmasız pencere: 2x hasar (host otoritesi)
+                e.hp -= (1 + bDmg()) * (vuln ? 2 : 1);
+                if (vuln) popFloater(b.mesh.position.x, 2.6, b.mesh.position.z, 'x2!', '#54ff7a');
                 if (e.hp <= 0) {
                   e.alive = false; explode(e.x, 1.0, e.z, true); scene.remove(e.mesh);
                   popFloater(e.x, 2.2, e.z, '+' + e.score, e.type === 'boss' ? '#ff7a3a' : '#ffe86a');
@@ -4028,7 +4196,9 @@ function tick() {
           for (const e of enemies) {
             const hr = 1.4 * (e.type === 'boss' ? 1.7 : 1);
             if (e.alive && Math.hypot(b.mesh.position.x - e.x, b.mesh.position.z - e.z) < hr) {
-              e.hp -= 1 + bDmg();
+              const vuln = e.type === 'boss' && e.vulnT > 0; // savunmasız pencere: 2x hasar
+              e.hp -= (1 + bDmg()) * (vuln ? 2 : 1);
+              if (vuln) popFloater(b.mesh.position.x, 2.6, b.mesh.position.z, 'x2!', '#54ff7a');
               if (e.hp <= 0) {
                 e.alive = false; explode(e.x, 1.0, e.z, true); scene.remove(e.mesh);
                 popFloater(e.x, 2.2, e.z, '+' + e.score, e.type === 'boss' ? '#ff7a3a' : '#ffe86a');
@@ -4069,15 +4239,18 @@ function tick() {
       if (enemies.length === 0 && player.alive) {
         wave++;
         if (wave > profile.bestWave) { profile.bestWave = wave; saveProfile(); }
-        const bonus = wave * 15; roundCoins += bonus; addCoins(bonus);
-        updateHUD();
-        banner(wave % 5 === 0 ? T().bossW : `${T().wave} ${wave}  +🪙${bonus}`);
-        if (wave % 5 === 0) stingBoss(); else stingWave();
-        player.health = Math.min(player.maxHealth, player.health + 1);
-        renderHealth();
-        // her 5. dalga temizlendikten sonra maç-içi yükseltme seçimi (Diep tarzı)
-        if ((wave - 1) % 5 === 0 && wave >= 6) offerBuildChoice(() => spawnEnemies(waveComposition(wave)));
-        else spawnEnemies(waveComposition(wave));
+        if (!soloEndless && wave > RUN_WAVES) { soloVictory(); } // 10. dalga (boss finali) temizlendi → koşu tamam
+        else {
+          const bonus = wave * 15; roundCoins += bonus; addCoins(bonus);
+          updateHUD();
+          banner(wave % 5 === 0 ? T().bossW : `${T().wave} ${wave}  +🪙${bonus}`);
+          if (wave % 5 === 0) stingBoss(); else stingWave();
+          player.health = Math.min(player.maxHealth, player.health + 1);
+          renderHealth();
+          // maç-içi yükseltme seçimi (Diep tarzı): İLK teklif 2. dalga temizlenince (erken tat — FTUE deneyi), sonra her boss dalgası sonrası
+          if (wave === 3 || ((wave - 1) % 5 === 0 && wave >= 6)) offerBuildChoice(() => spawnEnemies(waveComposition(wave)));
+          else spawnEnemies(waveComposition(wave));
+        }
       }
     }
   }
@@ -4087,6 +4260,7 @@ function tick() {
   updateFloaters(dt);
   if (toastT > 0) { toastT -= dt; if (toastT <= 0) $('toast').style.opacity = '0'; }
   statsCheckT -= dt; if (statsCheckT <= 0) { statsCheckT = 1.2; checkAchievements(); checkFtue(); }
+  tutUpdate();
   if (ftueHintOn && state === 'play') {
     ftueHintT -= dt;
     const anyInput = keys.KeyW || keys.KeyS || keys.KeyA || keys.KeyD || keys.ArrowUp || keys.ArrowDown || keys.ArrowLeft || keys.ArrowRight || keys.Space || touchCtl.move || touchCtl.turn || touchCtl.fire;
