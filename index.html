@@ -197,6 +197,16 @@
   .tm-odds { font-size: 12px; color: #b8b8b8; }
   #buildchoice { inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
                  background: rgba(6,10,4,.82); z-index: 40; gap: 22px; pointer-events: auto; }
+  /* son düşman yön oku (≤2 düşman kalınca ekran kenarında) */
+  #enemyarrow { display: none; position: fixed; left: 0; top: 0; z-index: 25; pointer-events: none;
+                font-size: 30px; line-height: 32px; width: 32px; height: 32px; text-align: center; color: #ff5a4a;
+                text-shadow: 0 0 10px rgba(255, 70, 40, .95), 0 2px 4px #000; will-change: transform; }
+  /* tek seferlik diriliş teklifi (yeni oyuncu) */
+  #reviveoffer { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center;
+                 justify-content: center; gap: 14px; background: rgba(6, 10, 4, .8); z-index: 45; }
+  #reviveoffer.hidden { display: none; }
+  #rv-title { font-size: 34px; font-weight: bold; color: #ffdd55; letter-spacing: 2px; text-shadow: 0 2px 8px #000; }
+  #rv-sub { color: #d6ffde; font-size: 16px; text-align: center; max-width: 320px; padding: 0 14px; text-shadow: 0 1px 4px #000; }
   #build-title { font-size: 30px; font-weight: bold; color: #ffdd55; letter-spacing: 2px; text-shadow: 0 2px 8px #000; }
   #build-cards { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; padding: 0 14px; }
   .buildcard { width: 150px; min-height: 168px; background: linear-gradient(180deg, #2a3d1c, #16220e);
@@ -350,6 +360,13 @@
 <div id="coophud" class="hud"></div>
 <div id="killfeed" class="hud"></div>
 <div id="ftuehint" class="hud"></div>
+<div id="enemyarrow">➤</div>
+<div id="reviveoffer" class="hidden">
+  <div id="rv-title">💥 NEREDEYSE!</div>
+  <div id="rv-sub"></div>
+  <button class="mbtn play" id="rv-yes">⚡ DEVAM ET</button>
+  <button class="mbtn small" id="rv-no">Vazgeç</button>
+</div>
 <div id="tutcard" class="hud"><span id="tut-step">1/4</span><span id="tut-ic">🕹️</span><div><div id="tut-txt"></div><div id="tut-bar"><div id="tut-fill"></div></div></div></div>
 <canvas id="minimap" class="hud" width="118" height="118"></canvas>
 <div id="wavebanner" class="hud"></div>

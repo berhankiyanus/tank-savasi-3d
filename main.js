@@ -12,6 +12,9 @@ const L = {
     quickPlay: '⚡ HIZLI OYNA', quickPlaySub: 'Tek dokunuş — dalga savaşına anında gir!',
     victoryTitle: '🏆 ZAFER!', victorySub: (s, c) => `Görev tamam — 10 dalga temizlendi!<br>Skor ${s} · +🪙${c}`, endlessBtn: '∞ SONSUZ DEVAM',
     botDuelBtn: '🤖 BOTA KARŞI OYNA',
+    reviveTitle: '💥 NEREDEYSE!', reviveSub: 'Yeni komutanlara özel: aynı dalgadan ücretsiz devam et!',
+    reviveYes: '⚡ DEVAM ET', reviveNo: 'Vazgeç',
+    overNewRec: b => `🏆 YENİ REKOR — Dalga ${b}!`, overCheer: b => `Rekorun: Dalga ${b} — bir daha dene!`,
     connLostTitle: '📡 BAĞLANTI KOPTU', connLostSub: 'Sunucuyla bağlantı kesildi — kazanımların kaydedildi.',
     vulnTxt: 'SAVUNMASIZ!',
     tutTitle: 'EĞİTİM', tutSteps: ['Tankı sür', 'Ateş et', 'Mermiyi duvardan sektir', 'Varili patlat'],
@@ -26,7 +29,7 @@ const L = {
     tmTitle: '🎰 Jeton Makinesi', tmCount: 'Jetonların', tmSpin: '🎲 ÇEVİR · 1 🎰', tmNeed: 'Jeton kazanmak için görev tamamla / seviye atla',
     buildTitle: 'YÜKSELTME SEÇ',
     gachaNew: s => `🎁 YENİ KAPLAMA! ${s}`, gachaDup: (s, c) => `🔁 ${s} zaten var → +🪙${c}`, tokenGot: n => `🎰 +${n} jeton!`,
-    ftueGift: s => `🎁 İlk düşmanını yok ettin! "${s}" kaplaması hediye!`,
+    ftueGift: s => `🎁 İlk düşmanını yok ettin! "${s}" kaplaması kazandın — Garaj → Kaplamalar'dan tak`,
     ftueHintDesk: 'W/↑ ilerle · S/↓ geri · A/D dön · BOŞLUK ateş 🔫',
     ftueHintTouch: 'Sol joystick: sür & dön · Sağ buton: ateş 🔫',
     ftueWelcome: 'Hoş geldin! Sür ve ateş et 🔫',
@@ -74,6 +77,9 @@ const L = {
     quickPlay: '⚡ QUICK PLAY', quickPlaySub: 'One tap — straight into wave battle!',
     victoryTitle: '🏆 VICTORY!', victorySub: (s, c) => `Mission complete — 10 waves cleared!<br>Score ${s} · +🪙${c}`, endlessBtn: '∞ CONTINUE ENDLESS',
     botDuelBtn: '🤖 PLAY VS BOT',
+    reviveTitle: '💥 SO CLOSE!', reviveSub: 'New commander bonus: continue from this wave for free!',
+    reviveYes: '⚡ CONTINUE', reviveNo: 'Give up',
+    overNewRec: b => `🏆 NEW RECORD — Wave ${b}!`, overCheer: b => `Your best: Wave ${b} — try again!`,
     connLostTitle: '📡 CONNECTION LOST', connLostSub: 'Lost connection to the server — your rewards were saved.',
     vulnTxt: 'VULNERABLE!',
     tutTitle: 'TUTORIAL', tutSteps: ['Drive the tank', 'Fire your cannon', 'Bounce a shot off a wall', 'Blow up a barrel'],
@@ -88,7 +94,7 @@ const L = {
     tmTitle: '🎰 Token Machine', tmCount: 'Your tokens', tmSpin: '🎲 SPIN · 1 🎰', tmNeed: 'Complete quests / level up to earn tokens',
     buildTitle: 'CHOOSE UPGRADE',
     gachaNew: s => `🎁 NEW SKIN! ${s}`, gachaDup: (s, c) => `🔁 ${s} already owned → +🪙${c}`, tokenGot: n => `🎰 +${n} tokens!`,
-    ftueGift: s => `🎁 First enemy down! "${s}" skin unlocked!`,
+    ftueGift: s => `🎁 First enemy down! You earned the "${s}" skin — equip it in Garage → Skins`,
     ftueHintDesk: 'W/↑ move · S/↓ back · A/D turn · SPACE fire 🔫',
     ftueHintTouch: 'Left stick: drive & turn · Right button: fire 🔫',
     ftueWelcome: 'Welcome! Drive and shoot 🔫',
@@ -282,6 +288,8 @@ async function fetchLeaderboard(period) {
 let paused = false;
 let matchSeq = 0; // gecikmiş timer'ların eski maça ait sonuç üretmesini önler
 let matchEndReason = ''; // analitik: maç neden bitti (death/victory/win/lose/disconnect/quit) — D1/D7 huni analizi için
+let dailyPending = false; // FTUE: günlük ödülü ilk menü ziyaretine ertele (mesaj bombardımanını önle)
+let soloStartBest = 1;    // ölüm ekranı teşviki: bu koşu başındaki rekor (yeni rekor tespiti)
 
 // ---------------------------------------------------------------- tanklar
 const TANKS = [
@@ -902,6 +910,39 @@ function buildEnvironment(mapIdx) {
   for (let i = 0; i < (spec.teleport || 0); i++) { const c = take(); if (c) pads.push(addTeleport(c)); }
   for (let i = 0; i + 1 < pads.length; i += 2) { pads[i].link = pads[i + 1]; pads[i + 1].link = pads[i]; }
 }
+// solo ölüm akışı: yeni komutana TEK SEFERLİK ücretsiz diriliş teklifi (ilk 3 maç; inceleme: iki test ölümü de dalga 1'deydi)
+function canOfferRevive() { return mode === 'solo' && !profile.reviveUsed && (profile.games || 0) <= 3; }
+function soloPlayerDied() {
+  player.alive = false; player.mesh.visible = false;
+  explode(player.x, 1.2, player.z, true);
+  const _ms = matchSeq;
+  if (canOfferRevive()) setTimeout(() => { if (_ms === matchSeq && state === 'play') showReviveOffer(_ms); }, 900);
+  else setTimeout(() => { if (_ms === matchSeq) gameOver(); }, 1600);
+}
+function showReviveOffer(ms) {
+  const t = T();
+  $('rv-title').textContent = t.reviveTitle;
+  $('rv-sub').textContent = t.reviveSub;
+  $('rv-yes').textContent = t.reviveYes;
+  $('rv-no').textContent = '‹ ' + t.reviveNo;
+  $('reviveoffer').classList.remove('hidden');
+  track('revive_offer');
+  setTimeout(() => { // cevapsız kalırsa normal sonuç ekranı
+    if (ms === matchSeq && !$('reviveoffer').classList.contains('hidden')) { $('reviveoffer').classList.add('hidden'); gameOver(); }
+  }, 10000);
+}
+function doRevive() {
+  if ($('reviveoffer').classList.contains('hidden') || state !== 'play') return;
+  $('reviveoffer').classList.add('hidden');
+  profile.reviveUsed = 1; saveProfile();
+  const c = randOpenCell();
+  player.x = c.x; player.z = c.z; player.vx = 0; player.vz = 0;
+  player.health = player.maxHealth; player.alive = true; player.inv = 2.5;
+  player.mesh.visible = true; player.mesh.position.set(player.x, 0, player.z);
+  renderHealth(); sfxPower(); haptic('MEDIUM');
+  banner(`${T().wave} ${wave} ⚡`);
+  track('revive_used');
+}
 // varil hasarı / yıkımı
 function damageCover(cv) { cv.hp--; if (cv.hp <= 0) destroyCover(cv); }
 function destroyCover(cv, fromNet) {
@@ -931,7 +972,7 @@ function barrelHurtLocalPlayer(cv, R) {
   if (mode === 'coop') { coopHitPlayer(coop.you); return; }
   if (mode !== 'solo') return;
   player.inv = 1.0; player.health--; renderHealth(); hitFlash();
-  if (player.health <= 0) { player.alive = false; player.mesh.visible = false; explode(player.x, 1.2, player.z, true); { const _ms = matchSeq; setTimeout(() => { if (_ms === matchSeq) gameOver(); }, 1600); } }
+  if (player.health <= 0) soloPlayerDied();
 }
 // tehlike güncellemesi (yerel oyuncuya etkir)
 let lavaBurnT = 0.35, teleCool = 0;
@@ -963,7 +1004,7 @@ function lavaDamagePlayer() {
   if (player.inv > 0 || player.shieldT > 0) return;
   if (mode === 'coop') { coopHitPlayer(coop.you); return; }
   player.inv = 0.6; player.health--; renderHealth(); hitFlash();
-  if (player.health <= 0) { player.alive = false; player.mesh.visible = false; explode(player.x, 1.2, player.z, true); { const _ms = matchSeq; setTimeout(() => { if (_ms === matchSeq) gameOver(); }, 1600); } }
+  if (player.health <= 0) soloPlayerDied();
 }
 function doTeleport(h) {
   teleCool = 1.3;
@@ -1697,6 +1738,8 @@ const ENEMY_TYPES = {
   boss:   { hp: 14, speed: 2.8, turn: 1.1, cool: [1.3, 2.0], bspeed: 22, keep: 12, sight: 80, scale: 2.1, color: 0x8f1414, coins: 120, score: 2000, triple: true, glow: true },
 };
 let enemyIdC = 0;
+// merhamet eğrisi (FTUE): solo 1-2. dalgada düşman ateş temposu %35 yavaş — yeni oyuncu ilk dakikada ölmesin
+const enemyMercy = () => (mode === 'solo' && wave <= 2 ? 1.35 : 1);
 function waveComposition(w, extra = 0) {
   if (w % 5 === 0) {
     const list = ['boss'];
@@ -1725,7 +1768,7 @@ function spawnEnemies(types) {
       triple: !!d.triple, coins: d.coins, score: d.score,
       mesh: buildTank({ color: d.color, scale: d.scale, glow: d.glow }),
       x: cell.x, z: cell.z, a: Math.random() * Math.PI * 2,
-      cool: d.cool[0] + Math.random() * (d.cool[1] - d.cool[0]),
+      cool: (d.cool[0] + Math.random() * (d.cool[1] - d.cool[0])) * enemyMercy(),
       alive: true, turnDir: 1, thinkT: 0,
     };
     if (type === 'boss') {
@@ -1810,7 +1853,7 @@ function checkFtue() {
   if (!profile.gift1 && (profile.kills || 0) >= 1) {
     profile.gift1 = true;
     if (!profile.skins.includes('crimson')) profile.skins.push('crimson');
-    if (profile.skin === 'default') profile.skin = 'crimson';
+    // OTOMATİK TAKMA YOK: kırmızı kaplama düşman rengiyle karışıyordu (inceleme bulgusu) — oyuncu garajdan kendisi takar
     saveProfile();
     showToast(T().ftueGift(skinById('crimson').name[lang]), 4500);
     sfxCoin();
@@ -2168,6 +2211,29 @@ function updateBuffs() {
   buffSig = s;
   $('buffs').innerHTML = state === 'play' ? items.map(x => `<span class="buff">${x}</span>`).join('') : '';
 }
+// "son düşman avı" fix'i (inceleme: dalga sonunda 45sn hedef arandı): ≤2 düşman kalınca
+// en yakın uzak düşmana ekran kenarında yön oku + minimap'te büyüyen nokta
+const enemyArrowEl = $('enemyarrow');
+const _camFwd = new THREE.Vector3();
+function updateEnemyArrow() {
+  let target = null, count = 0;
+  if (state === 'play' && !paused && (mode === 'solo' || (mode === 'coop' && isAuthority))) {
+    let best = 1e9;
+    for (const e of enemies) if (e.alive) { count++; const d = Math.hypot(e.x - player.x, e.z - player.z); if (d < best) { best = d; target = e; } }
+    if (count > 2 || best < 13) target = null; // kalabalıkta ya da düşman yakında gösterme
+  }
+  if (!target) { if (enemyArrowEl.style.display !== 'none') enemyArrowEl.style.display = 'none'; return; }
+  // ekran-uzayı yönü: kamera ileri/sağ XZ eksenlerinden — projeksiyon yok, hedef arkada da stabil
+  camera.getWorldDirection(_camFwd);
+  const fl = Math.hypot(_camFwd.x, _camFwd.z) || 1;
+  const fx = _camFwd.x / fl, fz = _camFwd.z / fl, rx = -fz, rz = fx;
+  const dx = target.x - player.x, dz = target.z - player.z;
+  const a = Math.atan2(dx * rx + dz * rz, dx * fx + dz * fz); // 0 = ekranda yukarı
+  const R = Math.min(innerWidth, innerHeight) * 0.32;
+  const x = innerWidth / 2 + Math.sin(a) * R, y = innerHeight / 2 - Math.cos(a) * R * 0.86;
+  enemyArrowEl.style.display = 'block';
+  enemyArrowEl.style.transform = `translate(${x - 16}px, ${y - 16}px) rotate(${a - Math.PI / 2}rad)`;
+}
 const miniCanvas = $('minimap'), miniCtx = miniCanvas.getContext('2d');
 function drawMinimap() {
   if (state !== 'play') { if (miniCanvas.style.display !== 'none') miniCanvas.style.display = 'none'; return; }
@@ -2180,8 +2246,11 @@ function drawMinimap() {
   c.fillStyle = 'rgba(190,160,120,0.6)';
   for (const w of walls) c.fillRect(px(w.minX), pz(w.minZ), Math.max(1, px(w.maxX) - px(w.minX)), Math.max(1, pz(w.maxZ) - pz(w.minZ)));
   if (covers.length) { c.fillStyle = '#e0742a'; for (const cv of covers) dot(cv.x, cv.z, 2); }
-  c.fillStyle = '#ff4030';
-  if (enemies.length) { for (const e of enemies) if (e.alive) dot(e.x, e.z, e.type === 'boss' ? 4.5 : 2.5); }
+  // son 1-2 düşman: minimap noktası nabız gibi büyüsün (avlanma yardımı)
+  const aliveE = enemies.reduce((n, e) => n + (e.alive ? 1 : 0), 0);
+  const ePulse = aliveE > 0 && aliveE <= 2 ? 1 + Math.abs(Math.sin(clock.elapsedTime * 6)) * 1.0 : 1;
+  c.fillStyle = ePulse > 1 ? '#ff6a3a' : '#ff4030';
+  if (enemies.length) { for (const e of enemies) if (e.alive) dot(e.x, e.z, (e.type === 'boss' ? 4.5 : 2.5) * ePulse); }
   else for (const m of coopEnemies.values()) dot(m.position.x, m.position.z, 2.5);
   if (mode === 'ball' && ball) { c.fillStyle = '#ffffff'; dot(ball.x, ball.z, 3); }
   if (mode === 'duel' && duel && duel.remoteAlive) { c.fillStyle = '#ff7a5a'; dot(duel.x, duel.z, 3); }
@@ -2248,6 +2317,8 @@ function openMenu() {
   mode = 'solo';
   if (showroom.active) { showroom.active = false; $('title').style.display = ''; $('submsg').style.display = ''; $('keys').style.display = ''; $('coinbar').style.visibility = ''; $('langsw').style.visibility = ''; $('bottomnav').style.display = ''; msgEl.classList.remove('sr'); }
   abortTutorial();
+  $('reviveoffer').classList.add('hidden');
+  if (dailyPending) { dailyPending = false; checkDaily(); } // FTUE: günlük ödül toastı oyun başında değil, ilk menü ziyaretinde
   clearBallMode(); clearCoop(); clearTeam(); clearPowerups();
   hideFtueHint();
   $('buildchoice').classList.add('hidden'); buildChoosing = false;
@@ -2730,6 +2801,8 @@ let soloEndless = false;
 function startSolo(mapIdx) {
   matchSeq++;
   soloEndless = false;
+  soloStartBest = profile.bestWave || 1;
+  $('reviveoffer').classList.add('hidden');
   mode = 'solo'; state = 'play';
   lastSoloMap = mapIdx;
   resetBuild();
@@ -2767,9 +2840,11 @@ function gameOver() {
   questProgress('wave', Math.max(0, wave - 1));
   submitScore(wave);
   const t = T();
+  // teşvik satırı: yeni rekor kutlanır, değilse rekor hatırlatılır (soğuk "OYUN BİTTİ" tek başına kalmasın)
+  const cheer = wave > soloStartBest ? t.overNewRec(profile.bestWave) : t.overCheer(profile.bestWave);
   showHarvest({
     title: t.over, won: null,
-    sub: t.overSub(score, wave, roundCoins),
+    sub: t.overSub(score, wave, roundCoins) + '<br>' + cheer,
     xpKind: 'wave', xpOpts: { wave }, coins: roundCoins,
     replay: () => startSolo(lastSoloMap),
   });
@@ -3711,6 +3786,8 @@ $('btn-duel-bot').addEventListener('click', () => { track('botduel_click'); star
 $('res-again').addEventListener('click', () => { const fn = harvestReplay; harvestReplay = null; maybeInterstitial(); if (fn) { track('retry_click', { mode: matchMode }); fn(); } else openMenu(); });
 $('res-menu').addEventListener('click', () => { harvestReplay = null; harvestEndless = null; openMenu(); });
 $('res-endless').addEventListener('click', () => { const fn = harvestEndless; harvestEndless = null; harvestReplay = null; if (fn) fn(); });
+$('rv-yes').addEventListener('click', doRevive);
+$('rv-no').addEventListener('click', () => { if ($('reviveoffer').classList.contains('hidden')) return; $('reviveoffer').classList.add('hidden'); gameOver(); });
 $('res-rewarded').addEventListener('click', async () => {
   const rb = $('res-rewarded'); if (rb.disabled || !harvestReward) return;
   rb.disabled = true; rb.textContent = T().adLoading;
@@ -3932,7 +4009,7 @@ function updateEnemy(e, dt, tgt) {
         if (e.triple) { fire(e, -0.2); fire(e, 0); fire(e, 0.2); } else fire(e);
         if (mode === 'coop') netSend({ t: 'efire', x: e.x, z: e.z, a: e.a, trip: e.triple });
         const c = ENEMY_TYPES[e.type] ? ENEMY_TYPES[e.type].cool : [2.2, 3.8];
-        e.cool = c[0] + Math.random() * (c[1] - c[0]);
+        e.cool = (c[0] + Math.random() * (c[1] - c[0])) * enemyMercy();
       }
     }
     if (Math.abs(diff) < 0.5) { if (distP > keep + 3) wantMove = 1; else if (distP < keep - 3) wantMove = -1; }
@@ -3985,7 +4062,8 @@ function updateEnemy(e, dt, tgt) {
 const clock = new THREE.Clock();
 applyLang();
 openMenu();
-checkDaily();
+// yeni oyuncu (FTUE) anında oyuna düşer: günlük ödül toastu maç başlangıcına binmesin, ilk menü ziyaretine ertele
+if ((profile.games || 0) > 0) checkDaily(); else dailyPending = true;
 // davet linkiyle gelindiyse (?j=KOD&m=MOD) doğrudan lobiye katıl
 {
   const params = new URLSearchParams(location.search);
@@ -4297,11 +4375,7 @@ function tick() {
           else {
             player.inv = 1.0; player.health--; renderHealth(); hitFlash();
             explode(b.mesh.position.x, 1.0, b.mesh.position.z, false);
-            if (player.health <= 0) {
-              player.alive = false; player.mesh.visible = false;
-              explode(player.x, 1.2, player.z, true);
-              { const _ms = matchSeq; setTimeout(() => { if (_ms === matchSeq) gameOver(); }, 1600); }
-            }
+            if (player.health <= 0) soloPlayerDied();
           }
         }
       }
@@ -4343,6 +4417,7 @@ function tick() {
 
   const bossE = (state === 'play' && (mode === 'solo' || (mode === 'coop' && isAuthority))) ? enemies.find(e => e.type === 'boss' && e.alive) : null;
   updateBossBar(bossE);
+  updateEnemyArrow();
   updateBuffs();
   drawMinimap();
   updateEngine();
