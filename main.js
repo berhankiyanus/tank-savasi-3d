@@ -11,7 +11,9 @@ const L = {
     keysTouch: 'Soldaki joystick &nbsp;→&nbsp; sür ve dön &nbsp;|&nbsp; Sağdaki buton &nbsp;→&nbsp; ateş',
     quickPlay: '⚡ HIZLI OYNA', quickPlaySub: 'Tek dokunuş — dalga savaşına anında gir!',
     victoryTitle: '🏆 ZAFER!', victorySub: (s, c) => `Görev tamam — 10 dalga temizlendi!<br>Skor ${s} · +🪙${c}`, endlessBtn: '∞ SONSUZ DEVAM',
-    botDuelBtn: '🤖 BOTA KARŞI OYNA',
+    botRookie: '🟢 ÇAYLAK · +🪙30', botPro: '🟡 USTA · +🪙70', botElite: '🔴 EFSANE · +🪙150',
+    lbWeekTitle: 'HAFTANIN EN İYİLERİ',
+    timeNewRec: d => `⏱ Süre ${d} — YENİ REKOR!`, timeLine: (d, b) => `⏱ Süre ${d} · Rekorun ${b}`,
     reviveTitle: '💥 NEREDEYSE!', reviveSub: 'Yeni komutanlara özel: aynı dalgadan ücretsiz devam et!',
     reviveYes: '⚡ DEVAM ET', reviveNo: 'Vazgeç',
     overNewRec: b => `🏆 YENİ REKOR — Dalga ${b}!`, overCheer: b => `Rekorun: Dalga ${b} — bir daha dene!`,
@@ -77,7 +79,9 @@ const L = {
     keysTouch: 'Left joystick &nbsp;→&nbsp; drive & turn &nbsp;|&nbsp; Right button &nbsp;→&nbsp; fire',
     quickPlay: '⚡ QUICK PLAY', quickPlaySub: 'One tap — straight into wave battle!',
     victoryTitle: '🏆 VICTORY!', victorySub: (s, c) => `Mission complete — 10 waves cleared!<br>Score ${s} · +🪙${c}`, endlessBtn: '∞ CONTINUE ENDLESS',
-    botDuelBtn: '🤖 PLAY VS BOT',
+    botRookie: '🟢 ROOKIE · +🪙30', botPro: '🟡 PRO · +🪙70', botElite: '🔴 LEGEND · +🪙150',
+    lbWeekTitle: "THIS WEEK'S BEST",
+    timeNewRec: d => `⏱ Time ${d} — NEW RECORD!`, timeLine: (d, b) => `⏱ Time ${d} · Your best ${b}`,
     reviveTitle: '💥 SO CLOSE!', reviveSub: 'New commander bonus: continue from this wave for free!',
     reviveYes: '⚡ CONTINUE', reviveNo: 'Give up',
     overNewRec: b => `🏆 NEW RECORD — Wave ${b}!`, overCheer: b => `Your best: Wave ${b} — try again!`,
@@ -292,6 +296,8 @@ let matchSeq = 0; // gecikmiş timer'ların eski maça ait sonuç üretmesini ö
 let matchEndReason = ''; // analitik: maç neden bitti (death/victory/win/lose/disconnect/quit) — D1/D7 huni analizi için
 let dailyPending = false; // FTUE: günlük ödülü ilk menü ziyaretine ertele (mesaj bombardımanını önle)
 let soloStartBest = 1;    // ölüm ekranı teşviki: bu koşu başındaki rekor (yeni rekor tespiti)
+let soloRunStart = 0;     // sonlu koşu kronometresi (zafer süresi — speedrun rekabeti)
+const fmtTime = s => Math.floor(s / 60) + ':' + String(Math.floor(s) % 60).padStart(2, '0');
 
 // ---------------------------------------------------------------- tanklar
 const TANKS = [
@@ -1925,7 +1931,8 @@ function renderMachine() {
   const sp = $('tm-spin'); if (sp) sp.onclick = spinToken;
 }
 function updateStats() {
-  $('statsline').innerHTML = `🏆 D.${profile.bestWave} &nbsp;·&nbsp; ⚔️ ${profile.kills} &nbsp;·&nbsp; 🥇 ${profile.wins} &nbsp;·&nbsp; 🏅`;
+  const brt = profile.bestRunTime ? ` &nbsp;·&nbsp; ⏱ ${fmtTime(profile.bestRunTime)}` : ''; // en hızlı zafer (rekor vitrini)
+  $('statsline').innerHTML = `🏆 D.${profile.bestWave}${brt} &nbsp;·&nbsp; ⚔️ ${profile.kills} &nbsp;·&nbsp; 🥇 ${profile.wins} &nbsp;·&nbsp; 🏅`;
 }
 let toastT = 0, statsCheckT = 2;
 function showToast(text, dur = 2800) {
@@ -2426,7 +2433,9 @@ function applyLang() {
   $('keys').innerHTML = IS_TOUCH ? t.keysTouch : t.keysDesk;
   $('btn-single').textContent = t.single;
   $('btn-duel').textContent = t.duel;
-  $('btn-duel-bot').textContent = t.botDuelBtn;
+  $('btn-bot-rookie').textContent = t.botRookie;
+  $('btn-bot-pro').textContent = t.botPro;
+  $('btn-bot-elite').textContent = t.botElite;
   $('btn-ball').textContent = t.ballBtn;
   $('btn-quickplay').textContent = t.quickPlay;
   { const sn = document.querySelector('.shop-note'); if (sn) sn.textContent = t.shopNote; } // dükkân dip notu (EN çevirisi eksikti)
@@ -2920,6 +2929,7 @@ function startSolo(mapIdx) {
   matchSeq++;
   soloEndless = false;
   soloStartBest = profile.bestWave || 1;
+  soloRunStart = clock.elapsedTime;
   $('reviveoffer').classList.add('hidden');
   mode = 'solo'; state = 'play';
   lastSoloMap = mapIdx;
@@ -2981,12 +2991,17 @@ function soloVictory() {
   let gemTxt = '';
   const today = new Date().toISOString().slice(0, 10);
   if (profile.lastVictoryDay !== today) { profile.lastVictoryDay = today; addGems(1); gemTxt = ' &nbsp;·&nbsp; +💎1'; }
+  // zafer süresi (speedrun rekabeti): en hızlı 10-dalga koşusu profile.bestRunTime'da tutulur
+  const runDur = Math.max(1, Math.round(clock.elapsedTime - soloRunStart));
+  const timeRec = !profile.bestRunTime || runDur < profile.bestRunTime;
+  if (timeRec) profile.bestRunTime = runDur;
+  const timeTxt = '<br>' + (timeRec ? t.timeNewRec(fmtTime(runDur)) : t.timeLine(fmtTime(runDur), fmtTime(profile.bestRunTime)));
   saveProfile();
   sfxPower();
-  track('run_victory', { map: lastSoloMap });
+  track('run_victory', { map: lastSoloMap, dur: runDur });
   showHarvest({
     title: t.victoryTitle, won: true,
-    sub: t.victorySub(score, roundCoins) + gemTxt,
+    sub: t.victorySub(score, roundCoins) + gemTxt + timeTxt,
     xpKind: 'wave', xpOpts: { wave }, coins: roundCoins,
     replay: () => startSolo(lastSoloMap),
     endless: () => resumeEndless(),
@@ -3195,7 +3210,17 @@ function duelReceiveHit() {
 // ---------------------------------------------------------------- BOTLAR: hızlı oyna (bota karşı 1v1, tamamen yerel)
 const BOT_NAMES = ['Kaplan', 'Yıldırım', 'Panzer', 'Volkan', 'Şahin', 'Bora', 'Demir', 'Atlas', 'Zafer', 'Kobra', 'Tayfun', 'Ejder', 'Fırtına', 'Çelik', 'Reis', 'Alpay', 'Doruk', 'Yağız'];
 function botName() { return BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)]; }
-function startBotDuel() {
+// bot zorluk kademeleri — inceleme: tek ayarlı bot yeni oyuncuyu 5-1 eziyordu; Çaylak yenilebilir olmalı,
+// Efsane ustalara meydan okumalı. Galibiyet ödülü kademeyle artar (rekabet motivasyonu).
+const BOT_DIFFS = {
+  rookie: { turn: 1.5, speed: 5.2, cool: [3.0, 4.6], bspeed: 17, aimErr: 0.38, reward: 30 },
+  pro:    { turn: 2.2, speed: 7.0, cool: [2.0, 3.4], bspeed: 24, aimErr: 0.13, reward: 70 },
+  elite:  { turn: 3.1, speed: 8.6, cool: [1.2, 2.0], bspeed: 30, aimErr: 0, reward: 150 },
+};
+let botDiff = 'rookie';
+function startBotDuel(diffId) {
+  if (diffId) botDiff = diffId;
+  const bd = BOT_DIFFS[botDiff] || BOT_DIFFS.pro;
   mode = 'duel'; state = 'play';
   isAuthority = true;
   profile.games++; saveProfile();
@@ -3215,7 +3240,7 @@ function startBotDuel() {
   duel = {
     you: 1, code: null, myKills: 0, myDeaths: 0, over: false, bot: true,
     x: -SX, z: -SZ, a: Math.PI, remoteAlive: true, remoteMesh: rm, oppName: nm, nameLabel: makeNameLabel(nm),
-    botE: { x: -SX, z: -SZ, a: Math.PI, cool: 1.6, thinkT: 0, turn: 2.2, speed: 7.0, keep: 10, sight: 55, type: 'normal', bspeed: 24, mesh: rm, baseScale: 1, alive: true, respawn: 0 },
+    botE: { x: -SX, z: -SZ, a: Math.PI, cool: 1.6, thinkT: 0, turn: bd.turn, speed: bd.speed, keep: 10, sight: 55, type: 'normal', bspeed: bd.bspeed, coolRange: bd.cool, aimErr: bd.aimErr, mesh: rm, baseScale: 1, alive: true, respawn: 0 },
   };
   player.x = SX; player.z = SZ; player.a = 0; player.vx = 0; player.vz = 0;
   player.alive = true; player.inv = 1.0;
@@ -3272,6 +3297,8 @@ function duelBotEnd(won) {
   duel.over = true;
   matchEndReason = won ? 'win' : 'lose';
   if (won) { profile.wins++; saveProfile(); questProgress('win', 1); }
+  const rw = won ? ((BOT_DIFFS[botDiff] || {}).reward || 0) : 0; // bot galibiyeti kademeye göre coin öder
+  if (rw) addCoins(rw);
   const t = T();
   banner(won ? t.youWin : t.youLose);
   if (won) stingWin(); else stingLose();
@@ -3281,7 +3308,7 @@ function duelBotEnd(won) {
     showHarvest({
       title: won ? t.youWin : t.youLose, won,
       sub: t.duelOverSub(mk, md),
-      xpKind: 'pvp', xpOpts: { kills: mk, won }, coins: 0,
+      xpKind: 'pvp', xpOpts: { kills: mk, won }, coins: rw,
       replay: () => startBotDuel(),
     });
   }, 1800);
@@ -3898,9 +3925,15 @@ $('btn-quickplay').addEventListener('click', () => {
   const pool = QUICK_MAPS.filter(mapUnlocked);
   startSolo(pool.length ? pool[(profile.games || 0) % pool.length] : 0);
 });
-if (V1_SIMPLE) for (const id of ['btn-ball', 'btn-coop', 'btn-team', 'btn-lb']) $(id).style.display = 'none';
-// bot düello girişi (HIZLI OYNA solo olunca tek girişi kopmuştu): düello panelinden, seçili haritayla anında başlar
-$('btn-duel-bot').addEventListener('click', () => { track('botduel_click'); startBotDuel(); });
+// v1: koop/2v2/top gizli; lider tablosu SADELEŞTİRİLMİŞ halde açık (yalnız haftalık tek liste — rekabet çıpası)
+if (V1_SIMPLE) {
+  for (const id of ['btn-ball', 'btn-coop', 'btn-team']) $(id).style.display = 'none';
+  $('lbt-day').style.display = 'none'; $('lbt-week').style.display = 'none'; // gün/hafta sekmeleri yok, tek liste
+}
+// bot düello girişi (HIZLI OYNA solo olunca tek girişi kopmuştu): düello panelinden, seçili haritayla anında başlar.
+// 3 zorluk kademesi — Çaylak yeni oyuncunun kazanma tadı alması için, Efsane ustalar için (ödül kademeyle artar)
+for (const [bid, did] of [['btn-bot-rookie', 'rookie'], ['btn-bot-pro', 'pro'], ['btn-bot-elite', 'elite']])
+  $(bid).addEventListener('click', () => { track('botduel_click', { diff: did }); startBotDuel(did); });
 $('res-again').addEventListener('click', () => { const fn = harvestReplay; harvestReplay = null; maybeInterstitial(); if (fn) { track('retry_click', { mode: matchMode }); fn(); } else openMenu(); });
 $('res-menu').addEventListener('click', () => { harvestReplay = null; harvestEndless = null; openMenu(); });
 $('res-endless').addEventListener('click', () => { const fn = harvestEndless; harvestEndless = null; harvestReplay = null; if (fn) fn(); });
@@ -3923,7 +3956,7 @@ $('res-rewarded').addEventListener('click', async () => {
 });
 $('btn-quests').addEventListener('click', () => { const t = T(); $('title').textContent = t.questsTitle; $('submsg').textContent = t.questsSub; renderQuests(); showPanel('panel-quests'); });
 $('btn-back-quests').addEventListener('click', openMenu);
-$('btn-lb').addEventListener('click', () => { const t = T(); $('title').textContent = t.lbTitle; $('submsg').textContent = ''; showPanel('panel-lb'); renderLeaderboard('day'); });
+$('btn-lb').addEventListener('click', () => { const t = T(); $('title').textContent = V1_SIMPLE ? t.lbWeekTitle : t.lbTitle; $('submsg').textContent = ''; showPanel('panel-lb'); renderLeaderboard(V1_SIMPLE ? 'week' : 'day'); });
 $('btn-season').addEventListener('click', () => { $('title').textContent = ''; $('submsg').textContent = ''; renderSeason(); showPanel('panel-season'); });
 $('btn-back-season').addEventListener('click', openMenu);
 $('lbt-day').addEventListener('click', () => renderLeaderboard('day'));
@@ -4124,9 +4157,11 @@ function updateEnemy(e, dt, tgt) {
         // boss anında ateş etmez: önce 0.9sn şarj telegrafı (aşağıdaki windup bloğu ateşler)
         if (!e.windup) { e.windup = 0.9; if (e.teleRing) e.teleRing.visible = true; }
       } else {
-        if (e.triple) { fire(e, -0.2); fire(e, 0); fire(e, 0.2); } else fire(e);
+        if (e.triple) { fire(e, -0.2); fire(e, 0); fire(e, 0.2); }
+        else if (e.aimErr) fire({ x: e.x, z: e.z, a: e.a + (Math.random() - 0.5) * e.aimErr, bspeed: e.bspeed }); // bot zorluk: nişan sapması (owner!==player → düşman mermisi)
+        else fire(e);
         if (mode === 'coop') netSend({ t: 'efire', x: e.x, z: e.z, a: e.a, trip: e.triple });
-        const c = ENEMY_TYPES[e.type] ? ENEMY_TYPES[e.type].cool : [2.2, 3.8];
+        const c = e.coolRange || (ENEMY_TYPES[e.type] ? ENEMY_TYPES[e.type].cool : [2.2, 3.8]);
         e.cool = (c[0] + Math.random() * (c[1] - c[0])) * enemyMercy();
       }
     }
