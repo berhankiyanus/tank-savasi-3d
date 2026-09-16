@@ -234,6 +234,7 @@ async function fetchLeaderboard(period) {
   catch { return []; }
 }
 let paused = false;
+let matchSeq = 0; // gecikmiş timer'ların eski maça ait sonuç üretmesini önler
 
 // ---------------------------------------------------------------- tanklar
 const TANKS = [
@@ -867,7 +868,7 @@ function barrelHurtLocalPlayer(cv, R) {
   if (mode === 'coop') { coopHitPlayer(coop.you); return; }
   if (mode !== 'solo') return;
   player.inv = 1.0; player.health--; renderHealth(); hitFlash();
-  if (player.health <= 0) { player.alive = false; player.mesh.visible = false; explode(player.x, 1.2, player.z, true); setTimeout(gameOver, 1600); }
+  if (player.health <= 0) { player.alive = false; player.mesh.visible = false; explode(player.x, 1.2, player.z, true); { const _ms = matchSeq; setTimeout(() => { if (_ms === matchSeq) gameOver(); }, 1600); } }
 }
 // tehlike güncellemesi (yerel oyuncuya etkir)
 let lavaBurnT = 0.35, teleCool = 0;
@@ -899,7 +900,7 @@ function lavaDamagePlayer() {
   if (player.inv > 0 || player.shieldT > 0) return;
   if (mode === 'coop') { coopHitPlayer(coop.you); return; }
   player.inv = 0.6; player.health--; renderHealth(); hitFlash();
-  if (player.health <= 0) { player.alive = false; player.mesh.visible = false; explode(player.x, 1.2, player.z, true); setTimeout(gameOver, 1600); }
+  if (player.health <= 0) { player.alive = false; player.mesh.visible = false; explode(player.x, 1.2, player.z, true); { const _ms = matchSeq; setTimeout(() => { if (_ms === matchSeq) gameOver(); }, 1600); } }
 }
 function doTeleport(h) {
   teleCool = 1.3;
@@ -1417,6 +1418,8 @@ function makeNameLabel(text) {
 }
 function setLabelText(label, text) { if (label) { label.material.map = nameTexture(text || '...'); label.material.needsUpdate = true; } }
 // kill feed / olay akışı
+// kullanıcı/uzak kaynaklı metinleri HTML'e gömerken kaçışla (XSS önlemi)
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 function killFeed(html) {
   const el = $('killfeed');
   const row = document.createElement('div'); row.className = 'kfrow'; row.innerHTML = html;
@@ -1949,7 +1952,7 @@ async function renderLeaderboard(period) {
   $('lblist').innerHTML = rows.map((r, i) => {
     const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1) + '.';
     const me = r.name === myName ? ' me' : '';
-    return `<div class="lbrow${me}"><span class="lbrank">${medal}</span><span class="lbname">${r.name}</span><span class="lbscore">🌊 ${r.score}</span></div>`;
+    return `<div class="lbrow${me}"><span class="lbrank">${medal}</span><span class="lbname">${esc(r.name)}</span><span class="lbscore">🌊 ${r.score}</span></div>`;
   }).join('');
 }
 function renderQuests() {
@@ -2006,7 +2009,7 @@ function updateCoopRoster() {
   const rows = [{ name: profile.name, alive: player.alive, pid: coop.you }];
   for (const [pid, rm] of coop.remotes) rows.push({ name: rm.name || ('Oyuncu' + pid), alive: rm.alive, pid });
   rows.sort((a, b) => a.pid - b.pid);
-  el.innerHTML = rows.map(r => `<div class="crow">${r.alive ? '🟢' : '⚫'} ${r.name}</div>`).join('');
+  el.innerHTML = rows.map(r => `<div class="crow">${r.alive ? '🟢' : '⚫'} ${esc(r.name)}</div>`).join('');
 }
 let buffSig = '';
 function updateBuffs() {
@@ -2093,6 +2096,7 @@ function showPanel(id) {
   for (const [p, b] of Object.entries(NAV_MAP)) $(b).classList.toggle('on', p === id); // alt nav aktif sekme
 }
 function openMenu() {
+  matchSeq++; // eski maçın gecikmiş timer'larını geçersiz kıl
   state = 'menu';
   mode = 'solo';
   if (showroom.active) { showroom.active = false; $('title').style.display = ''; $('submsg').style.display = ''; $('keys').style.display = ''; $('coinbar').style.visibility = ''; $('langsw').style.visibility = ''; $('bottomnav').style.display = ''; msgEl.classList.remove('sr'); }
@@ -2568,6 +2572,7 @@ function renderMaps() {
 // ---------------------------------------------------------------- tek oyunculu
 let lastSoloMap = 0;
 function startSolo(mapIdx) {
+  matchSeq++;
   mode = 'solo'; state = 'play';
   lastSoloMap = mapIdx;
   resetBuild();
@@ -2702,7 +2707,7 @@ function handleNet(m) {
     duel.remoteAlive = false; duel.remoteMesh.visible = false;
     explode(duel.tx, 1.2, duel.tz, true);
     duel.myKills++; profile.kills++; saveProfile(); updateHUD();
-    killFeed(`<b>${profile.name}</b> ⚔️ ${duel.oppName || '?'}`);
+    killFeed(`<b>${esc(profile.name)}</b> ⚔️ ${esc(duel.oppName || '?')}`);
     if (duel.myKills >= KILL_TARGET) { netSend({ t: 'win' }); duelEnd(true); }
   }
   else if (m.t === 'win') { duelEnd(false); }
@@ -2769,7 +2774,7 @@ function duelReceiveHit() {
   player.alive = false; player.mesh.visible = false;
   explode(player.x, 1.2, player.z, true); hitFlash();
   duel.myDeaths++; netSend({ t: 'die' }); updateHUD();
-  killFeed(`<b>${duel.oppName || '?'}</b> ⚔️ ${profile.name}`);
+  killFeed(`<b>${esc(duel.oppName || '?')}</b> ⚔️ ${esc(profile.name)}`);
   if (duel.over) return;
   setTimeout(() => {
     if (!duel || duel.over || mode !== 'duel') return;
@@ -2836,15 +2841,16 @@ function botDuelBotDies() {
   duel.remoteAlive = false; duel.remoteMesh.visible = false;
   explode(duel.x, 1.2, duel.z, true);
   duel.myKills++; profile.kills++; saveProfile(); updateHUD();
-  killFeed(`<b>${profile.name}</b> ⚔️ ${duel.oppName}`);
+  killFeed(`<b>${esc(profile.name)}</b> ⚔️ ${esc(duel.oppName)}`);
   if (duel.myKills >= KILL_TARGET) duelBotEnd(true);
 }
 function botDuelPlayerDies() {
   player.alive = false; player.mesh.visible = false;
   explode(player.x, 1.2, player.z, true); hitFlash();
   duel.myDeaths++; updateHUD();
-  killFeed(`<b>${duel.oppName}</b> ⚔️ ${profile.name}`);
+  killFeed(`<b>${esc(duel.oppName)}</b> ⚔️ ${esc(profile.name)}`);
   if (duel.over) return;
+  if (duel.myDeaths >= KILL_TARGET) { duelBotEnd(false); return; } // hedef ölüm sayısında YENİLGİ (eksikti: maç hiç bitmiyordu)
   setTimeout(() => {
     if (!duel || duel.over || mode !== 'duel') return;
     const cell = randOpenCell(duel.x, duel.z, 16);
@@ -3129,6 +3135,7 @@ function placeCoopSpawns() {
   }
 }
 function beginCoop(you, players, mapIdx) {
+  matchSeq++;
   mode = 'coop'; state = 'play';
   const host = you === players[0];
   isAuthority = host;
@@ -3170,17 +3177,20 @@ function coopNearestPlayer(e) {
 function coopHitPlayer(pid) {
   let downed = false, nm = '';
   if (pid === coop.you) {
+    if (player.inv > 0) return;
     if (player.shieldT > 0) { player.inv = 0.3; explode(player.x, 1, player.z, false); sfxBounce(); return; }
     player.inv = 1.0; player.health--; renderHealth(); hitFlash(); explode(player.x, 1, player.z, false);
     if (player.health <= 0) { player.alive = false; player.mesh.visible = false; explode(player.x, 1.2, player.z, true); downed = true; nm = profile.name; }
     netSend({ t: 'phealth', pid, hp: player.health, alive: player.alive });
   } else {
     const rm = coop.remotes.get(pid); if (!rm) return;
+    if ((rm.inv || 0) > 0) return;                                                        // çifte vuruş koruması
+    if (rm.shieldOn) { rm.inv = 0.3; explode(rm.x, 1, rm.z, false); sfxBounce(); return; } // KALKANLI misafire hasar yok (host tarafı)
     rm.inv = 1.0; rm.hp--; explode(rm.x, 1, rm.z, false);
     if (rm.hp <= 0) { rm.alive = false; rm.mesh.visible = false; explode(rm.x, 1.2, rm.z, true); downed = true; nm = rm.name || ('Oyuncu' + pid); }
     netSend({ t: 'phealth', pid, hp: rm.hp, alive: rm.alive });
   }
-  if (downed) { killFeed(`☠️ <b>${nm}</b>`); netSend({ t: 'down', name: nm }); updateCoopRoster(); }
+  if (downed) { killFeed(`☠️ <b>${esc(nm)}</b>`); netSend({ t: 'down', name: nm }); updateCoopRoster(); }
   coopCheckOver();
 }
 function coopCheckOver() {
@@ -3246,7 +3256,12 @@ function handleCoopNet(m) {
     const ce = coopEnemies.get(m.id);
     if (ce) { explode(ce.position.x, 1, ce.position.z, true); scene.remove(ce); coopEnemies.delete(m.id); }
   } else if (m.t === 'wave') {
-    wave = m.n; updateHUD(); banner(`${T().wave} ${wave}`);
+    wave = m.n;
+    // misafirde de rekor/harita açılışı + dalga bonusu (önceden yalnız host alıyordu → eşitsiz ilerleme)
+    if (wave > profile.bestWave) { profile.bestWave = wave; saveProfile(); }
+    const gBonus = wave * 15; roundCoins += gBonus; addCoins(gBonus);
+    updateHUD(); banner(wave % 5 === 0 ? T().bossW : `${T().wave} ${wave}  +🪙${gBonus}`);
+    if (wave % 5 === 0) stingBoss(); else stingWave();
     for (const ce of coopEnemies.values()) scene.remove(ce);
     coopEnemies.clear();
     player.alive = true; player.mesh.visible = true;
@@ -3255,10 +3270,14 @@ function handleCoopNet(m) {
       player.health = m.hp; player.alive = m.alive; renderHealth();
       if (!m.alive) { player.mesh.visible = false; } else { player.mesh.visible = true; }
       if (m.hp >= 0 && m.alive) hitFlash();
+    } else {
+      // diğer oyuncuların kendi bildirdiği can/ölüm durumu (host'un coopCheckOver'ı ve roster bunu görmüyordu)
+      const rm = coop.remotes.get(m.pid);
+      if (rm) { rm.hp = m.hp; rm.alive = !!m.alive; rm.mesh.visible = rm.alive; updateCoopRoster(); if (isAuthority) coopCheckOver(); }
     }
   } else if (m.t === 'pu_spawn') { addPowerup(m.type, m.x, m.z, m.id); }
   else if (m.t === 'pu_take') { const i = powerups.findIndex(p => p.id === m.id); if (i >= 0) { scene.remove(powerups[i].mesh); powerups.splice(i, 1); } }
-  else if (m.t === 'down') { killFeed(`☠️ <b>${m.name || '?'}</b>`); updateCoopRoster(); }
+  else if (m.t === 'down') { killFeed(`☠️ <b>${esc(m.name || '?')}</b>`); updateCoopRoster(); }
   else if (m.t === 'barrel') { const cv = covers.find(c => c.id === m.id); if (cv) destroyCover(cv, true); }
   else if (m.t === 'coopover') { coopGameOver(); }
   else if (m.t === 'peerleft') { coopPeerLeft(m.who); }
@@ -3270,6 +3289,7 @@ function updateCoop(dt) {
   if (coop.rosterT <= 0) { coop.rosterT = 0.4; updateCoopRoster(); }
   const k = 1 - Math.exp(-12 * dt);
   for (const rm of coop.remotes.values()) {
+    rm.inv = Math.max(0, (rm.inv || 0) - dt); // uzak oyuncu dokunulmazlığı zamanla insin (önceden hiç inmiyordu)
     rm.x += (rm.tx - rm.x) * k; rm.z += (rm.tz - rm.z) * k; rm.a += angNorm(rm.ta - rm.a) * k;
     rm.mesh.position.set(rm.x, 0, rm.z); rm.mesh.rotation.y = rm.a; rm.mesh.visible = rm.alive;
     if (rm.nameLabel) { rm.nameLabel.visible = rm.alive; if (rm.alive) rm.nameLabel.position.set(rm.x, 3.4, rm.z); }
@@ -3388,7 +3408,7 @@ function onTeamKill(byPid, diedPid) {
   }
   const dt = team.teamOf[diedPid];
   const col = dt != null ? TEAM_COLOR_HEX[dt] : '#fff';
-  killFeed(`<b>${teamNameOf(byPid)}</b> ⚔️ <span style="color:${col}">${teamNameOf(diedPid)}</span>`);
+  killFeed(`<b>${esc(teamNameOf(byPid))}</b> ⚔️ <span style="color:${col}">${esc(teamNameOf(diedPid))}</span>`);
   updateHUD(); updateTeamRoster();
   if (!team.over && kt != null && team.scores[kt] >= TEAM_TARGET) { team.over = true; teamEnd(kt === team.mine); }
 }
@@ -3432,7 +3452,7 @@ function updateTeamRoster() {
   const rows = [{ name: profile.name, alive: player.alive, team: team.mine, pid: team.you }];
   for (const [pid, rm] of team.remotes) rows.push({ name: rm.name || ('Oyuncu' + pid), alive: rm.alive, team: rm.team, pid });
   rows.sort((a, b) => a.team - b.team || a.pid - b.pid);
-  el.innerHTML = rows.map(r => `<div class="crow" style="color:${TEAM_COLOR_HEX[r.team]}">${r.alive ? '🟢' : '⚫'} ${r.name}${r.pid === team.you ? ' •' : ''}</div>`).join('');
+  el.innerHTML = rows.map(r => `<div class="crow" style="color:${TEAM_COLOR_HEX[r.team]}">${r.alive ? '🟢' : '⚫'} ${esc(r.name)}${r.pid === team.you ? ' •' : ''}</div>`).join('');
 }
 function handleTeamNet(m) {
   if (!team) return;
@@ -3626,6 +3646,14 @@ addEventListener('pointerdown', unlockAudio);
 addEventListener('keydown', unlockAudio);
 
 const touchCtl = { turn: 0, move: 0, fire: false };
+// arka plan/odak kaybında girdileri bırak (bildirim/uygulama değişimi sonrası tank kendi kendine gitmesin/ateş etmesin)
+function resetInputs() { for (const k of Object.keys(keys)) keys[k] = false; touchCtl.turn = 0; touchCtl.move = 0; touchCtl.fire = false; }
+function onAppHidden() {
+  resetInputs();
+  if (state === 'play' && mode === 'solo' && !paused) openSettings(); // solo: otomatik duraklat (ayarlar = duraklatma ekranı)
+}
+addEventListener('blur', onAppHidden);
+document.addEventListener('visibilitychange', () => { if (document.hidden) onAppHidden(); });
 if (IS_TOUCH) {
   document.body.classList.add('touch');
   const stick = $('stick'), knob = $('knob'), fireBtn = $('firebtn');
@@ -3999,7 +4027,7 @@ function tick() {
             if (player.health <= 0) {
               player.alive = false; player.mesh.visible = false;
               explode(player.x, 1.2, player.z, true);
-              setTimeout(gameOver, 1600);
+              { const _ms = matchSeq; setTimeout(() => { if (_ms === matchSeq) gameOver(); }, 1600); }
             }
           }
         }
