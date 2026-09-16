@@ -38,6 +38,7 @@ const L = {
     chooseMap: 'HARİTA SEÇ', garageTitle: 'GARAJ — Tank Al & Değiştir',
     buy: 'SATIN AL', owned: 'SEÇ', selected: '✓ SEÇİLİ', locked: w => `🔒 Dalga ${w}`,
     accTab: 'AKSESUAR', accEquip: 'TAK', accRemove: '✓ ÇIKAR', accNone: 'Aksesuar yok', shopTitle: 'ELMAS DÜKKÂNI',
+    shopSoon: '🔒 Satın alma yakında — mağaza sürümüyle birlikte gelecek',
     noMoney: 'Yetersiz 🪙!', sHealth: 'Can', sSpeed: 'Hız', sFire: 'Ateş',
     reward: '🪙', bestWave: w => `En iyi: Dalga ${w}`, maxLevel: 'MAKS',
     ballBtn: '⚽ 1v1 TOP MAÇI', ballSub: t => `Topu ateşle karşı base'e sok! İlk ${t} gol kazanır.`,
@@ -91,6 +92,7 @@ const L = {
     chooseMap: 'CHOOSE MAP', garageTitle: 'GARAGE — Buy & Switch Tanks',
     buy: 'BUY', owned: 'SELECT', selected: '✓ SELECTED', locked: w => `🔒 Wave ${w}`,
     accTab: 'ACCESSORY', accEquip: 'EQUIP', accRemove: '✓ REMOVE', accNone: 'No accessory', shopTitle: 'GEM SHOP',
+    shopSoon: '🔒 Purchases coming soon — with the store release',
     noMoney: 'Not enough 🪙!', sHealth: 'HP', sSpeed: 'Speed', sFire: 'Fire',
     reward: '🪙', bestWave: w => `Best: Wave ${w}`, maxLevel: 'MAX',
     ballBtn: '⚽ 1v1 BALL MATCH', ballSub: t => `Shoot the ball into the rival base! First to ${t} goals wins.`,
@@ -116,6 +118,7 @@ const T = () => L[lang];
 
 // ---------------------------------------------------------------- kalıcı profil
 const DEFAULT_PROFILE = { coins: 0, owned: ['recruit'], selected: 'recruit', bestWave: 1, upgrades: {}, kills: 0, wins: 0, games: 0, skins: ['default'], skin: 'default', achieved: [], lastDaily: '', streak: 0, name: '', gift1: false, level: 1, xp: 0, tokens: 0, gems: 0, accessories: [], accessory: '' };
+const PROFILE_V = 2; // şema sürümü — ileride alan taşıma (migration) için
 let profile;
 try {
   profile = Object.assign({}, DEFAULT_PROFILE, JSON.parse(localStorage.getItem('tankprofile') || '{}'));
@@ -128,8 +131,22 @@ try {
   profile.streak = profile.streak || 0;
   if (typeof profile.lastDaily !== 'string') profile.lastDaily = '';
   if (!profile.name) profile.name = 'Oyuncu' + Math.floor(Math.random() * 900 + 100);
-} catch { profile = Object.assign({}, DEFAULT_PROFILE); }
-function saveProfile() { localStorage.setItem('tankprofile', JSON.stringify(profile)); }
+  // sayısal alan doğrulama: bozuk/NaN/negatif kayıt oyunu kilitleyemesin
+  const num = (v, lo, hi, d) => (Number.isFinite(+v) ? Math.max(lo, Math.min(hi, Math.floor(+v))) : d);
+  profile.coins = num(profile.coins, 0, 1e9, 0); profile.gems = num(profile.gems, 0, 1e6, 0);
+  profile.tokens = num(profile.tokens, 0, 1e6, 0); profile.xp = num(profile.xp, 0, 1e9, 0);
+  profile.level = num(profile.level, 1, 9999, 1); profile.bestWave = num(profile.bestWave, 1, 500, 1);
+  if (!Array.isArray(profile.accessories)) profile.accessories = [];
+  if (typeof profile.accessory !== 'string') profile.accessory = '';
+  if (typeof profile.selected !== 'string') profile.selected = 'recruit';
+  if (typeof profile.skin !== 'string') profile.skin = 'default';
+  profile.name = String(profile.name).slice(0, 14);
+  profile.v = PROFILE_V;
+} catch { profile = Object.assign({}, DEFAULT_PROFILE, { v: PROFILE_V }); }
+function saveProfile() {
+  try { localStorage.setItem('tankprofile', JSON.stringify(profile)); }
+  catch (e) { /* kota/gizli mod: oyun çalışmaya devam etsin */ }
+}
 function addCoins(n) { profile.coins += n; saveProfile(); updateCoinBar(); }
 function addGems(n) { profile.gems = (profile.gems || 0) + n; saveProfile(); updateGemBar(); }
 
@@ -164,31 +181,39 @@ function nativeInit() {
 
 // ---------------------------------------------------------------- PlatformAdapter (GDD kuralı: oyun kodu platform API'sini
 // DOĞRUDAN çağırmaz; yalnızca bu soyut arayüzü kullanır. Web'de stub, native'de AdMob/StoreKit'e bağlanır — hesap sonrası).
+// geliştirme simülasyonu YALNIZCA yerel geliştirmede aktif: üretimde sahte başarı dönmez
+// (inceleme kuralı: gerçek sağlayıcı yokken satın alma/reklam "başarılı" görünmemeli)
+const DEV_SIM = !isNativeApp() && /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
 const Platform = {
-  // ödüllü reklam izlet → Promise<bool> (izlendi=ödül ver). Web/dev: reklam yok, kısa gecikmeyle true.
+  // gerçek reklam gösterilebilir mi? (native: AdMob eklentisi; web: yalnızca yerel geliştirme simülasyonu)
+  adsAvailable() { return isNativeApp() ? !!capPlugins().AdMob : DEV_SIM; },
+  // ödüllü reklam izlet → Promise<bool> (izlendi=ödül ver)
   rewarded(placement) {
     return new Promise(resolve => {
       const P = capPlugins();
       if (isNativeApp() && P.AdMob) {
         // TODO(native): AdMob rewarded göster; kullanıcı tamamlarsa resolve(true), atlarsa resolve(false).
-        // SDK/hesap gelene kadar stub:
-        resolve(true);
+        resolve(false); // SDK bağlanana dek ödül YOK (sahte başarı üretme)
+      } else if (DEV_SIM) {
+        setTimeout(() => resolve(true), 400); // yalnız localhost: akış testi
       } else {
-        setTimeout(() => resolve(true), 400); // web: simüle
+        resolve(false); // üretim webi: reklam yok → ödül yok
       }
     });
   },
   // maç aralarında interstitial (asla maç İÇİNDE değil). Web: no-op. Native: AdMob interstitial (TODO).
   interstitial() { /* native TODO: AdMob interstitial */ },
-  // IAP satın alma → Promise<bool>. Native: StoreKit/Play Billing (TODO). Web/dev: test için simüle başarılı.
+  // IAP satın alma → Promise<bool>
   purchase(sku) {
     return new Promise(resolve => {
       const P = capPlugins();
       if (isNativeApp() && P.InAppPurchase) {
         // TODO(native): StoreKit/Play Billing satın alma akışı; başarılıysa resolve(true).
         resolve(false);
+      } else if (DEV_SIM) {
+        setTimeout(() => resolve(true), 600); // yalnız localhost: akış testi
       } else {
-        setTimeout(() => resolve(true), 600); // web/dev: mağaza yok → akışı test etmek için simüle
+        resolve(false); // üretim: gerçek mağaza gelene dek satın alma kapalı
       }
     });
   },
@@ -196,6 +221,7 @@ const Platform = {
 // ödüllü reklam sıklık sınırı (GDD: saatte ≤4, FTUE'nin ilk 3 maçında hiç)
 let rewardedTimes = [];
 function canOfferRewarded() {
+  if (!Platform.adsAvailable()) return false; // gerçek reklam yoksa x2 butonu hiç görünmesin
   if ((profile.games || 0) <= 3) return false;
   const now = Date.now();
   rewardedTimes = rewardedTimes.filter(t => now - t < 3600000);
@@ -2515,7 +2541,10 @@ async function buyGems(pack, btn) {
     addGems(total); sfxCoin(); showToast(`💎 +${total}`, 2600);
     track('iap', { sku: pack.sku, gems: total });
     renderShop();
-  } else { btn.disabled = false; btn.textContent = old; }
+  } else {
+    btn.disabled = false; btn.textContent = old;
+    showToast(T().shopSoon, 2800); // üretimde satın alma kapalı — dürüst mesaj, sahte başarı yok
+  }
 }
 
 function renderAchievements() {
