@@ -15,6 +15,8 @@ const L = {
     vulnTxt: 'SAVUNMASIZ!',
     tutTitle: 'EĞİTİM', tutSteps: ['Tankı sür', 'Ateş et', 'Mermiyi duvardan sektir', 'Varili patlat'],
     tutDone: '🎓 Eğitim tamam! +🪙100',
+    shopNote: '💎 Elmaslarla premium tank ve aksesuar alınır. Gerçek para satın almaları henüz aktif değil — mağaza sürümüyle gelecek.',
+    packPop: '★ POPÜLER', packBest: '★ EN AVANTAJLI',
     againBtn: '↻ TEKRAR OYNA', rewardedBtn: '📺 Reklam izle → x2 ödül', rewardedGot: '🎉 x2 ödül alındı!', adLoading: '📺 Yükleniyor...',
     questsBtn: '🎯 GÖREVLER', questsTitle: 'GÜNLÜK GÖREVLER', questsSub: 'Her gece yenilenir',
     lbBtn: '🏆 LİDER', lbTitle: 'LİDER TABLOSU', lbDaily: 'BUGÜN', lbWeekly: 'BU HAFTA', lbEmpty: 'Henüz skor yok — ilk sen ol!', lbLoad: 'Yükleniyor...', lbScore: 'Dalga',
@@ -74,6 +76,8 @@ const L = {
     vulnTxt: 'VULNERABLE!',
     tutTitle: 'TUTORIAL', tutSteps: ['Drive the tank', 'Fire your cannon', 'Bounce a shot off a wall', 'Blow up a barrel'],
     tutDone: '🎓 Tutorial complete! +🪙100',
+    shopNote: '💎 Gems buy premium tanks and accessories. Real-money purchases are not live yet — coming with the store release.',
+    packPop: '★ POPULAR', packBest: '★ BEST VALUE',
     againBtn: '↻ PLAY AGAIN', rewardedBtn: '📺 Watch ad → 2x reward', rewardedGot: '🎉 2x reward claimed!', adLoading: '📺 Loading...',
     questsBtn: '🎯 QUESTS', questsTitle: 'DAILY QUESTS', questsSub: 'Refreshes every night',
     lbBtn: '🏆 RANKS', lbTitle: 'LEADERBOARD', lbDaily: 'TODAY', lbWeekly: 'THIS WEEK', lbEmpty: 'No scores yet — be the first!', lbLoad: 'Loading...', lbScore: 'Wave',
@@ -251,7 +255,8 @@ function maybeInterstitial() {
 const SESSION_ID = Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
 function track(ev, data) {
   try {
-    const payload = JSON.stringify(Object.assign({ ev, sid: SESSION_ID, t: Date.now() }, data || {}));
+    // pid: kalıcı istemci kimliği (CLIENT_ID) — sunucuda günlük tekil oyuncu (D1/D7 retention) sayımı için
+    const payload = JSON.stringify(Object.assign({ ev, sid: SESSION_ID, pid: CLIENT_ID, t: Date.now() }, data || {}));
     const url = apiBase() + '/ev';
     if (navigator.sendBeacon) navigator.sendBeacon(url, payload);
     else fetch(url, { method: 'POST', body: payload, keepalive: true }).catch(() => {});
@@ -499,10 +504,24 @@ function tex(url, srgb = false, repeat = 1) {
   return t;
 }
 
-const [tankGltf, envTex] = await Promise.all([
-  new GLTFLoader().loadAsync('assets/tank.glb'),
-  new RGBELoader().loadAsync('assets/env.hdr'),
-]);
+// açılış varlıkları: başarısızlıkta siyah ekran yerine YENİDEN DENE ekranı (zayıf ağ / ilk yüklemede kesinti)
+let tankGltf, envTex;
+try {
+  [tankGltf, envTex] = await Promise.all([
+    new GLTFLoader().loadAsync('assets/tank.glb'),
+    new RGBELoader().loadAsync('assets/env.hdr'),
+  ]);
+} catch (err) {
+  const ld = document.getElementById('loading');
+  if (ld) {
+    const trq = (localStorage.getItem('tanklang') || navigator.language || 'tr').toLowerCase().startsWith('tr');
+    ld.innerHTML = `<div class="ldtitle">TANK SAVAŞI 3D</div>
+      <div class="ldtext" style="max-width:280px;text-align:center">⚠️ ${trq ? 'Yükleme başarısız — internet bağlantını kontrol et' : 'Loading failed — check your connection'}</div>
+      <button id="bootretry" style="margin-top:18px;font:bold 17px system-ui;padding:12px 26px;border-radius:12px;border:2px solid #7dff9b;background:#1c2a14;color:#7dff9b;cursor:pointer">↻ ${trq ? 'TEKRAR DENE' : 'RETRY'}</button>`;
+    document.getElementById('bootretry').onclick = () => location.reload();
+  }
+  throw err; // modül dursun; retry temiz reload yapar
+}
 envTex.mapping = THREE.EquirectangularReflectionMapping;
 scene.background = envTex;
 scene.environment = envTex;
@@ -897,7 +916,7 @@ function destroyCover(cv, fromNet) {
 function damageEnemy(e, dmg) {
   e.hp -= dmg;
   if (e.hp <= 0) {
-    e.alive = false; explode(e.x, 1.0, e.z, true); scene.remove(e.mesh);
+    e.alive = false; explode(e.x, 1.0, e.z, true); scene.remove(e.mesh); disposeTank(e.mesh);
     popFloater(e.x, 2.2, e.z, '+' + e.score, e.type === 'boss' ? '#ff7a3a' : '#ffe86a');
     if (mode === 'coop') netSend({ t: 'ekill', id: e.id });
     score += e.score; roundCoins += e.coins; profile.kills++; addCoins(e.coins); updateHUD();
@@ -993,6 +1012,7 @@ function buildTank(def) {
       o.castShadow = o.receiveShadow = true;
       if (o.material && o.material.name === 'TankPaint') {
         o.material = o.material.clone();
+        o.material.userData.owned = true; // örneğe özel klon: disposeTank bunu serbest bırakabilir (paylaşılan glTF malzemesi değil)
         o.material.color.set(def.color);
         if (def.metal) o.material.metalness = 0.7;
         if (def.glow) { o.material.emissive.set(def.color); o.material.emissiveIntensity = 0.35; }
@@ -1103,6 +1123,19 @@ const accById = id => ACCESSORIES.find(a => a.id === id);
 // kule-üstü oturan aksesuarlar (tank kule yüksekliğine göre kaydırılır); diğerleri gövdeye sabit
 const ACC_TURRET_SLOT = new Set(['surf', 'cone', 'tophat', 'duck', 'crown']);
 function disposeSubtree(o) { o.traverse(n => { if (n.isMesh) { if (n.geometry) n.geometry.dispose(); if (n.material) (Array.isArray(n.material) ? n.material : [n.material]).forEach(m => m.dispose()); } }); }
+// tank klonu temizliği (GPU sızıntısı fix): yalnız örneğe ÖZEL kaynaklar bırakılır (userData.owned malzeme klonları,
+// ownGeo işaretli geometriler — boss halkaları). Paylaşılan glTF geometri/malzemesine dokunmak diğer klonları bozar.
+function disposeTank(root) {
+  if (!root) return;
+  root.traverse(o => {
+    if (o.isMesh) {
+      (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => { if (m && m.userData && m.userData.owned) m.dispose(); });
+      if (o.userData.ownGeo && o.geometry) o.geometry.dispose();
+    }
+  });
+}
+// isim etiketi temizliği: DİKKAT — canvas dokular nameTexCache'te paylaşılır, dispose EDİLMEZ; yalnız sprite malzemesi örneğe özeldir
+function disposeLabel(l) { if (l && l.material) l.material.dispose(); }
 function applyAccessory(root, accId, tankDef) {
   if (root.userData.accMesh) { root.remove(root.userData.accMesh); disposeSubtree(root.userData.accMesh); root.userData.accMesh = null; }
   const a = accById(accId); if (!a) return;
@@ -1490,6 +1523,7 @@ function applySkin(mesh, skinId) {
   mesh.traverse(o => {
     if (o.isMesh && o.material && o.material.name === 'TankPaint') {
       o.material = o.material.clone();
+      o.material.userData.owned = true;
       o.material.color.setHex(s.color);
       o.material.metalness = s.metal != null ? s.metal : 0.15;
       o.material.roughness = s.rough != null ? s.rough : 0.55;
@@ -1503,7 +1537,7 @@ function applySkin(mesh, skinId) {
 const DUEL_TANK = { ...TANKS[0] };
 function setPlayerTank(overrideDef) {
   const def = overrideDef || effTank(profile.selected);
-  if (player.mesh) scene.remove(player.mesh);
+  if (player.mesh) { scene.remove(player.mesh); disposeTank(player.mesh); }
   player.mesh = buildTank(def);
   applySkin(player.mesh, profile.skin);
   applyAccessory(player.mesh, profile.accessory, def);
@@ -1571,7 +1605,7 @@ function fire(owner, angOff = 0, playerShot = null) {
   if (isPlayer && playerTurret) recoil = 0.14;
 }
 function clearBullets() { for (const b of bullets) scene.remove(b.mesh); bullets.length = 0; }
-function clearEnemies() { for (const e of enemies) scene.remove(e.mesh); enemies = []; }
+function clearEnemies() { for (const e of enemies) { scene.remove(e.mesh); disposeTank(e.mesh); } enemies = []; }
 
 // ---------------------------------------------------------------- güç-yükseltmeleri
 const POWERUPS = [
@@ -2238,6 +2272,7 @@ function applyLang() {
   $('btn-duel').textContent = t.duel;
   $('btn-ball').textContent = t.ballBtn;
   $('btn-quickplay').textContent = t.quickPlay;
+  { const sn = document.querySelector('.shop-note'); if (sn) sn.textContent = t.shopNote; } // dükkân dip notu (EN çevirisi eksikti)
   // alt nav etiketleri (ikon sabit, .nlbl metni dile göre)
   $('btn-quests').querySelector('.nlbl').textContent = t.navQuests;
   $('btn-back-quests').textContent = t.back;
@@ -2590,8 +2625,8 @@ function renderAccessories() {
 const GEM_PACKS = [
   { sku: 'gems_small', gems: 50,   bonus: 0,   price: '₺29,99',  tag: '' },
   { sku: 'gems_mid',   gems: 150,  bonus: 15,  price: '₺79,99',  tag: '+%10' },
-  { sku: 'gems_big',   gems: 400,  bonus: 60,  price: '₺179,99', tag: '★ POPÜLER' },
-  { sku: 'gems_mega',  gems: 1000, bonus: 250, price: '₺379,99', tag: '★ EN AVANTAJLI' },
+  { sku: 'gems_big',   gems: 400,  bonus: 60,  price: '₺179,99', tagKey: 'packPop' },
+  { sku: 'gems_mega',  gems: 1000, bonus: 250, price: '₺379,99', tagKey: 'packBest' },
 ];
 let shopFromGarage = false;
 function openShop() {
@@ -2612,7 +2647,7 @@ function renderShop() {
       `<div class="cname" style="color:#6fe0ff">💎 ${total}</div>` +
       `<div class="cswatch" style="background:radial-gradient(circle at 50% 38%,#1c6a86,#0c1620);display:flex;align-items:center;justify-content:center;font-size:34px">💎</div>` +
       (p.bonus ? `<div class="cstat" style="text-align:center;color:#7dff9b">+${p.bonus} bonus 🎁</div>` : `<div class="cstat" style="text-align:center">&nbsp;</div>`) +
-      `<div class="cstat" style="text-align:center;color:#ffd76a;font-weight:bold;min-height:16px">${p.tag || ''}</div>`;
+      `<div class="cstat" style="text-align:center;color:#ffd76a;font-weight:bold;min-height:16px">${p.tagKey ? T()[p.tagKey] : (p.tag || '')}</div>`;
     const btn = document.createElement('button'); btn.className = 'mbtn small gold';
     btn.textContent = p.price;
     btn.onclick = () => buyGems(p, btn);
@@ -2797,9 +2832,9 @@ function autoJoinFromLink(code, mode) {
 }
 function clearDuelMeshes() {
   if (!duel) return;
-  if (duel.remoteMesh) scene.remove(duel.remoteMesh);
+  if (duel.remoteMesh) { scene.remove(duel.remoteMesh); disposeTank(duel.remoteMesh); }
   if (duel.remoteShield) scene.remove(duel.remoteShield);
-  if (duel.nameLabel) scene.remove(duel.nameLabel);
+  if (duel.nameLabel) { scene.remove(duel.nameLabel); disposeLabel(duel.nameLabel); }
 }
 function closeNet() {
   if (ws) { ws.onclose = null; ws.close(); ws = null; }
@@ -2809,6 +2844,17 @@ function closeNet() {
   matchOverMode = null; myReady = false; peerReady = false;
 }
 function netSend(obj) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(obj)); }
+// koop/takım maçı ortasında SOKET koptu (wifi/sunucu restart): kazanımları teslim eden sonuç ekranı göster
+function connLost() {
+  matchSeq++;
+  matchEndReason = 'disconnect';
+  const t = T(), cCoins = roundCoins;
+  if (mode === 'coop') { if (coop) coop.over = true; clearCoop(); }
+  else if (mode === 'team') clearTeam();
+  clearBullets(); clearEnemies();
+  closeNet();
+  showHarvest({ title: t.connLostTitle, won: false, sub: t.connLostSub, xpKind: 'wave', xpOpts: { wave: mode === 'coop' ? wave : 1 }, coins: cCoins, replay: null });
+}
 function connectNet(onOpen) {
   netYou = null; netMode = null; netBegun = false; netMapIdx = null;
   try { ws = new WebSocket(wsBase()); }
@@ -2817,7 +2863,13 @@ function connectNet(onOpen) {
   ws.onerror = () => { duelStatusEl.textContent = T().connFail; };
   ws.onclose = () => {
     if (state === 'play' && (mode === 'duel' || mode === 'ball')) peerLeft();
+    else if (state === 'play' && (mode === 'coop' || mode === 'team')) connLost(); // sunucu bağlantısı koptu: asılı kalma yok, düzgün sonuç ekranı
     else if (matchOverMode) onPeerGone();
+    else if (state === 'menu' && !msgEl.classList.contains('hidden')) {
+      // lobide beklerken düştü: durum satırına yaz (sessiz kalmasın)
+      const el = (pendingMode === 'coop' || pendingMode === 'team') ? $('coopstatus') : duelStatusEl;
+      if (el) el.textContent = T().connFail;
+    }
   };
   ws.onmessage = ev => { let m; try { m = JSON.parse(ev.data); } catch { return; } handleNet(m); };
 }
@@ -2879,7 +2931,7 @@ function handleNet(m) {
 }
 function applyRemoteSkin(color, scale, name, acc) {
   if (!duel) return;
-  scene.remove(duel.remoteMesh);
+  scene.remove(duel.remoteMesh); disposeTank(duel.remoteMesh);
   duel.remoteMesh = buildTank({ color, scale: scale || 1 });
   applyAccessory(duel.remoteMesh, acc); // rakibin aksesuarı (base tank → turretTop 1.5)
   duel.remoteMesh.position.set(duel.x, 0, duel.z);
@@ -3021,6 +3073,7 @@ function botDuelPlayerDies() {
 function duelBotEnd(won) {
   if (!duel || duel.over) return;
   duel.over = true;
+  matchEndReason = won ? 'win' : 'lose';
   if (won) { profile.wins++; saveProfile(); questProgress('win', 1); }
   const t = T();
   banner(won ? t.youWin : t.youLose);
@@ -3039,6 +3092,7 @@ function duelBotEnd(won) {
 function duelEnd(won) {
   if (!duel || duel.over) return;
   duel.over = true;
+  matchEndReason = won ? 'win' : 'lose';
   if (won) { profile.wins++; saveProfile(); questProgress('win', 1); }
   grantMatchXp('pvp', { kills: duel.myKills, won });
   const t = T(), a = duel.myKills, b = duel.myDeaths;
@@ -3049,6 +3103,7 @@ function duelEnd(won) {
 function peerLeft() {
   if (!duel || duel.over) return;
   duel.over = true;
+  matchEndReason = 'peerleft';
   const t = T();
   banner(t.peerLeft);
   setTimeout(() => {
@@ -3263,6 +3318,7 @@ function endBall() {
   const winner = ball.g1 > ball.g2 ? 1 : 2;
   const won = winner === duel.you;
   ball.over = true;
+  matchEndReason = won ? 'win' : 'lose';
   if (won) { profile.wins++; saveProfile(); questProgress('win', 1); }
   grantMatchXp('ball', { won });
   banner(won ? t.youWin : t.youLose);
@@ -3274,9 +3330,9 @@ function endBall() {
 
 // ---------------------------------------------------------------- kooperatif
 function clearCoop() {
-  if (coop) for (const rm of coop.remotes.values()) { scene.remove(rm.mesh); if (rm.shield) scene.remove(rm.shield); if (rm.nameLabel) scene.remove(rm.nameLabel); }
+  if (coop) for (const rm of coop.remotes.values()) { scene.remove(rm.mesh); disposeTank(rm.mesh); if (rm.shield) scene.remove(rm.shield); if (rm.nameLabel) { scene.remove(rm.nameLabel); disposeLabel(rm.nameLabel); } }
   $('coophud').style.display = 'none';
-  for (const ce of coopEnemies.values()) scene.remove(ce);
+  for (const ce of coopEnemies.values()) { scene.remove(ce); disposeTank(ce); }
   coopEnemies.clear();
   clearEnemies(); clearPowerups();
   coop = null;
@@ -3373,6 +3429,7 @@ function coopNextWave() {
   spawnEnemies(waveComposition(wave, coop.players.length));
 }
 function coopGameOver() {
+  matchEndReason = matchEndReason || 'wipe'; // takım silindi (disconnect gibi özel nedenler önceden set edilmiş olabilir)
   if (coop) coop.over = true;
   questProgress('wave', Math.max(0, wave - 1));
   submitScore(wave);
@@ -3383,7 +3440,7 @@ function coopGameOver() {
 function coopPeerLeft(who) {
   if (!coop) return;
   const rm = coop.remotes.get(who);
-  if (rm) { scene.remove(rm.mesh); if (rm.shield) scene.remove(rm.shield); if (rm.nameLabel) scene.remove(rm.nameLabel); coop.remotes.delete(who); }
+  if (rm) { scene.remove(rm.mesh); disposeTank(rm.mesh); if (rm.shield) scene.remove(rm.shield); if (rm.nameLabel) { scene.remove(rm.nameLabel); disposeLabel(rm.nameLabel); } coop.remotes.delete(who); }
   coop.players = coop.players.filter(p => p !== who);
   updateCoopRoster();
   banner(T().peerLeft);
@@ -3413,7 +3470,7 @@ function handleCoopNet(m) {
     }
   } else if (m.t === 'ekill') {
     const ce = coopEnemies.get(m.id);
-    if (ce) { explode(ce.position.x, 1, ce.position.z, true); scene.remove(ce); coopEnemies.delete(m.id); }
+    if (ce) { explode(ce.position.x, 1, ce.position.z, true); scene.remove(ce); disposeTank(ce); coopEnemies.delete(m.id); }
   } else if (m.t === 'wave') {
     wave = m.n;
     // misafirde de rekor/harita açılışı + dalga bonusu (önceden yalnız host alıyordu → eşitsiz ilerleme)
@@ -3476,13 +3533,14 @@ function paintTank(mesh, color) {
   mesh.traverse(o => {
     if (o.isMesh && o.material && o.material.name === 'TankPaint') {
       o.material = o.material.clone();
+      o.material.userData.owned = true;
       o.material.color.setHex(color);
       o.material.emissiveIntensity = 0;
     }
   });
 }
 function clearTeam() {
-  if (team) for (const rm of team.remotes.values()) { scene.remove(rm.mesh); if (rm.shield) scene.remove(rm.shield); if (rm.nameLabel) scene.remove(rm.nameLabel); }
+  if (team) for (const rm of team.remotes.values()) { scene.remove(rm.mesh); disposeTank(rm.mesh); if (rm.shield) scene.remove(rm.shield); if (rm.nameLabel) { scene.remove(rm.nameLabel); disposeLabel(rm.nameLabel); } }
   $('coophud').style.display = 'none';
   clearEnemies(); clearPowerups();
   team = null;
@@ -3579,6 +3637,7 @@ function teamReceiveHit(byPid) {
   onTeamKill(byPid, team.you);
 }
 function teamEnd(won) {
+  matchEndReason = won ? 'win' : 'lose';
   if (won) { profile.wins++; saveProfile(); questProgress('win', 1); }
   const t = T();
   banner(won ? t.teamWin : t.teamLose);
@@ -3997,7 +4056,8 @@ function trackTransitions() {
   if (state !== lastTrackedState) {
     if (state === 'play') { matchMode = mode; matchStartT = clock.elapsedTime; matchStartKills = profile.kills || 0; track('gameplay_start', { mode }); }
     else if (lastTrackedState === 'play') {
-      track('match_end', { mode: matchMode, dur: Math.round(clock.elapsedTime - matchStartT) });
+      track('match_end', { mode: matchMode, dur: Math.round(clock.elapsedTime - matchStartT), reason: matchEndReason || 'quit' });
+      matchEndReason = '';
       questProgress('match', 1);                                   // görev: maç oyna
       questProgress('kill', (profile.kills || 0) - matchStartKills); // görev: tank patlat
     }
@@ -4100,17 +4160,25 @@ function tick() {
     for (let i = bullets.length - 1; i >= 0; i--) {
       const b = bullets[i];
       b.life -= dt;
-      const nx = b.mesh.position.x + b.vx * dt, nz = b.mesh.position.z + b.vz * dt;
-      const w = pointInWall(nx, nz);
       let dead = b.life <= 0;
-      if (w && !dead) {
-        if (b.bounces > 0) {
-          const inX = b.mesh.position.x > w.minX && b.mesh.position.x < w.maxX;
-          if (inX) b.vz = -b.vz; else b.vx = -b.vx;
-          b.bounces--; sfxBounce();
-          if (b.playerShot) tutEvent('bounce');
-        } else { explode(b.mesh.position.x, 1.0, b.mesh.position.z, false); dead = true; }
-      } else { b.mesh.position.x = nx; b.mesh.position.z = nz; }
+      // anti-tünelleme: kare adımı ≤0.8 birimlik dilimlere bölünür — düşük FPS'te hızlı mermi (bspeed 42 × dt 0.05 ≈ 2.1 birim)
+      // tek adımda duvar hücresini atlayabiliyordu; dilim başına duvar testi bunu kapatır (sabit-adım simülasyonun hafif hali)
+      if (!dead) {
+        const slices = Math.min(4, Math.max(1, Math.ceil(Math.hypot(b.vx, b.vz) * dt / 0.8)));
+        const sdt = dt / slices;
+        for (let s = 0; s < slices && !dead; s++) {
+          const nx = b.mesh.position.x + b.vx * sdt, nz = b.mesh.position.z + b.vz * sdt;
+          const w = pointInWall(nx, nz);
+          if (w) {
+            if (b.bounces > 0) {
+              const inX = b.mesh.position.x > w.minX && b.mesh.position.x < w.maxX;
+              if (inX) b.vz = -b.vz; else b.vx = -b.vx;
+              b.bounces--; sfxBounce();
+              if (b.playerShot) tutEvent('bounce');
+            } else { explode(b.mesh.position.x, 1.0, b.mesh.position.z, false); dead = true; }
+          } else { b.mesh.position.x = nx; b.mesh.position.z = nz; }
+        }
+      }
       if (!dead) b.mesh.rotation.y = Math.atan2(-b.vx, -b.vz);
 
       if (!dead && covers.length) {
@@ -4145,7 +4213,7 @@ function tick() {
                 e.hp -= (1 + bDmg()) * (vuln ? 2 : 1);
                 if (vuln) popFloater(b.mesh.position.x, 2.6, b.mesh.position.z, 'x2!', '#54ff7a');
                 if (e.hp <= 0) {
-                  e.alive = false; explode(e.x, 1.0, e.z, true); scene.remove(e.mesh);
+                  e.alive = false; explode(e.x, 1.0, e.z, true); scene.remove(e.mesh); disposeTank(e.mesh);
                   popFloater(e.x, 2.2, e.z, '+' + e.score, e.type === 'boss' ? '#ff7a3a' : '#ffe86a');
                   netSend({ t: 'ekill', id: e.id });
                   score += e.score; roundCoins += e.coins; profile.kills++; addCoins(e.coins); updateHUD();
@@ -4200,7 +4268,7 @@ function tick() {
               e.hp -= (1 + bDmg()) * (vuln ? 2 : 1);
               if (vuln) popFloater(b.mesh.position.x, 2.6, b.mesh.position.z, 'x2!', '#54ff7a');
               if (e.hp <= 0) {
-                e.alive = false; explode(e.x, 1.0, e.z, true); scene.remove(e.mesh);
+                e.alive = false; explode(e.x, 1.0, e.z, true); scene.remove(e.mesh); disposeTank(e.mesh);
                 popFloater(e.x, 2.2, e.z, '+' + e.score, e.type === 'boss' ? '#ff7a3a' : '#ffe86a');
                 score += e.score; roundCoins += e.coins; profile.kills++; addCoins(e.coins); updateHUD();
               } else { e.hitT = 0.14; explode(b.mesh.position.x, 1.0, b.mesh.position.z, false); }
