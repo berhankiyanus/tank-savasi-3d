@@ -272,6 +272,13 @@
   .card .cswatch.cswatch-3d:hover { transform: translateY(-1px); box-shadow: 0 0 12px rgba(120,255,180,.5); }
   .card .cs-3d { position: absolute; right: 5px; bottom: 4px; font-size: 10px; font-weight: bold;
                  background: rgba(0,0,0,.55); color: #bff; padding: 2px 6px; border-radius: 6px; letter-spacing: .5px; }
+  /* garaj kartı tank görseli (offscreen render önbelleği) */
+  .card .cswatch.has-thumb { height: 72px; background: radial-gradient(ellipse at 50% 80%, #232d38, #10151c); overflow: hidden; }
+  .card .tankthumb { width: 100%; height: 100%; object-fit: contain; display: block; pointer-events: none; }
+  /* premium (elmas) satın alma butonu nefes animasyonu */
+  @keyframes srbreath { 0%, 100% { transform: scale(1); box-shadow: 0 0 0 rgba(255, 210, 80, 0); }
+                        50% { transform: scale(1.045); box-shadow: 0 0 22px rgba(255, 210, 80, .55); } }
+  .sr-btn.breath { animation: srbreath 1.7s ease-in-out infinite; }
   /* 3B tank vitrini overlay */
   .panel.showroom { position: fixed; inset: 0; width: 100%; max-width: none; padding: 0; margin: 0;
                     justify-content: space-between; pointer-events: none; z-index: 40; }
@@ -450,6 +457,7 @@
   <!-- elmas dükkânı (IAP) -->
   <div id="panel-shop" class="panel">
     <div id="shoplist" class="card-list"></div>
+    <div class="shop-note" id="shop-free" style="color:#ffd76a">🎁 Ücretsiz 💎 kazan: her 5. seviyede +2 · sezon kademeleri 8/16/24 · günün ilk koşu zaferi +1</div>
     <div class="shop-note">💎 Elmaslarla premium tank ve aksesuar alınır. Gerçek para satın almaları henüz aktif değil — mağaza sürümüyle gelecek.</div>
     <button class="mbtn small" id="btn-back-shop">‹ GERİ</button>
   </div>

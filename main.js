@@ -20,6 +20,7 @@ const L = {
     tutTitle: 'EĞİTİM', tutSteps: ['Tankı sür', 'Ateş et', 'Mermiyi duvardan sektir', 'Varili patlat'],
     tutDone: '🎓 Eğitim tamam! +🪙100',
     shopNote: '💎 Elmaslarla premium tank ve aksesuar alınır. Gerçek para satın almaları henüz aktif değil — mağaza sürümüyle gelecek.',
+    freeGems: '🎁 Ücretsiz 💎 kazan: her 5. seviyede +2 · sezon kademeleri 8/16/24 · günün ilk koşu zaferi +1',
     packPop: '★ POPÜLER', packBest: '★ EN AVANTAJLI',
     againBtn: '↻ TEKRAR OYNA', rewardedBtn: '📺 Reklam izle → x2 ödül', rewardedGot: '🎉 x2 ödül alındı!', adLoading: '📺 Yükleniyor...',
     questsBtn: '🎯 GÖREVLER', questsTitle: 'GÜNLÜK GÖREVLER', questsSub: 'Her gece yenilenir',
@@ -85,6 +86,7 @@ const L = {
     tutTitle: 'TUTORIAL', tutSteps: ['Drive the tank', 'Fire your cannon', 'Bounce a shot off a wall', 'Blow up a barrel'],
     tutDone: '🎓 Tutorial complete! +🪙100',
     shopNote: '💎 Gems buy premium tanks and accessories. Real-money purchases are not live yet — coming with the store release.',
+    freeGems: '🎁 Earn free 💎: +2 every 5th level · season tiers 8/16/24 · first run victory each day +1',
     packPop: '★ POPULAR', packBest: '★ BEST VALUE',
     againBtn: '↻ PLAY AGAIN', rewardedBtn: '📺 Watch ad → 2x reward', rewardedGot: '🎉 2x reward claimed!', adLoading: '📺 Loading...',
     questsBtn: '🎯 QUESTS', questsTitle: 'DAILY QUESTS', questsSub: 'Refreshes every night',
@@ -665,7 +667,7 @@ const harborGroundMat = asphaltMat.clone(); harborGroundMat.color.setHex(0x9fb4c
 const harborWallMat = wallMat.clone(); harborWallMat.color.setHex(0xd0dae2); harborWallMat.metalness = 0.2; harborWallMat.roughness = 0.6;
 // kanyon: kızıl kum zemin + kızıl kaya duvar
 const canyonGroundMat = sandMat.clone(); canyonGroundMat.color.setHex(0xd8845a);
-const canyonWallMat = wallMat.clone(); canyonWallMat.color.setHex(0xd8885a); canyonWallMat.roughness = 1.0;
+const canyonWallMat = wallMat.clone(); canyonWallMat.color.setHex(0xb0603a); canyonWallMat.roughness = 1.0; // zeminden belirgin koyu-kızıl (0xd8885a zeminle aynı tona düşüyordu — duvar/zemin ayrımı yoktu)
 
 // dekoratif obje malzeme + geometrileri (paylaşımlı, bir kez oluşturulur)
 const dMat = {
@@ -793,7 +795,7 @@ const THEMES = {
   desert: { ground: sandMat, wall: sandWallMat, fog: [0xe6cf9a, 55, 150], sun: [0xffe6b0, 3.7], hemi: [0xffe8c0, 0x9c7a48, 0.6], decor: 'desert', bullet: B_DAY },
   snow: { ground: snowMat, wall: iceWallMat, fog: [0xdce8f2, 60, 170], sun: [0xe2ecff, 2.7], hemi: [0xcfe0ff, 0x8a99aa, 0.75], decor: 'snow', bullet: [0xbfe8ff, 0x9fbcff, 0xcfeeff] },
   night: { ground: nightGroundMat, wall: nightWallMat, fog: [0x0a0e1a, 42, 135], sun: [0x9fb4ff, 1.1], hemi: [0x2a3350, 0x101522, 0.5], decor: 'night', bg: 0x0a0e1a, env: false, stars: true, bullet: [0xaef0ff, 0xff7ad0, 0xaef0ff] },
-  lava: { ground: lavaGroundMat, wall: lavaWallMat, fog: [0x2a0a04, 40, 120], sun: [0xff7a2e, 2.2], hemi: [0x5a1e10, 0x2a0a04, 0.7], decor: 'lava', bg: 0x1a0805, env: false, bullet: [0xff8a2a, 0xffd23a, 0xff7a1e] },
+  lava: { ground: lavaGroundMat, wall: lavaWallMat, fog: [0x2a0a04, 46, 135], sun: [0xff7a2e, 2.6], hemi: [0x6a2414, 0x2a0a04, 0.95], decor: 'lava', bg: 0x1a0805, env: false, bullet: [0xff8a2a, 0xffd23a, 0xff7a1e] }, // inceleme: sahne fazla karanlıktı — ortam ışığı yükseltildi
   space: { ground: spaceGroundMat, wall: spaceWallMat, fog: [0x05060f, 70, 220], sun: [0xcfe0ff, 2.4], hemi: [0x3a2a5a, 0x101020, 0.5], decor: 'space', bg: 0x05060f, env: false, stars: true, bullet: [0x6be7ff, 0xc07bff, 0x8be8ff] },
   city:   { ground: asphaltMat, wall: cityWallMat, fog: [0x8a94a8, 62, 155], sun: [0xffd9a8, 3.0], hemi: [0xaebfd8, 0x3a3f4a, 0.75], decor: 'city', bullet: B_DAY },
   harbor: { ground: harborGroundMat, wall: harborWallMat, fog: [0xaac6d6, 72, 175], sun: [0xfff4e0, 3.5], hemi: [0xcfe2ee, 0x4a5560, 0.85], decor: 'harbor', bullet: B_DAY },
@@ -888,6 +890,50 @@ function addTeleport(cell) {
   scene.add(m);
   const h = { type: 'teleport', x: cell.x, z: cell.z, r: 1.1, mesh: m, link: null }; hazards.push(h); return h;
 }
+// ---- ufuk silüetleri: arena DIŞINA tema renkli uzak şekiller — inceleme bulgusu: hiçbir açıdan
+// ufuk görünmüyordu, her sahne "kutunun içi" hissi veriyordu; sis içinde eriyen siluetler derinlik katar
+const silConeGeo = new THREE.ConeGeometry(1, 1, 7);
+const silBoxGeo = new THREE.BoxGeometry(1, 1, 1);
+let silGroup = null;
+const SIL_SPECS = {
+  default: { c: 0x6b5a40, t: 'hill' },   // tozlu tepeler
+  stadium: { c: 0x49653b, t: 'hill' },
+  desert:  { c: 0xb08a54, t: 'dune' },   // basık kumullar
+  snow:    { c: 0xdde8f2, t: 'peak' },   // sivri beyaz zirveler
+  night:   { c: 0x161d33, t: 'peak' },
+  lava:    { c: 0x2a1008, t: 'volcano' },
+  space:   { c: 0x141834, t: 'spire' },  // ince kuleler
+  city:    { c: 0x525c6e, t: 'tower' },  // bina siluetleri
+  harbor:  { c: 0x516774, t: 'tower' },
+  canyon:  { c: 0x8a4a2c, t: 'mesa' },   // yayvan masa tepeler
+};
+function buildSilhouettes(theme, mapIdx) {
+  if (silGroup) {
+    const mats = new Set();
+    silGroup.traverse(o => { if (o.isMesh && o.material) mats.add(o.material); });
+    scene.remove(silGroup); for (const m of mats) m.dispose();
+    silGroup = null;
+  }
+  const spec = SIL_SPECS[theme] || SIL_SPECS.default;
+  const mat = new THREE.MeshStandardMaterial({ color: spec.c, roughness: 1, metalness: 0 });
+  const rng = makeRng((mapIdx + 7) * 0x51ed2701); // deterministik: aynı harita hep aynı ufku kurar
+  silGroup = new THREE.Group();
+  const R0 = arenaHalf + 14;
+  for (let i = 0; i < 14; i++) {
+    const a = (i / 14) * Math.PI * 2 + (rng() - 0.5) * 0.35;
+    const r = R0 + rng() * 16;
+    let m, h;
+    if (spec.t === 'tower') { h = 7 + rng() * 9; m = new THREE.Mesh(silBoxGeo, mat); m.scale.set(3.5 + rng() * 3, h, 3.5 + rng() * 3); }
+    else if (spec.t === 'mesa') { h = 4.5 + rng() * 3.5; m = new THREE.Mesh(silBoxGeo, mat); m.scale.set(7 + rng() * 6, h, 5 + rng() * 4); }
+    else if (spec.t === 'spire') { h = 9 + rng() * 8; m = new THREE.Mesh(silConeGeo, mat); const w = 2.2 + rng() * 1.6; m.scale.set(w, h, w); }
+    else if (spec.t === 'peak' || spec.t === 'volcano') { h = 7 + rng() * 7; m = new THREE.Mesh(silConeGeo, mat); const w = 6 + rng() * 4; m.scale.set(w, h, w); }
+    else { h = spec.t === 'dune' ? 2.6 + rng() * 2 : 3.5 + rng() * 3; m = new THREE.Mesh(silConeGeo, mat); const w = 9 + rng() * 7; m.scale.set(w, h, w); } // hill/dune: geniş-basık
+    m.position.set(Math.cos(a) * r, h / 2 - 0.05, Math.sin(a) * r);
+    m.rotation.y = rng() * Math.PI;
+    silGroup.add(m);
+  }
+  scene.add(silGroup);
+}
 function buildEnvironment(mapIdx) {
   clearCovers(); clearHazards();
   const theme = MAPS[mapIdx].theme || 'default';
@@ -909,6 +955,7 @@ function buildEnvironment(mapIdx) {
   const pads = [];
   for (let i = 0; i < (spec.teleport || 0); i++) { const c = take(); if (c) pads.push(addTeleport(c)); }
   for (let i = 0; i + 1 < pads.length; i += 2) { pads[i].link = pads[i + 1]; pads[i + 1].link = pads[i]; }
+  buildSilhouettes(theme, mapIdx); // arena dışına tema silüetleri (ufuk hissi)
 }
 // solo ölüm akışı: yeni komutana TEK SEFERLİK ücretsiz diriliş teklifi (ilk 3 maç; inceleme: iki test ölümü de dalga 1'deydi)
 function canOfferRevive() { return mode === 'solo' && !profile.reviveUsed && (profile.games || 0) <= 3; }
@@ -1069,6 +1116,42 @@ function buildTank(def) {
   });
   if (def.scale && def.scale !== 1) g.scale.setScalar(def.scale);
   return g;
+}
+
+// ---------------------------------------------------------------- garaj kartı tank görselleri
+// inceleme bulgusu: kartlarda tank GÖRSELİ yoktu (düz renk şerit) — küçük offscreen renderer ile
+// her tank bir kez data-URI'ye çizilir ve oturum boyunca önbellekte kalır (tembel model inince tazelenir)
+let thumbGl = null, thumbScene = null, thumbCam = null;
+const tankThumbs = {};
+function renderTankThumb(base) {
+  if (tankThumbs[base.id]) return tankThumbs[base.id];
+  if (base.model && !loadedModels[base.model]) return null; // özel model henüz inmedi — çağıran ensureModel sonrası yeniler
+  try {
+    if (!thumbGl) {
+      thumbGl = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+      thumbGl.setSize(240, 150); thumbGl.setPixelRatio(1);
+      thumbGl.toneMapping = THREE.ACESFilmicToneMapping;
+      thumbScene = new THREE.Scene();
+      thumbScene.environment = envTex;
+      thumbScene.add(new THREE.HemisphereLight(0xcfe0ff, 0x3a2f22, 0.9));
+      const k = new THREE.DirectionalLight(0xffffff, 2.6); k.position.set(4, 7, 5); thumbScene.add(k);
+      const r = new THREE.DirectionalLight(0x88bbff, 1.5); r.position.set(-5, 4, -6); thumbScene.add(r);
+      thumbCam = new THREE.PerspectiveCamera(30, 240 / 150, 0.1, 80);
+    }
+    const m = buildTank(base);
+    m.rotation.y = Math.PI * 0.78; // çeyrek açı: namlu sola-öne, gövde okunur
+    thumbScene.add(m);
+    const box = new THREE.Box3().setFromObject(m), size = new THREE.Vector3(), ctr = new THREE.Vector3();
+    box.getSize(size); box.getCenter(ctr);
+    const R = Math.max(size.x, size.y, size.z);
+    thumbCam.position.set(ctr.x + R * 0.9, ctr.y + R * 0.72, ctr.z + R * 1.3);
+    thumbCam.lookAt(ctr.x, ctr.y - size.y * 0.06, ctr.z);
+    thumbGl.render(thumbScene, thumbCam);
+    const url = thumbGl.domElement.toDataURL('image/png');
+    thumbScene.remove(m); disposeTank(m);
+    tankThumbs[base.id] = url;
+    return url;
+  } catch (e) { return null; } // thumbnail üretilemezse kart renk şeridiyle kalır (oyun etkilenmez)
 }
 
 // ---------------------------------------------------------------- aksesuarlar (prosedürel; tanka takılır)
@@ -2347,6 +2430,7 @@ function applyLang() {
   $('btn-ball').textContent = t.ballBtn;
   $('btn-quickplay').textContent = t.quickPlay;
   { const sn = document.querySelector('.shop-note'); if (sn) sn.textContent = t.shopNote; } // dükkân dip notu (EN çevirisi eksikti)
+  { const fg = $('shop-free'); if (fg) fg.textContent = t.freeGems; } // "elmas nasıl kazanılır" — dükkân çıkmaz sokak hissi vermesin
   // alt nav etiketleri (ikon sabit, .nlbl metni dile göre)
   $('btn-quests').querySelector('.nlbl').textContent = t.navQuests;
   $('btn-back-quests').textContent = t.back;
@@ -2393,6 +2477,7 @@ function barHTML(frac) {
 
 // ---------------------------------------------------------------- 3B garaj vitrini (döndürülebilir inceleme)
 let showroomScene = null, showroomCam = null, showroomTurn = null, showroomTankMesh = null;
+let srKey = null, srRim = null, srAccent = null, srRingMat = null; // vitrin ışıkları — büyük/premium tanka göre uyarlanır
 const showroom = { active: false, mode: 'tank', tankId: null, accId: '', rot: 0, vel: 0, elev: 0.42, dragging: false, lastX: 0, lastY: 0, centerY: 0.9, radius: 8 };
 const SHOWROOM_PIVOT_Y = 0.5; // platform üstü — tank tabanı (y=0) buraya oturur
 function ensureShowroom() {
@@ -2407,16 +2492,17 @@ function ensureShowroom() {
   // döner platform + parlayan halka
   const base = new THREE.Mesh(new THREE.CylinderGeometry(3.1, 3.4, 0.5, 56), new THREE.MeshStandardMaterial({ color: 0x1a222c, roughness: 0.45, metalness: 0.7 }));
   base.position.y = 0.25; base.castShadow = base.receiveShadow = true; showroomScene.add(base);
-  const ring = new THREE.Mesh(new THREE.TorusGeometry(3.08, 0.05, 12, 64), new THREE.MeshStandardMaterial({ color: 0x1ec8b0, emissive: 0x1ec8b0, emissiveIntensity: 1.5, toneMapped: false }));
+  srRingMat = new THREE.MeshStandardMaterial({ color: 0x1ec8b0, emissive: 0x1ec8b0, emissiveIntensity: 1.5, toneMapped: false });
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(3.08, 0.05, 12, 64), srRingMat);
   ring.rotation.x = Math.PI / 2; ring.position.y = 0.5; showroomScene.add(ring);
   showroomTurn = new THREE.Group(); showroomTurn.position.y = SHOWROOM_PIVOT_Y; showroomScene.add(showroomTurn);
   // stüdyo ışıkları — hero aydınlatma
-  const key = new THREE.DirectionalLight(0xffffff, 3.0); key.position.set(4, 9, 6); key.castShadow = true;
-  key.shadow.mapSize.set(1024, 1024); const sc = key.shadow.camera; sc.left = -6; sc.right = 6; sc.top = 6; sc.bottom = -6; sc.near = 1; sc.far = 34; key.shadow.bias = -0.0006;
-  showroomScene.add(key);
-  showroomScene.add(new THREE.HemisphereLight(0x9fc0ff, 0x241d2e, 0.55));
-  const rim = new THREE.DirectionalLight(0x66aaff, 2.4); rim.position.set(-6, 4, -7); showroomScene.add(rim);
-  const accent = new THREE.PointLight(0xff9a3c, 26, 20, 2); accent.position.set(-4, 2.6, 3.5); showroomScene.add(accent);
+  srKey = new THREE.DirectionalLight(0xffffff, 3.0); srKey.position.set(4, 9, 6); srKey.castShadow = true;
+  srKey.shadow.mapSize.set(1024, 1024); const sc = srKey.shadow.camera; sc.left = -8; sc.right = 8; sc.top = 8; sc.bottom = -8; sc.near = 1; sc.far = 44; srKey.shadow.bias = -0.0006;
+  showroomScene.add(srKey);
+  showroomScene.add(new THREE.HemisphereLight(0x9fc0ff, 0x241d2e, 0.75));
+  srRim = new THREE.DirectionalLight(0x66aaff, 2.4); srRim.position.set(-6, 4, -7); showroomScene.add(srRim);
+  srAccent = new THREE.PointLight(0xff9a3c, 26, 20, 2); srAccent.position.set(-4, 2.6, 3.5); showroomScene.add(srAccent);
   // sürükle-çevir kontrolleri (yalnızca vitrin açıkken)
   renderer.domElement.addEventListener('pointerdown', e => {
     if (!showroom.active) return;
@@ -2437,19 +2523,35 @@ function buildShowroomTank() {
   if (showroomTankMesh) {
     showroomTurn.remove(showroomTankMesh);
     if (showroomTankMesh.userData.accMesh) disposeSubtree(showroomTankMesh.userData.accMesh);
-    showroomTankMesh.traverse(o => { if (o.isMesh && o.material && o.material.name === 'TankPaint') o.material.dispose(); });
+    disposeTank(showroomTankMesh); // TankPaint/kaplama klonu + klonlanmış glow malzemeleri (owned işaretli)
   }
   const def = effTank(showroom.tankId);
   const m = buildTank(def);
   // seçili tankta oyuncunun kaplaması, diğerlerinde varsayılan görünüm
   applySkin(m, showroom.tankId === profile.selected ? profile.skin : 'default');
   applyAccessory(m, showroom.accId, def); // önizlenen/takılı aksesuar
+  // glow malzemelerini KLONLA (paylaşılan glTF malzemesinde nabız oyun-içi tanklara sızmasın) → vitrinde nabız atsın
+  m.userData.glowMats = [];
+  m.traverse(o => {
+    if (o.isMesh && o.material && (o.material.name === 'EnergyGlow' || o.material.name === 'CoreGlow')) {
+      o.material = o.material.clone(); o.material.userData.owned = true;
+      m.userData.glowMats.push(o.material);
+    }
+  });
   showroomTankMesh = m; showroomTurn.add(m);
   // kamerayı modelin boyutuna göre çerçevele
   const box = new THREE.Box3().setFromObject(m), size = new THREE.Vector3(); box.getSize(size);
   showroom.centerY = SHOWROOM_PIVOT_Y + (box.min.y + box.max.y) / 2;
   const portrait = innerWidth < innerHeight;
   showroom.radius = Math.max(size.x, size.z, size.y) * (portrait ? 2.5 : 1.95) + 1.6;
+  // ışıkları model boyutuna ölçekle (Titan/Obüs gibi büyük modeller sönük kalıyordu) + premium altın halka
+  const bigR = Math.max(size.x, size.y, size.z), ls = Math.max(1, bigR / 3.4);
+  srKey.position.set(4 * ls, 9 * ls, 6 * ls); srKey.intensity = 3.0 + (ls - 1) * 3.2;
+  srRim.position.set(-6 * ls, 4 * ls, -7 * ls); srRim.intensity = 2.4 + (ls - 1) * 2.8;
+  srAccent.position.set(-4 * ls, 2.6 * ls, 3.5 * ls); srAccent.distance = 20 * ls; srAccent.intensity = 26 * ls;
+  const premium = !!tankById(showroom.tankId).gem;
+  srRingMat.color.setHex(premium ? 0xffc23a : 0x1ec8b0);
+  srRingMat.emissive.setHex(premium ? 0xffc23a : 0x1ec8b0);
 }
 function frameShowroomCam() {
   const R = showroom.radius, e = showroom.elev, ty = showroom.centerY;
@@ -2463,6 +2565,9 @@ function updateShowroom(dt) {
     if (Math.abs(showroom.vel) < 0.002) { showroom.vel = 0; showroom.rot += dt * 0.35; } // boşta yavaş oto-dönüş
   }
   showroomTurn.rotation.y = showroom.rot;
+  // premium parçalar vitrinde nabız gibi parlar (klonlanmış malzemeler — oyun içine sızmaz)
+  const gm = showroomTankMesh && showroomTankMesh.userData.glowMats;
+  if (gm && gm.length) { const p = 1.1 + Math.sin(clock.elapsedTime * 3.2) * 0.55; for (const mm of gm) mm.emissiveIntensity = p; }
   frameShowroomCam();
 }
 function renderShowroomUI() {
@@ -2488,7 +2593,7 @@ function renderShowroomUI() {
     const isGem = !!base.gem;
     act.innerHTML = `${t.buy} · ${isGem ? '💎' + base.gem : '🪙' + base.price}`;
     act.disabled = isGem ? (profile.gems || 0) < base.gem : profile.coins < base.price;
-    act.className = 'mbtn sr-btn gold';
+    act.className = 'mbtn sr-btn gold' + (isGem ? ' breath' : ''); // premium: nefes animasyonu (istek yaratma)
     act.onclick = () => {
       if (isGem ? (profile.gems || 0) < base.gem : profile.coins < base.price) return;
       if (isGem) profile.gems -= base.gem; else profile.coins -= base.price;
@@ -2513,6 +2618,7 @@ function renderShowroomAcc(t, act) {
   } else {
     act.innerHTML = `${t.buy} · ${a.gem ? '💎' + a.gem : '🪙' + a.price}`;
     act.disabled = a.gem ? (profile.gems || 0) < a.gem : profile.coins < a.price;
+    if (a.gem) act.className += ' breath';
     act.onclick = () => {
       if (a.gem) { if ((profile.gems || 0) < a.gem) return; profile.gems -= a.gem; } else { if (profile.coins < a.price) return; profile.coins -= a.price; }
       profile.accessories = profile.accessories || []; profile.accessories.push(a.id); profile.accessory = a.id;
@@ -2565,13 +2671,25 @@ function renderGarage() {
     card.className = 'card' + (sel ? ' sel' : '');
     const hex = '#' + base.color.toString(16).padStart(6, '0');
     const fireRate = 1 / def.cool;
+    const thumb = renderTankThumb(base); // önbellekli 3B kart görseli (özel model inmediyse null → renk şeridi + async tazeleme)
+    const swatchHTML = thumb
+      ? `<div class="cswatch cswatch-3d has-thumb"><img class="tankthumb" src="${thumb}" alt=""><span class="cs-3d">🔍 3B</span></div>`
+      : `<div class="cswatch cswatch-3d" style="background:linear-gradient(135deg,${hex},#1a1a1a)"><span class="cs-3d">🔍 3B</span></div>`;
     card.innerHTML =
       `<div class="cname">${base.name[lang]}</div>` +
-      `<div class="cswatch cswatch-3d" style="background:linear-gradient(135deg,${hex},#1a1a1a)"><span class="cs-3d">🔍 3B</span></div>` +
+      swatchHTML +
       `<div class="cstat">${t.sHealth}${barHTML(def.health / STAT_MAX.health)}</div>` +
       `<div class="cstat">${t.sSpeed}${barHTML(def.speed / STAT_MAX.speed)}</div>` +
       `<div class="cstat">${t.sFire}${barHTML(fireRate / STAT_MAX.fire)}</div>`;
-    card.querySelector('.cswatch').onclick = () => openShowroom(base.id); // renk örneğine dokun → 3B inceleme
+    card.querySelector('.cswatch').onclick = () => openShowroom(base.id); // görsele dokun → 3B inceleme
+    if (!thumb && base.model) ensureModel(base.model).then(() => { // tembel model indi → kart görselini yerinde tazele
+      const u = renderTankThumb(base);
+      const sw = card.querySelector('.cswatch');
+      if (u && sw && sw.isConnected) {
+        sw.classList.add('has-thumb'); sw.style.background = '';
+        sw.innerHTML = `<img class="tankthumb" src="${u}" alt=""><span class="cs-3d">🔍 3B</span>`;
+      }
+    });
     const btn = document.createElement('button');
     btn.className = 'mbtn small' + (base.glow ? ' gold' : '');
     if (sel) { btn.textContent = t.selected; btn.disabled = true; }
