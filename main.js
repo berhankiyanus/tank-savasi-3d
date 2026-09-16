@@ -11,6 +11,7 @@ const L = {
     keysTouch: 'Soldaki joystick &nbsp;→&nbsp; sür ve dön &nbsp;|&nbsp; Sağdaki buton &nbsp;→&nbsp; ateş',
     quickPlay: '⚡ HIZLI OYNA', quickPlaySub: 'Tek dokunuş — dalga savaşına anında gir!',
     victoryTitle: '🏆 ZAFER!', victorySub: (s, c) => `Görev tamam — 10 dalga temizlendi!<br>Skor ${s} · +🪙${c}`, endlessBtn: '∞ SONSUZ DEVAM',
+    botDuelBtn: '🤖 BOTA KARŞI OYNA',
     connLostTitle: '📡 BAĞLANTI KOPTU', connLostSub: 'Sunucuyla bağlantı kesildi — kazanımların kaydedildi.',
     vulnTxt: 'SAVUNMASIZ!',
     tutTitle: 'EĞİTİM', tutSteps: ['Tankı sür', 'Ateş et', 'Mermiyi duvardan sektir', 'Varili patlat'],
@@ -72,6 +73,7 @@ const L = {
     keysTouch: 'Left joystick &nbsp;→&nbsp; drive & turn &nbsp;|&nbsp; Right button &nbsp;→&nbsp; fire',
     quickPlay: '⚡ QUICK PLAY', quickPlaySub: 'One tap — straight into wave battle!',
     victoryTitle: '🏆 VICTORY!', victorySub: (s, c) => `Mission complete — 10 waves cleared!<br>Score ${s} · +🪙${c}`, endlessBtn: '∞ CONTINUE ENDLESS',
+    botDuelBtn: '🤖 PLAY VS BOT',
     connLostTitle: '📡 CONNECTION LOST', connLostSub: 'Lost connection to the server — your rewards were saved.',
     vulnTxt: 'VULNERABLE!',
     tutTitle: 'TUTORIAL', tutSteps: ['Drive the tank', 'Fire your cannon', 'Bounce a shot off a wall', 'Blow up a barrel'],
@@ -2270,6 +2272,7 @@ function applyLang() {
   $('keys').innerHTML = IS_TOUCH ? t.keysTouch : t.keysDesk;
   $('btn-single').textContent = t.single;
   $('btn-duel').textContent = t.duel;
+  $('btn-duel-bot').textContent = t.botDuelBtn;
   $('btn-ball').textContent = t.ballBtn;
   $('btn-quickplay').textContent = t.quickPlay;
   { const sn = document.querySelector('.shop-note'); if (sn) sn.textContent = t.shopNote; } // dükkân dip notu (EN çevirisi eksikti)
@@ -2778,6 +2781,7 @@ function soloVictory() {
   clearPowerups();
   shieldBubble.visible = false;
   questProgress('wave', RUN_WAVES);
+  profile.wins++; questProgress('win', 1); // koşu zaferi = galibiyet (v1'de "maç kazan" görevinin ana yolu)
   submitScore(wave);
   const t = T();
   const bonus = 150; roundCoins += bonus; addCoins(bonus);
@@ -3702,6 +3706,8 @@ $('btn-quickplay').addEventListener('click', () => {
   startSolo(pool.length ? pool[(profile.games || 0) % pool.length] : 0);
 });
 if (V1_SIMPLE) for (const id of ['btn-ball', 'btn-coop', 'btn-team', 'btn-lb']) $(id).style.display = 'none';
+// bot düello girişi (HIZLI OYNA solo olunca tek girişi kopmuştu): düello panelinden, seçili haritayla anında başlar
+$('btn-duel-bot').addEventListener('click', () => { track('botduel_click'); startBotDuel(); });
 $('res-again').addEventListener('click', () => { const fn = harvestReplay; harvestReplay = null; maybeInterstitial(); if (fn) { track('retry_click', { mode: matchMode }); fn(); } else openMenu(); });
 $('res-menu').addEventListener('click', () => { harvestReplay = null; harvestEndless = null; openMenu(); });
 $('res-endless').addEventListener('click', () => { const fn = harvestEndless; harvestEndless = null; harvestReplay = null; if (fn) fn(); });

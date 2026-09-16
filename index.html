@@ -287,6 +287,9 @@
 
   #touchui { position: fixed; inset: 0; z-index: 20; display: none; pointer-events: none; }
   body.touch #touchui { display: block; }
+  /* menü/paneller açıkken dokunmatik kontroller gizli (ATEŞ butonu alt nav'ın üstüne biniyordu);
+     :has desteklemeyen çok eski WebView'da yalnız eski davranış kalır (zararsız) */
+  body.touch:has(#msg:not(.hidden)) #touchui { display: none; }
   #stick { position: absolute; left: calc(22px + env(safe-area-inset-left)); bottom: calc(26px + env(safe-area-inset-bottom));
            width: 150px; height: 150px; border-radius: 50%;
            background: rgba(255,255,255,.07); border: 2px solid rgba(255,255,255,.28);
@@ -443,6 +446,7 @@
   <!-- düello -->
   <div id="panel-duel" class="panel">
     <div id="duelmapsrow"></div>
+    <button class="mbtn play" id="btn-duel-bot">🤖 BOTA KARŞI OYNA</button>
     <button class="mbtn" id="btn-create">ODA KUR</button>
     <div class="or">— / —</div>
     <div id="joinrow">
