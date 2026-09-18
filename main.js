@@ -18,6 +18,7 @@ const L = {
     lockedLv: n => `🔒 Seviye ${n}'te açılır — oynadıkça XP kazan!`,
     gateOpen: '🔓 Yeni özellik açıldı — menüye göz at!',
     gemTip: 'Elmas al', namePh: 'İsmin',
+    setHaptic: 'Titreşim', privacyLbl: 'Gizlilik Politikası',
     connWaking: '⏳ Sunucu uyanıyor — birkaç saniye sürebilir...', offlineMsg: '📡 İnternet yok — bağlanınca tekrar dene',
     lbWeekTitle: 'HAFTANIN EN İYİLERİ',
     timeNewRec: d => `⏱ Süre ${d} — YENİ REKOR!`, timeLine: (d, b) => `⏱ Süre ${d} · Rekorun ${b}`,
@@ -93,6 +94,7 @@ const L = {
     lockedLv: n => `🔒 Unlocks at level ${n} — play to earn XP!`,
     gateOpen: '🔓 New feature unlocked — check the menu!',
     gemTip: 'Get gems', namePh: 'Your name',
+    setHaptic: 'Haptics', privacyLbl: 'Privacy Policy',
     connWaking: '⏳ Server waking up — may take a few seconds...', offlineMsg: '📡 No internet — try again when connected',
     lbWeekTitle: "THIS WEEK'S BEST",
     timeNewRec: d => `⏱ Time ${d} — NEW RECORD!`, timeLine: (d, b) => `⏱ Time ${d} · Your best ${b}`,
@@ -197,6 +199,8 @@ let settings;
 try { settings = Object.assign({ muted: false, quality: 'high', music: true }, JSON.parse(localStorage.getItem('tanksettings') || '{}')); }
 catch { settings = { muted: false, quality: 'high', music: true }; }
 if (typeof settings.music !== 'boolean') settings.music = true;
+if (typeof settings.haptics !== 'boolean') settings.haptics = true; // titreşim tercihi (yeni ayar)
+const GAME_VER = '0.9.0'; // ayarlar panelinde görünür; mağaza sürümleriyle birlikte artır
 function saveSettings() { try { localStorage.setItem('tanksettings', JSON.stringify(settings)); } catch (e) { /* engelli depolama: ayar kalıcı olmaz ama oyun çalışır */ } }
 
 // ---------------------------------------------------------------- sunucu adresi (web vs native app)
@@ -210,7 +214,7 @@ function apiBase() { return isNativeApp() ? 'https://' + REMOTE_HOST : ''; }
 const V1_SIMPLE = true;
 function wsBase() { return isNativeApp() ? 'wss://' + REMOTE_HOST : (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host; }
 function capPlugins() { return (window.Capacitor && window.Capacitor.Plugins) || {}; }
-function haptic(style) { try { const H = capPlugins().Haptics; if (isNativeApp() && H) H.impact({ style: style || 'MEDIUM' }); } catch {} }
+function haptic(style) { try { if (!settings.haptics) return; const H = capPlugins().Haptics; if (isNativeApp() && H) H.impact({ style: style || 'MEDIUM' }); } catch {} }
 function nativeInit() {
   if (!isNativeApp()) return;
   const P = capPlugins();
@@ -4233,6 +4237,10 @@ function updateSettingsLabels() {
   $('set-sound').textContent = `${t.setSound}: ${settings.muted ? t.offW : t.onW}`;
   $('set-music').textContent = `${t.setMusic}: ${settings.music ? t.onW : t.offW}`;
   $('set-quality').textContent = `${t.setQuality}: ${settings.quality === 'low' ? t.qLow : t.qHigh}`;
+  $('set-haptic').textContent = `${t.setHaptic}: ${settings.haptics ? t.onW : t.offW}`;
+  $('set-privacy').textContent = t.privacyLbl;
+  $('set-privacy').href = isNativeApp() ? 'https://' + REMOTE_HOST + '/privacy' : 'privacy.html'; // privacy.html native pakette yok — canlıya git
+  $('set-ver').textContent = 'v' + GAME_VER;
   $('set-resume').textContent = t.resumeW;
   $('set-quit').textContent = t.toMenuW;
   $('set-close').textContent = t.closeW;
@@ -4248,6 +4256,7 @@ function closeSettings() { paused = false; $('settings').classList.add('hidden')
 $('btn-settings').addEventListener('click', openSettings);
 $('btn-settings-menu').addEventListener('click', openSettings);
 $('set-sound').addEventListener('click', () => { settings.muted = !settings.muted; saveSettings(); updateSettingsLabels(); updateMusicGain(); if (!settings.muted) sfxCoin(); });
+$('set-haptic').addEventListener('click', () => { settings.haptics = !settings.haptics; saveSettings(); updateSettingsLabels(); haptic('MEDIUM'); });
 $('set-music').addEventListener('click', () => { settings.music = !settings.music; saveSettings(); updateSettingsLabels(); if (settings.music) startMusic(); else updateMusicGain(); });
 $('set-quality').addEventListener('click', () => { settings.quality = settings.quality === 'low' ? 'high' : 'low'; saveSettings(); applyQuality(); updateSettingsLabels(); });
 $('set-resume').addEventListener('click', closeSettings);
