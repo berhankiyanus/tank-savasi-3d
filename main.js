@@ -12,6 +12,7 @@ const L = {
     quickPlay: '⚡ HIZLI OYNA', quickPlaySub: 'Tek dokunuş — dalga savaşına anında gir!',
     victoryTitle: '🏆 ZAFER!', victorySub: (s, c) => `Görev tamam — 10 dalga temizlendi!<br>Skor ${s} · +🪙${c}`, endlessBtn: '∞ SONSUZ DEVAM',
     botRookie: '🟢 ÇAYLAK · +🪙30', botPro: '🟡 USTA · +🪙70', botElite: '🔴 EFSANE · +🪙150',
+    fairNote: '⚔️ Düellolarda herkes eşit tankla savaşır — yetenek kazanır!',
     lbWeekTitle: 'HAFTANIN EN İYİLERİ',
     timeNewRec: d => `⏱ Süre ${d} — YENİ REKOR!`, timeLine: (d, b) => `⏱ Süre ${d} · Rekorun ${b}`,
     reviveTitle: '💥 NEREDEYSE!', reviveSub: 'Yeni komutanlara özel: aynı dalgadan ücretsiz devam et!',
@@ -80,6 +81,7 @@ const L = {
     quickPlay: '⚡ QUICK PLAY', quickPlaySub: 'One tap — straight into wave battle!',
     victoryTitle: '🏆 VICTORY!', victorySub: (s, c) => `Mission complete — 10 waves cleared!<br>Score ${s} · +🪙${c}`, endlessBtn: '∞ CONTINUE ENDLESS',
     botRookie: '🟢 ROOKIE · +🪙30', botPro: '🟡 PRO · +🪙70', botElite: '🔴 LEGEND · +🪙150',
+    fairNote: '⚔️ Duels are fought with equal tanks — skill wins!',
     lbWeekTitle: "THIS WEEK'S BEST",
     timeNewRec: d => `⏱ Time ${d} — NEW RECORD!`, timeLine: (d, b) => `⏱ Time ${d} · Your best ${b}`,
     reviveTitle: '💥 SO CLOSE!', reviveSub: 'New commander bonus: continue from this wave for free!',
@@ -301,22 +303,24 @@ const fmtTime = s => Math.floor(s / 60) + ':' + String(Math.floor(s) % 60).padSt
 
 // ---------------------------------------------------------------- tanklar
 const TANKS = [
+  // DENGE (2026-09-18): atış aralığı bandı 0.38-0.60'a sıkıştırıldı — "iyi tank = 3-7× atış" hile hissi
+  // veriyordu. Pahalı tanklar artık YAN-BASAMAK (karakter) + `shot` kimlik rengi (mermi/iz — görsel premium).
   { id: 'recruit',  name: { tr: 'Acemi',      en: 'Recruit'  }, price: 0,    color: 0x4a5d26, scale: 1.00, health: 5, speed: 8.0,  turn: 2.6, cool: 0.45, bspeed: 24 },
-  { id: 'scout',    name: { tr: 'Kaşif',      en: 'Scout'    }, price: 150,  color: 0x2f7db0, scale: 0.90, health: 4, speed: 10.6, turn: 3.3, cool: 0.40, bspeed: 28 },
+  { id: 'scout',    name: { tr: 'Kaşif',      en: 'Scout'    }, price: 150,  color: 0x2f7db0, scale: 0.90, health: 4, speed: 10.6, turn: 3.3, cool: 0.42, bspeed: 28 },
   { id: 'guardian', name: { tr: 'Muhafız',    en: 'Guardian' }, price: 300,  color: 0x707070, scale: 1.15, health: 8, speed: 6.4,  turn: 2.0, cool: 0.50, bspeed: 22 },
-  { id: 'sniper',   name: { tr: 'Nişancı',    en: 'Sniper'   }, price: 500,  color: 0x7a3aa0, scale: 1.00, health: 5, speed: 8.6,  turn: 2.8, cool: 0.30, bspeed: 42 },
-  { id: 'phantom',  name: { tr: 'Hayalet',    en: 'Phantom'  }, price: 800,  color: 0x1aa37a, scale: 1.00, health: 6, speed: 9.6,  turn: 3.0, cool: 0.33, bspeed: 32, glow: true },
-  { id: 'goldking', name: { tr: 'Altın Kral', en: 'Gold King'}, price: 1500, color: 0xffcc33, scale: 1.08, health: 9, speed: 9.2,  turn: 2.9, cool: 0.30, bspeed: 36, glow: true, metal: true },
-  { id: 'heavy',    name: { tr: 'Ağır Tank',   en: 'Heavy Tank'}, price: 2500, color: 0x6b6f4a, scale: 0.95, health: 12, speed: 5.6, turn: 1.8, cool: 0.50, bspeed: 30, model: 'heavy', metal: true, turretTop: 1.8 },
-  { id: 'twin',     name: { tr: 'İkiz Namlu',  en: 'Twin Cannon'}, price: 3000, color: 0x556047, scale: 0.95, health: 7,  speed: 8.4, turn: 2.8, cool: 0.26, bspeed: 30, model: 'twin', turretTop: 1.62 },
-  { id: 'arty',     name: { tr: 'Obüs',        en: 'Howitzer'  }, price: 3500, color: 0x6a6248, scale: 0.95, health: 6,  speed: 5.4, turn: 1.7, cool: 0.60, bspeed: 46, model: 'arty', turretTop: 1.55 },
+  { id: 'sniper',   name: { tr: 'Nişancı',    en: 'Sniper'   }, price: 500,  color: 0x7a3aa0, scale: 1.00, health: 5, speed: 8.6,  turn: 2.8, cool: 0.40, bspeed: 42, shot: 0xb46aff },
+  { id: 'phantom',  name: { tr: 'Hayalet',    en: 'Phantom'  }, price: 800,  color: 0x1aa37a, scale: 1.00, health: 6, speed: 9.6,  turn: 3.0, cool: 0.40, bspeed: 32, glow: true, shot: 0x3affc8 },
+  { id: 'goldking', name: { tr: 'Altın Kral', en: 'Gold King'}, price: 1500, color: 0xffcc33, scale: 1.08, health: 8, speed: 9.2,  turn: 2.9, cool: 0.38, bspeed: 36, glow: true, metal: true, shot: 0xffd24a },
+  { id: 'heavy',    name: { tr: 'Ağır Tank',   en: 'Heavy Tank'}, price: 2500, color: 0x6b6f4a, scale: 0.95, health: 11, speed: 5.6, turn: 1.8, cool: 0.50, bspeed: 30, model: 'heavy', metal: true, turretTop: 1.8, shot: 0xffb45a },
+  { id: 'twin',     name: { tr: 'İkiz Namlu',  en: 'Twin Cannon'}, price: 3000, color: 0x556047, scale: 0.95, health: 7,  speed: 8.4, turn: 2.8, cool: 0.38, bspeed: 30, model: 'twin', turretTop: 1.62, shot: 0xbfe84a },
+  { id: 'arty',     name: { tr: 'Obüs',        en: 'Howitzer'  }, price: 3500, color: 0x6a6248, scale: 0.95, health: 6,  speed: 5.4, turn: 1.7, cool: 0.60, bspeed: 46, model: 'arty', turretTop: 1.55, shot: 0xffc27a },
   // coin merdiveninin tepesi — dozer bıçaklı süper-ağır; SIDEGRADE felsefesi: güç değil karakter (yavaş+tanky, ateş hızı ORTALAMA ALTINDA)
-  { id: 'mamut',    name: { tr: 'Mamut',       en: 'Mammoth'   }, price: 5000, color: 0x525a3a, scale: 1.18, health: 13, speed: 5.0, turn: 1.6, cool: 0.48, bspeed: 28, model: 'mamut', metal: true, turretTop: 1.9 },
-  { id: 'hover',    name: { tr: 'Hover Tank',  en: 'Hover Tank'}, gem: 40, color: 0x3a4450, scale: 1.00, health: 5, speed: 12.0, turn: 3.5, cool: 0.34, bspeed: 34, model: 'hover', metal: true, glow: true, turretTop: 1.5 },
-  { id: 'titan',    name: { tr: 'Titan',       en: 'Titan'     }, gem: 60, color: 0x40444a, scale: 1.05, health: 14, speed: 5.2, turn: 1.6, cool: 0.44, bspeed: 32, model: 'titan', metal: true, glow: true, turretTop: 2.05 },
+  { id: 'mamut',    name: { tr: 'Mamut',       en: 'Mammoth'   }, price: 5000, color: 0x525a3a, scale: 1.18, health: 12, speed: 5.0, turn: 1.6, cool: 0.48, bspeed: 28, model: 'mamut', metal: true, turretTop: 1.9, shot: 0xff9a3a },
+  { id: 'hover',    name: { tr: 'Hover Tank',  en: 'Hover Tank'}, gem: 40, color: 0x3a4450, scale: 1.00, health: 5, speed: 12.0, turn: 3.5, cool: 0.40, bspeed: 34, model: 'hover', metal: true, glow: true, turretTop: 1.5, shot: 0x35e0ff },
+  { id: 'titan',    name: { tr: 'Titan',       en: 'Titan'     }, gem: 60, color: 0x40444a, scale: 1.05, health: 13, speed: 5.2, turn: 1.6, cool: 0.44, bspeed: 32, model: 'titan', metal: true, glow: true, turretTop: 2.05, shot: 0xff4a3a },
 ];
 const tankById = id => TANKS.find(t => t.id === id) || TANKS[0];
-const STAT_MAX = { health: 14, speed: 13.6, fire: 1 / 0.16 };
+const STAT_MAX = { health: 16, speed: 14.2, fire: 3.4 }; // sıkıştırılmış bantlara göre çubuk tavanları
 // tank yükseltmeleri
 const UPGRADES = [
   { key: 'health', name: { tr: 'Zırh', en: 'Armor' } },
@@ -382,9 +386,11 @@ function effTank(id) {
   const b = tankById(id);
   const u = (profile.upgrades && profile.upgrades[id]) || {};
   return Object.assign({}, b, {
+    // DENGE: yükseltme etkileri yumuşatıldı (hız 0.6→0.4, ateş 0.03→0.015, taban 0.16→0.30) —
+    // full-upgrade en iyi tank artık Acemi'nin ~1.5× atış hızında (3× yerine); "hile" hissi biter, ilerleme tadı kalır
     health: b.health + (u.health || 0),
-    speed: b.speed + (u.speed || 0) * 0.6,
-    cool: Math.max(0.16, b.cool - (u.fire || 0) * 0.03),
+    speed: b.speed + (u.speed || 0) * 0.4,
+    cool: Math.max(0.30, b.cool - (u.fire || 0) * 0.015),
   });
 }
 
@@ -603,6 +609,11 @@ wallMat.aoMap.channel = 0;
 // ---------------------------------------------------------------- temalar (zemin/duvar/atmosfer/dekor)
 // temaya göre değişen mermi/namlu renkleri
 const playerBulletMat = new THREE.MeshBasicMaterial({ color: 0xffe08a });
+// tank kimliği: premium tankların KENDİ mermi/iz rengi (yalnız yerel oyuncunun atışları; tema renginin yerine geçer).
+// DUEL_TANK'ta `shot` yok → PvP'de herkes standart mermi (adalet algısı da korunur).
+const customShotMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+const customShotTailMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.32, depthWrite: false });
+let playerShotCustom = false;
 const enemyBulletMat = new THREE.MeshBasicMaterial({ color: 0xff7a5a });
 const playerTailMat = new THREE.MeshBasicMaterial({ color: 0xffe08a, transparent: true, opacity: 0.32, depthWrite: false });
 const enemyTailMat = new THREE.MeshBasicMaterial({ color: 0xff7a5a, transparent: true, opacity: 0.32, depthWrite: false });
@@ -1729,6 +1740,9 @@ function setPlayerTank(overrideDef) {
   turretBaseZ = playerTurret ? playerTurret.position.z : 0;
   player.stat = def;
   player.maxHealth = def.health;
+  // tank kimlik mermisi (görsel premium): def.shot varsa yerel atışlar o renkte
+  playerShotCustom = !!def.shot;
+  if (def.shot) { customShotMat.color.setHex(def.shot); customShotTailMat.color.setHex(def.shot); }
 }
 await ensureModel(tankById(profile.selected).model); // seçili tank özel modelliyse açılışta yükle
 setPlayerTank();
@@ -1765,12 +1779,12 @@ const TEAM_SPAWNS = [[[1, 11], [1, 1]], [[11, 11], [11, 1]]]; // takım0 sol ken
 function fire(owner, angOff = 0, playerShot = null) {
   const isPlayer = owner === player;
   const a = owner.a + angOff;
-  const mesh = new THREE.Mesh(bulletGeo, isPlayer ? playerBulletMat : enemyBulletMat);
+  const mesh = new THREE.Mesh(bulletGeo, isPlayer ? (playerShotCustom ? customShotMat : playerBulletMat) : enemyBulletMat);
   const bx = owner.x + fwdX(a) * 2.6;
   const bz = owner.z + fwdZ(a) * 2.6;
   mesh.position.set(bx, 1.13, bz);
   mesh.rotation.y = a;
-  const tail = new THREE.Mesh(bulletTailGeo, isPlayer ? playerTailMat : enemyTailMat);
+  const tail = new THREE.Mesh(bulletTailGeo, isPlayer ? (playerShotCustom ? customShotTailMat : playerTailMat) : enemyTailMat);
   tail.position.z = 0.75; mesh.add(tail);
   scene.add(mesh);
   let sp;
@@ -2483,6 +2497,7 @@ function applyLang() {
   $('keys').innerHTML = IS_TOUCH ? t.keysTouch : t.keysDesk;
   $('btn-single').textContent = t.single;
   $('btn-duel').textContent = t.duel;
+  $('duel-fair').textContent = t.fairNote;
   $('btn-bot-rookie').textContent = t.botRookie;
   $('btn-bot-pro').textContent = t.botPro;
   $('btn-bot-elite').textContent = t.botElite;
@@ -4294,7 +4309,7 @@ if ((profile.games || 0) > 0) checkDaily(); else dailyPending = true;
 // (durum değişkenleri yukarıda team/duel yanında bildirildi — TDZ için)
 function resetBuild() { matchBuild = { fire: 0, armor: 0, speed: 0, dmg: 0, multi: 0 }; buildChoosing = false; }
 function buildOn() { return mode === 'solo' && matchBuild; } // şimdilik sadece solo (coop maç-içi build v1.x)
-function bFire() { return buildOn() ? Math.max(0.4, 1 - 0.11 * matchBuild.fire) : 1; }
+function bFire() { return buildOn() ? Math.max(0.55, 1 - 0.11 * matchBuild.fire) : 1; } // DENGE: taban 0.4→0.55 (maç-içi yığılma ~15 atış/sn'ye çıkabiliyordu)
 function bSpeed() { return buildOn() ? (1 + 0.10 * matchBuild.speed) : 1; }
 function bDmg() { return buildOn() ? matchBuild.dmg : 0; }
 function bMulti() { return !!(buildOn() && matchBuild.multi > 0); }
@@ -4308,7 +4323,7 @@ const BUILD_OPTS = [
 function offerBuildChoice(onDone) {
   if (!matchBuild) resetBuild();
   buildOnDone = onDone;
-  const pool = BUILD_OPTS.filter(o => !(o.id === 'multi' && matchBuild.multi > 0)).slice();
+  const pool = BUILD_OPTS.filter(o => !(o.id === 'multi' && matchBuild.multi > 0) && !(o.id === 'fire' && matchBuild.fire >= 3)).slice(); // fire en çok 3 yığın (denge)
   for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t = pool[i]; pool[i] = pool[j]; pool[j] = t; }
   const picks = pool.slice(0, 3), tt = T();
   $('build-title').textContent = tt.buildTitle;
