@@ -7,14 +7,20 @@ const root = __dirname;
 const out = path.join(root, 'www');
 const items = ['index.html', 'main.js', 'manifest.json', 'sw.js', 'libs', 'assets'];
 
+const EXCLUDE = new Set(['icon-1024.png']); // 813KB kaynak ikon — pakete girmesin (resources/icon.png zaten kaynak)
+
 function copy(src, dst) {
   const st = fs.statSync(src);
   if (st.isDirectory()) {
     fs.mkdirSync(dst, { recursive: true });
     for (const f of fs.readdirSync(src)) {
-      if (f === '.DS_Store') continue;
+      if (f === '.DS_Store' || EXCLUDE.has(f)) continue;
       copy(path.join(src, f), path.join(dst, f));
     }
+  } else if (path.basename(src) === 'sw.js') {
+    // native sürüm damgası: her paket taze önbellek adıyla çıkar (offline eski kabukta kalmaz)
+    const stamped = fs.readFileSync(src, 'utf8').replace('__BUILDSTAMP__', Date.now().toString(36));
+    fs.writeFileSync(dst, stamped);
   } else {
     fs.copyFileSync(src, dst);
   }
