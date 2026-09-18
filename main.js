@@ -9,7 +9,7 @@ const L = {
     sub: 'Duvarların arkasına saklanan düşman tankları yok et!',
     keysDesk: 'W / ↑ &nbsp;→&nbsp; ileri &nbsp;|&nbsp; S / ↓ &nbsp;→&nbsp; geri &nbsp;|&nbsp; A / D &nbsp;→&nbsp; dön &nbsp;|&nbsp; BOŞLUK &nbsp;→&nbsp; ateş',
     keysTouch: 'Soldaki joystick &nbsp;→&nbsp; sür ve dön &nbsp;|&nbsp; Sağdaki buton &nbsp;→&nbsp; ateş',
-    quickPlay: '⚡ HIZLI OYNA', quickPlaySub: 'Tek dokunuş — dalga savaşına anında gir!',
+    quickPlay: 'HIZLI OYNA', quickPlaySub: 'Tek dokunuş — dalga savaşına anında gir!',
     victoryTitle: '🏆 ZAFER!', victorySub: (s, c) => `Görev tamam — 10 dalga temizlendi!<br>Skor ${s} · +🪙${c}`, endlessBtn: '∞ SONSUZ DEVAM',
     botRookie: '🟢 ÇAYLAK · +🪙30', botPro: '🟡 USTA · +🪙70', botElite: '🔴 EFSANE · +🪙150',
     fairNote: '⚔️ Düellolarda herkes eşit tankla savaşır — yetenek kazanır!',
@@ -37,7 +37,7 @@ const L = {
     ftueHintDesk: 'W/↑ ilerle · S/↓ geri · A/D dön · BOŞLUK ateş 🔫',
     ftueHintTouch: 'Sol joystick: sür & dön · Sağ buton: ateş 🔫',
     ftueWelcome: 'Hoş geldin! Sür ve ateş et 🔫',
-    single: '🌊 TEK OYUNCU', duel: '⚔️ ARKADAŞLA DÜELLO', garage: 'GARAJ', back: '‹ GERİ',
+    single: 'TEK OYUNCU', duel: 'ARKADAŞLA DÜELLO', garage: 'GARAJ', back: '‹ GERİ',
     navQuests: 'GÖREVLER', navLb: 'LİDER', navSeason: 'SEZON', navShop: 'DÜKKAN',
     create: 'ODA KUR', join: 'KATIL', codePh: 'KOD',
     shareBtn: '🔗 DAVET LİNKİ', linkCopied: '🔗 Davet linki kopyalandı!', shareText: 'Tank Savaşı 3D — bana katıl!',
@@ -78,7 +78,7 @@ const L = {
     sub: 'Destroy the enemy tanks hiding behind the walls!',
     keysDesk: 'W / ↑ &nbsp;→&nbsp; forward &nbsp;|&nbsp; S / ↓ &nbsp;→&nbsp; back &nbsp;|&nbsp; A / D &nbsp;→&nbsp; turn &nbsp;|&nbsp; SPACE &nbsp;→&nbsp; fire',
     keysTouch: 'Left joystick &nbsp;→&nbsp; drive & turn &nbsp;|&nbsp; Right button &nbsp;→&nbsp; fire',
-    quickPlay: '⚡ QUICK PLAY', quickPlaySub: 'One tap — straight into wave battle!',
+    quickPlay: 'QUICK PLAY', quickPlaySub: 'One tap — straight into wave battle!',
     victoryTitle: '🏆 VICTORY!', victorySub: (s, c) => `Mission complete — 10 waves cleared!<br>Score ${s} · +🪙${c}`, endlessBtn: '∞ CONTINUE ENDLESS',
     botRookie: '🟢 ROOKIE · +🪙30', botPro: '🟡 PRO · +🪙70', botElite: '🔴 LEGEND · +🪙150',
     fairNote: '⚔️ Duels are fought with equal tanks — skill wins!',
@@ -106,7 +106,7 @@ const L = {
     ftueHintDesk: 'W/↑ move · S/↓ back · A/D turn · SPACE fire 🔫',
     ftueHintTouch: 'Left stick: drive & turn · Right button: fire 🔫',
     ftueWelcome: 'Welcome! Drive and shoot 🔫',
-    single: '🌊 SINGLE PLAYER', duel: '⚔️ DUEL WITH A FRIEND', garage: 'GARAGE', back: '‹ BACK',
+    single: 'SINGLE PLAYER', duel: 'DUEL WITH A FRIEND', garage: 'GARAGE', back: '‹ BACK',
     navQuests: 'QUESTS', navLb: 'RANKS', navSeason: 'SEASON', navShop: 'SHOP',
     create: 'CREATE ROOM', join: 'JOIN', codePh: 'CODE',
     shareBtn: '🔗 INVITE LINK', linkCopied: '🔗 Invite link copied!', shareText: 'Tank Battle 3D — join me!',
@@ -296,6 +296,8 @@ async function fetchLeaderboard(period) {
 let paused = false;
 let matchSeq = 0; // gecikmiş timer'ların eski maça ait sonuç üretmesini önler
 let matchEndReason = ''; // analitik: maç neden bitti (death/victory/win/lose/disconnect/quit) — D1/D7 huni analizi için
+// game-icons stencil yardımcıları (index.html'deki #gisprite sembollerine referans; renk currentColor'dan)
+const gi = id => `<svg class="gi"><use href="#gi-${id}"/></svg>`;
 let dailyPending = false; // FTUE: günlük ödülü ilk menü ziyaretine ertele (mesaj bombardımanını önle)
 let soloStartBest = 1;    // ölüm ekranı teşviki: bu koşu başındaki rekor (yeni rekor tespiti)
 let soloRunStart = 0;     // sonlu koşu kronometresi (zafer süresi — speedrun rekabeti)
@@ -309,15 +311,15 @@ const TANKS = [
   { id: 'scout',    name: { tr: 'Kaşif',      en: 'Scout'    }, price: 150,  color: 0x2f7db0, scale: 0.90, health: 4, speed: 10.6, turn: 3.3, cool: 0.42, bspeed: 28 },
   { id: 'guardian', name: { tr: 'Muhafız',    en: 'Guardian' }, price: 300,  color: 0x707070, scale: 1.15, health: 8, speed: 6.4,  turn: 2.0, cool: 0.50, bspeed: 22 },
   { id: 'sniper',   name: { tr: 'Nişancı',    en: 'Sniper'   }, price: 500,  color: 0x7a3aa0, scale: 1.00, health: 5, speed: 8.6,  turn: 2.8, cool: 0.40, bspeed: 42, shot: 0xb46aff },
-  { id: 'phantom',  name: { tr: 'Hayalet',    en: 'Phantom'  }, price: 800,  color: 0x1aa37a, scale: 1.00, health: 6, speed: 9.6,  turn: 3.0, cool: 0.40, bspeed: 32, glow: true, shot: 0x3affc8 },
-  { id: 'goldking', name: { tr: 'Altın Kral', en: 'Gold King'}, price: 1500, color: 0xffcc33, scale: 1.08, health: 8, speed: 9.2,  turn: 2.9, cool: 0.38, bspeed: 36, glow: true, metal: true, shot: 0xffd24a },
-  { id: 'heavy',    name: { tr: 'Ağır Tank',   en: 'Heavy Tank'}, price: 2500, color: 0x6b6f4a, scale: 0.95, health: 11, speed: 5.6, turn: 1.8, cool: 0.50, bspeed: 30, model: 'heavy', metal: true, turretTop: 1.8, shot: 0xffb45a },
-  { id: 'twin',     name: { tr: 'İkiz Namlu',  en: 'Twin Cannon'}, price: 3000, color: 0x556047, scale: 0.95, health: 7,  speed: 8.4, turn: 2.8, cool: 0.38, bspeed: 30, model: 'twin', turretTop: 1.62, shot: 0xbfe84a },
-  { id: 'arty',     name: { tr: 'Obüs',        en: 'Howitzer'  }, price: 3500, color: 0x6a6248, scale: 0.95, health: 6,  speed: 5.4, turn: 1.7, cool: 0.60, bspeed: 46, model: 'arty', turretTop: 1.55, shot: 0xffc27a },
+  { id: 'phantom',  name: { tr: 'Hayalet',    en: 'Phantom'  }, price: 1000,  color: 0x1aa37a, scale: 1.00, health: 6, speed: 9.6,  turn: 3.0, cool: 0.40, bspeed: 32, glow: true, shot: 0x3affc8 },
+  { id: 'goldking', name: { tr: 'Altın Kral', en: 'Gold King'}, price: 2200, color: 0xffcc33, scale: 1.08, health: 8, speed: 9.2,  turn: 2.9, cool: 0.38, bspeed: 36, glow: true, metal: true, shot: 0xffd24a },
+  { id: 'heavy',    name: { tr: 'Ağır Tank',   en: 'Heavy Tank'}, price: 4200, color: 0x6b6f4a, scale: 0.95, health: 11, speed: 5.6, turn: 1.8, cool: 0.50, bspeed: 30, model: 'heavy', metal: true, turretTop: 1.8, shot: 0xffb45a },
+  { id: 'twin',     name: { tr: 'İkiz Namlu',  en: 'Twin Cannon'}, price: 5500, color: 0x556047, scale: 0.95, health: 7,  speed: 8.4, turn: 2.8, cool: 0.38, bspeed: 30, model: 'twin', turretTop: 1.62, shot: 0xbfe84a },
+  { id: 'arty',     name: { tr: 'Obüs',        en: 'Howitzer'  }, price: 7000, color: 0x6a6248, scale: 0.95, health: 6,  speed: 5.4, turn: 1.7, cool: 0.60, bspeed: 46, model: 'arty', turretTop: 1.55, shot: 0xffc27a },
   // coin merdiveninin tepesi — dozer bıçaklı süper-ağır; SIDEGRADE felsefesi: güç değil karakter (yavaş+tanky, ateş hızı ORTALAMA ALTINDA)
-  { id: 'mamut',    name: { tr: 'Mamut',       en: 'Mammoth'   }, price: 5000, color: 0x525a3a, scale: 1.18, health: 12, speed: 5.0, turn: 1.6, cool: 0.48, bspeed: 28, model: 'mamut', metal: true, turretTop: 1.9, shot: 0xff9a3a },
-  { id: 'hover',    name: { tr: 'Hover Tank',  en: 'Hover Tank'}, gem: 40, color: 0x3a4450, scale: 1.00, health: 5, speed: 12.0, turn: 3.5, cool: 0.40, bspeed: 34, model: 'hover', metal: true, glow: true, turretTop: 1.5, shot: 0x35e0ff },
-  { id: 'titan',    name: { tr: 'Titan',       en: 'Titan'     }, gem: 60, color: 0x40444a, scale: 1.05, health: 13, speed: 5.2, turn: 1.6, cool: 0.44, bspeed: 32, model: 'titan', metal: true, glow: true, turretTop: 2.05, shot: 0xff4a3a },
+  { id: 'mamut',    name: { tr: 'Mamut',       en: 'Mammoth'   }, price: 9500, color: 0x525a3a, scale: 1.18, health: 12, speed: 5.0, turn: 1.6, cool: 0.48, bspeed: 28, model: 'mamut', metal: true, turretTop: 1.9, shot: 0xff9a3a },
+  { id: 'hover',    name: { tr: 'Hover Tank',  en: 'Hover Tank'}, gem: 75, color: 0x3a4450, scale: 1.00, health: 5, speed: 12.0, turn: 3.5, cool: 0.40, bspeed: 34, model: 'hover', metal: true, glow: true, turretTop: 1.5, shot: 0x35e0ff },
+  { id: 'titan',    name: { tr: 'Titan',       en: 'Titan'     }, gem: 150, color: 0x40444a, scale: 1.05, health: 13, speed: 5.2, turn: 1.6, cool: 0.44, bspeed: 32, model: 'titan', metal: true, glow: true, turretTop: 2.05, shot: 0xff4a3a },
 ];
 const tankById = id => TANKS.find(t => t.id === id) || TANKS[0];
 const STAT_MAX = { health: 16, speed: 14.2, fire: 3.4 }; // sıkıştırılmış bantlara göre çubuk tavanları
@@ -328,7 +330,7 @@ const UPGRADES = [
   { key: 'fire', name: { tr: 'Ateş', en: 'Fire' } },
 ];
 const UP_MAX = 5;
-const upCost = lvl => 60 * (lvl + 1);
+const upCost = lvl => 90 * (lvl + 1); // ekonomi v3: yükseltme adımı 60→90
 // kozmetik kaplamalar (oyuncunun kendi tankına uygulanır)
 // r: nadirlik (c=yaygın, r=nadir, e=efsanevi) — jeton makinesi ağırlığı + fiyat için
 const SKINS = [
@@ -1300,16 +1302,16 @@ function buildJetpack() {
   return g;
 }
 const ACCESSORIES = [
-  { id: 'surf', name: { tr: 'Sörf Tahtası', en: 'Surfboard' }, icon: '🏄', price: 800, r: 'c', build: buildSurf, mount: { x: 0, y: 1.6, z: 0.12, rz: 0.1 } },
-  { id: 'flag', name: { tr: 'Bayrak', en: 'Flag' }, icon: '🚩', price: 500, r: 'c', build: buildFlag, mount: { x: -0.5, y: 0.86, z: 1.15 } },
-  { id: 'cone', name: { tr: 'Parti Şapkası', en: 'Party Hat' }, icon: '🎉', price: 450, r: 'c', build: buildCone, mount: { x: 0, y: 1.48, z: 0.12 } },
-  { id: 'tophat', name: { tr: 'Silindir Şapka', en: 'Top Hat' }, icon: '🎩', price: 750, r: 'c', build: buildTophat, mount: { x: 0, y: 1.48, z: 0.12 } },
-  { id: 'spoiler', name: { tr: 'Spoiler', en: 'Spoiler' }, icon: '🏁', price: 1000, r: 'r', build: buildSpoiler, mount: { x: 0, y: 0.72, z: 1.28 } },
-  { id: 'duck', name: { tr: 'Lastik Ördek', en: 'Rubber Duck' }, icon: '🦆', price: 600, r: 'r', build: buildDuck, mount: { x: 0, y: 1.46, z: 0.12 } },
-  { id: 'disco', name: { tr: 'Disko Topu', en: 'Disco Ball' }, icon: '🪩', gem: 15, r: 'e', build: buildDisco, mount: { x: 0, y: 1.5, z: 0.12 } },
-  { id: 'crown', name: { tr: 'Altın Taç', en: 'Golden Crown' }, icon: '👑', gem: 20, r: 'e', build: buildCrown, mount: { x: 0, y: 1.5, z: 0.12 } },
-  { id: 'wings', name: { tr: 'Melek Kanatları', en: 'Angel Wings' }, icon: '🪽', gem: 30, r: 'e', build: buildWings, mount: { x: 0, y: 0.75, z: 0.35 } },
-  { id: 'jetpack', name: { tr: 'Jetpack', en: 'Jetpack' }, icon: '🚀', gem: 25, r: 'e', build: buildJetpack, mount: { x: 0, y: 0.7, z: 1.15 } },
+  { id: 'surf', name: { tr: 'Sörf Tahtası', en: 'Surfboard' }, icon: '🏄', price: 1300, r: 'c', build: buildSurf, mount: { x: 0, y: 1.6, z: 0.12, rz: 0.1 } },
+  { id: 'flag', name: { tr: 'Bayrak', en: 'Flag' }, icon: '🚩', price: 800, r: 'c', build: buildFlag, mount: { x: -0.5, y: 0.86, z: 1.15 } },
+  { id: 'cone', name: { tr: 'Parti Şapkası', en: 'Party Hat' }, icon: '🎉', price: 700, r: 'c', build: buildCone, mount: { x: 0, y: 1.48, z: 0.12 } },
+  { id: 'tophat', name: { tr: 'Silindir Şapka', en: 'Top Hat' }, icon: '🎩', price: 1200, r: 'c', build: buildTophat, mount: { x: 0, y: 1.48, z: 0.12 } },
+  { id: 'spoiler', name: { tr: 'Spoiler', en: 'Spoiler' }, icon: '🏁', price: 1600, r: 'r', build: buildSpoiler, mount: { x: 0, y: 0.72, z: 1.28 } },
+  { id: 'duck', name: { tr: 'Lastik Ördek', en: 'Rubber Duck' }, icon: '🦆', price: 950, r: 'r', build: buildDuck, mount: { x: 0, y: 1.46, z: 0.12 } },
+  { id: 'disco', name: { tr: 'Disko Topu', en: 'Disco Ball' }, icon: '🪩', gem: 30, r: 'e', build: buildDisco, mount: { x: 0, y: 1.5, z: 0.12 } },
+  { id: 'crown', name: { tr: 'Altın Taç', en: 'Golden Crown' }, icon: '👑', gem: 35, r: 'e', build: buildCrown, mount: { x: 0, y: 1.5, z: 0.12 } },
+  { id: 'wings', name: { tr: 'Melek Kanatları', en: 'Angel Wings' }, icon: '🪽', gem: 60, r: 'e', build: buildWings, mount: { x: 0, y: 0.75, z: 0.35 } },
+  { id: 'jetpack', name: { tr: 'Jetpack', en: 'Jetpack' }, icon: '🚀', gem: 50, r: 'e', build: buildJetpack, mount: { x: 0, y: 0.7, z: 1.15 } },
 ];
 const accById = id => ACCESSORIES.find(a => a.id === id);
 // kule-üstü oturan aksesuarlar (tank kule yüksekliğine göre kaydırılır); diğerleri gövdeye sabit
@@ -1883,11 +1885,12 @@ const shieldBubble = makeShieldBubble();
 
 // düşman tipleri: normal / keşif (hızlı-zayıf) / ağır (yavaş-zırhlı) / nişancı (uzaktan) / boss
 const ENEMY_TYPES = {
-  normal: { hp: 1, speed: 4.6, turn: 1.9, cool: [2.2, 3.8], bspeed: 17, keep: 11, sight: 55, scale: 1.0, color: 0xa03428, coins: 9, score: 100 },
-  scout:  { hp: 1, speed: 7.8, turn: 2.9, cool: [2.6, 4.2], bspeed: 16, keep: 6, sight: 50, scale: 0.82, color: 0xc9902f, coins: 7, score: 80 },
-  heavy:  { hp: 3, speed: 3.0, turn: 1.3, cool: [2.4, 3.8], bspeed: 20, keep: 9, sight: 52, scale: 1.35, color: 0x5a6b55, coins: 21, score: 250 },
-  sniper: { hp: 1, speed: 3.6, turn: 1.6, cool: [2.0, 3.2], bspeed: 34, keep: 24, sight: 75, scale: 0.95, color: 0x8a3a8a, coins: 15, score: 180 },
-  boss:   { hp: 14, speed: 2.8, turn: 1.1, cool: [1.3, 2.0], bspeed: 22, keep: 12, sight: 80, scale: 2.1, color: 0x8f1414, coins: 120, score: 2000, triple: true, glow: true },
+  // EKONOMİ v3 (2026-09-18): kill gelirleri ~%35 düşürüldü — koşu geliri ~1450→~850, "30 dakikada biten ekonomi" fix'i
+  normal: { hp: 1, speed: 4.6, turn: 1.9, cool: [2.2, 3.8], bspeed: 17, keep: 11, sight: 55, scale: 1.0, color: 0xa03428, coins: 6, score: 100 },
+  scout:  { hp: 1, speed: 7.8, turn: 2.9, cool: [2.6, 4.2], bspeed: 16, keep: 6, sight: 50, scale: 0.82, color: 0xc9902f, coins: 5, score: 80 },
+  heavy:  { hp: 3, speed: 3.0, turn: 1.3, cool: [2.4, 3.8], bspeed: 20, keep: 9, sight: 52, scale: 1.35, color: 0x5a6b55, coins: 14, score: 250 },
+  sniper: { hp: 1, speed: 3.6, turn: 1.6, cool: [2.0, 3.2], bspeed: 34, keep: 24, sight: 75, scale: 0.95, color: 0x8a3a8a, coins: 10, score: 180 },
+  boss:   { hp: 14, speed: 2.8, turn: 1.1, cool: [1.3, 2.0], bspeed: 22, keep: 12, sight: 80, scale: 2.1, color: 0x8f1414, coins: 80, score: 2000, triple: true, glow: true },
 };
 let enemyIdC = 0;
 // merhamet eğrisi (FTUE): solo 1-2. dalgada düşman ateş temposu %35 yavaş — yeni oyuncu ilk dakikada ölmesin
@@ -2341,7 +2344,7 @@ function updateBossBar(boss) {
   const el = $('bossbar');
   if (boss) {
     el.style.display = 'flex';
-    $('bosslabel').textContent = boss.bossName ? '☠️ ' + boss.bossName : T().bossLbl; // isimli boss (kişilik/rekabet hissi)
+    $('bosslabel').innerHTML = boss.bossName ? gi('skull') + ' ' + esc(boss.bossName) : T().bossLbl; // isimli boss (kişilik/rekabet hissi)
     $('bosshp').style.width = Math.max(0, (boss.hp / boss.maxHp) * 100) + '%';
   } else if (el.style.display !== 'none') el.style.display = 'none';
 }
@@ -2495,14 +2498,14 @@ function applyLang() {
   const t = T();
   document.title = t.title;
   $('keys').innerHTML = IS_TOUCH ? t.keysTouch : t.keysDesk;
-  $('btn-single').textContent = t.single;
-  $('btn-duel').textContent = t.duel;
+  $('btn-single').innerHTML = gi('crosshair') + ' ' + t.single;
+  $('btn-duel').innerHTML = gi('swords') + ' ' + t.duel;
   $('duel-fair').textContent = t.fairNote;
   $('btn-bot-rookie').textContent = t.botRookie;
   $('btn-bot-pro').textContent = t.botPro;
   $('btn-bot-elite').textContent = t.botElite;
   $('btn-ball').textContent = t.ballBtn;
-  $('btn-quickplay').textContent = t.quickPlay;
+  $('btn-quickplay').innerHTML = gi('tank') + ' ' + t.quickPlay;
   { const sn = document.querySelector('.shop-note'); if (sn) sn.textContent = t.shopNote; } // dükkân dip notu (EN çevirisi eksikti)
   { const fg = $('shop-free'); if (fg) fg.textContent = t.freeGems; } // "elmas nasıl kazanılır" — dükkân çıkmaz sokak hissi vermesin
   // alt nav etiketleri (ikon sabit, .nlbl metni dile göre)
@@ -3060,7 +3063,7 @@ function soloVictory() {
   profile.wins++; questProgress('win', 1); // koşu zaferi = galibiyet (v1'de "maç kazan" görevinin ana yolu)
   submitScore(wave);
   const t = T();
-  const bonus = 150; roundCoins += bonus; addCoins(bonus);
+  const bonus = 250; roundCoins += bonus; addCoins(bonus);
   let gemTxt = '';
   const today = new Date().toISOString().slice(0, 10);
   if (profile.lastVictoryDay !== today) { profile.lastVictoryDay = today; addGems(1); gemTxt = ' &nbsp;·&nbsp; +💎1'; }
@@ -3717,7 +3720,7 @@ function coopNextWave() {
   for (const rm of coop.remotes.values()) { rm.alive = true; rm.hp = player.maxHealth; }
   placeCoopSpawns();
   renderHealth(); updateHUD();
-  const bonus = wave * 15; roundCoins += bonus; addCoins(bonus);
+  const bonus = wave * 8; roundCoins += bonus; addCoins(bonus);
   netSend({ t: 'wave', n: wave });
   netSend({ t: 'phealth', pid: coop.you, hp: player.health, alive: true });
   for (const [pid, rm] of coop.remotes) netSend({ t: 'phealth', pid, hp: rm.hp, alive: true });
@@ -3772,7 +3775,7 @@ function handleCoopNet(m) {
     wave = m.n;
     // misafirde de rekor/harita açılışı + dalga bonusu (önceden yalnız host alıyordu → eşitsiz ilerleme)
     if (wave > profile.bestWave) { profile.bestWave = wave; saveProfile(); }
-    const gBonus = wave * 15; roundCoins += gBonus; addCoins(gBonus);
+    const gBonus = wave * 8; roundCoins += gBonus; addCoins(gBonus);
     updateHUD(); banner(wave % 5 === 0 ? T().bossW : `${T().wave} ${wave}  +🪙${gBonus}`);
     if (wave % 5 === 0) stingBoss(); else stingWave();
     for (const ce of coopEnemies.values()) scene.remove(ce);
@@ -4615,7 +4618,7 @@ function tick() {
         if (wave > profile.bestWave) { profile.bestWave = wave; saveProfile(); }
         if (!soloEndless && wave > RUN_WAVES) { soloVictory(); } // 10. dalga (boss finali) temizlendi → koşu tamam
         else {
-          const bonus = wave * 15; roundCoins += bonus; addCoins(bonus);
+          const bonus = wave * 8; roundCoins += bonus; addCoins(bonus);
           updateHUD();
           banner(wave % 5 === 0 ? T().bossW : `${T().wave} ${wave}  +🪙${bonus}`);
           if (wave % 5 === 0) stingBoss(); else stingWave();
