@@ -143,7 +143,7 @@ const L = {
     tabTanks: 'TANKS', tabSkins: 'SKINS', profileTitle: 'PROFILE & ACHIEVEMENTS', dailyW: 'Daily Reward · Day',
   },
 };
-let lang = localStorage.getItem('tanklang') || ((navigator.language || 'tr').startsWith('tr') ? 'tr' : 'en');
+let lang = (() => { try { return localStorage.getItem('tanklang'); } catch (e) { return null; } })() || ((navigator.language || 'tr').startsWith('tr') ? 'tr' : 'en');
 const T = () => L[lang];
 
 // ---------------------------------------------------------------- kalıcı profil
@@ -185,7 +185,7 @@ let settings;
 try { settings = Object.assign({ muted: false, quality: 'high', music: true }, JSON.parse(localStorage.getItem('tanksettings') || '{}')); }
 catch { settings = { muted: false, quality: 'high', music: true }; }
 if (typeof settings.music !== 'boolean') settings.music = true;
-function saveSettings() { localStorage.setItem('tanksettings', JSON.stringify(settings)); }
+function saveSettings() { try { localStorage.setItem('tanksettings', JSON.stringify(settings)); } catch (e) { /* engelli depolama: ayar kalıcı olmaz ama oyun çalışır */ } }
 
 // ---------------------------------------------------------------- sunucu adresi (web vs native app)
 // Capacitor (App Store/Play) paketinde sayfa localhost'tan servis edilir → çok-oyunculu + analitik
@@ -279,7 +279,14 @@ function track(ev, data) {
   } catch {}
 }
 // lider tablosu: kalıcı istemci kimliği (aynı oyuncunun günlük en iyisi tekilleşsin)
-const CLIENT_ID = (() => { let c = localStorage.getItem('tankcid'); if (!c) { c = Math.random().toString(36).slice(2, 12); localStorage.setItem('tankcid', c); } return c; })();
+// Safari gizli mod / engelli depolama BOOT'U ÇÖKERTMESİN: erişim başarısızsa oturumluk rastgele kimlik
+const CLIENT_ID = (() => {
+  try {
+    let c = localStorage.getItem('tankcid');
+    if (!c) { c = Math.random().toString(36).slice(2, 12); localStorage.setItem('tankcid', c); }
+    return c;
+  } catch (e) { return Math.random().toString(36).slice(2, 12); }
+})();
 function submitScore(score) {
   if (!score || score < 1) return;
   try {
@@ -2494,7 +2501,8 @@ function openMenu() {
 }
 
 function applyLang() {
-  localStorage.setItem('tanklang', lang);
+  try { localStorage.setItem('tanklang', lang); } catch (e) { /* engelli depolama */ }
+  document.documentElement.lang = lang; // <html lang> dil anahtarıyla güncellensin
   const t = T();
   document.title = t.title;
   $('keys').innerHTML = IS_TOUCH ? t.keysTouch : t.keysDesk;
