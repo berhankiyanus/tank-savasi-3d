@@ -290,6 +290,7 @@ function track(ev, data) {
     else fetch(url, { method: 'POST', body: payload, keepalive: true }).catch(() => {});
   } catch {}
 }
+track('load_start'); // boot hunisi başlangıcı (load_end ile fark = ilk-kareye-süre; eksikse boot terki)
 // lider tablosu: kalıcı istemci kimliği (aynı oyuncunun günlük en iyisi tekilleşsin)
 // Safari gizli mod / engelli depolama BOOT'U ÇÖKERTMESİN: erişim başarısızsa oturumluk rastgele kimlik
 const CLIENT_ID = (() => {
@@ -558,6 +559,7 @@ try {
     new RGBELoader().loadAsync('assets/env.hdr'),
   ]);
 } catch (err) {
+  track('asset_fail', { m: String(err && err.message).slice(0, 80) }); // açılış varlığı inmedi — artık görünür
   const ld = document.getElementById('loading');
   if (ld) {
     const trq = (localStorage.getItem('tanklang') || navigator.language || 'tr').toLowerCase().startsWith('tr');
@@ -2094,6 +2096,7 @@ function tutEvent(id, amt) {
   tut.prog += (amt == null ? 1 : amt); // dikkat: `amt || 1` olmaz — 0 birim hareket 1 saymamalı (falsy-sıfır)
   if (tut.prog >= s.goal) {
     sfxPower(); haptic('LIGHT');
+    track('tutorial_step', { n: tut.step + 1 }); // hangi adımda kayıp var — huni ölçümü
     if (tut.step + 1 >= TUT_STEPS.length) { tutFinish(); return; }
     tut.step++; tut.prog = 0;
   }
@@ -2535,7 +2538,10 @@ function updateHUD() {
 
 // panel yönetimi
 const NAV_MAP = { 'panel-garage': 'btn-garage', 'panel-quests': 'btn-quests', 'panel-shop': 'btn-shop-nav', 'panel-lb': 'btn-lb', 'panel-season': 'btn-season' };
+let lastPanelTracked = '';
 function showPanel(id) {
+  if (id !== 'panel-main' && id !== lastPanelTracked) track('panel_open', { p: id.replace('panel-', '') }); // meta ekran ziyaret hunisi
+  lastPanelTracked = id;
   for (const p of ['panel-main', 'panel-maps', 'panel-garage', 'panel-duel', 'panel-coop', 'panel-profile', 'panel-rematch', 'panel-result', 'panel-quests', 'panel-lb', 'panel-season', 'panel-showroom', 'panel-shop'])
     $(p).classList.toggle('show', p === id);
   for (const [p, b] of Object.entries(NAV_MAP)) $(b).classList.toggle('on', p === id); // alt nav aktif sekme
@@ -2755,6 +2761,7 @@ function renderShowroomUI() {
       if (isGem ? (profile.gems || 0) < base.gem : profile.coins < base.price) return showToast(T().noMoney);
       if (isGem) profile.gems -= base.gem; else profile.coins -= base.price;
       profile.owned.push(base.id); profile.selected = base.id;
+      track('soft_purchase', { t: 'tank', id: base.id, cur: isGem ? 'g' : 'c', amt: isGem ? base.gem : base.price });
       saveProfile(); sfxCoin(); setPlayerTank(); updateCoinBar(); showroom.accId = profile.accessory; buildShowroomTank(); renderShowroomUI();
     };
   }
@@ -2779,6 +2786,7 @@ function renderShowroomAcc(t, act) {
     act.onclick = () => {
       if (a.gem) { if ((profile.gems || 0) < a.gem) return showToast(T().noMoney); profile.gems -= a.gem; } else { if (profile.coins < a.price) return showToast(T().noMoney); profile.coins -= a.price; }
       profile.accessories = profile.accessories || []; profile.accessories.push(a.id); profile.accessory = a.id;
+      track('soft_purchase', { t: 'acc', id: a.id, cur: a.gem ? 'g' : 'c', amt: a.gem || a.price });
       saveProfile(); sfxCoin(); updateCoinBar(); setPlayerTank(); renderShowroomUI();
     };
   }
@@ -2860,6 +2868,7 @@ function renderGarage() {
         await ensureModel(base.model);
         if (isGem) profile.gems -= base.gem; else profile.coins -= base.price;
         profile.owned.push(base.id); profile.selected = base.id;
+        track('soft_purchase', { t: 'tank', id: base.id, cur: isGem ? 'g' : 'c', amt: isGem ? base.gem : base.price });
         saveProfile(); sfxCoin(); setPlayerTank(); updateCoinBar(); renderGarage();
       };
     }
@@ -2884,6 +2893,7 @@ function renderGarage() {
             profile.coins -= cost;
             profile.upgrades[base.id] = profile.upgrades[base.id] || {};
             profile.upgrades[base.id][u.key] = lvl + 1;
+            track('soft_purchase', { t: 'up', id: base.id + ':' + u.key, cur: 'c', amt: cost });
             saveProfile(); sfxPower(); updateCoinBar();
             if (profile.selected === base.id) setPlayerTank();
             renderGarage();
@@ -2929,7 +2939,7 @@ function renderSkins() {
     else {
       btn.innerHTML = `${t.buy} · 🪙${s.price}`;
       btn.classList.toggle('cant', profile.coins < s.price);
-      btn.onclick = () => { if (profile.coins < s.price) return showToast(T().noMoney); profile.coins -= s.price; profile.skins.push(s.id); profile.skin = s.id; saveProfile(); sfxCoin(); setPlayerTank(); updateCoinBar(); renderSkins(); };
+      btn.onclick = () => { if (profile.coins < s.price) return showToast(T().noMoney); profile.coins -= s.price; profile.skins.push(s.id); profile.skin = s.id; track('soft_purchase', { t: 'skin', id: s.id, cur: 'c', amt: s.price }); saveProfile(); sfxCoin(); setPlayerTank(); updateCoinBar(); renderSkins(); };
     }
     card.appendChild(btn); wrap.appendChild(card);
   }
@@ -2967,6 +2977,7 @@ function renderAccessories() {
       btn.onclick = () => {
         if (a.gem) { if ((profile.gems || 0) < a.gem) return showToast(T().noMoney); profile.gems -= a.gem; } else { if (profile.coins < a.price) return showToast(T().noMoney); profile.coins -= a.price; }
         profile.accessories = profile.accessories || []; profile.accessories.push(a.id); profile.accessory = a.id;
+        track('soft_purchase', { t: 'acc', id: a.id, cur: a.gem ? 'g' : 'c', amt: a.gem || a.price });
         saveProfile(); sfxCoin(); updateCoinBar(); setPlayerTank(); renderAccessories();
       };
     }
@@ -4082,8 +4093,8 @@ function handleTeamNet(m) {
 }
 
 // ---------------------------------------------------------------- menü olayları
-$('lang-tr').addEventListener('click', () => { lang = 'tr'; applyLang(); if ($('panel-garage').classList.contains('show')) renderGarage(); if ($('panel-maps').classList.contains('show')) renderMaps(); });
-$('lang-en').addEventListener('click', () => { lang = 'en'; applyLang(); if ($('panel-garage').classList.contains('show')) renderGarage(); if ($('panel-maps').classList.contains('show')) renderMaps(); });
+$('lang-tr').addEventListener('click', () => { lang = 'tr'; track('lang_switch', { to: 'tr' }); applyLang(); if ($('panel-garage').classList.contains('show')) renderGarage(); if ($('panel-maps').classList.contains('show')) renderMaps(); });
+$('lang-en').addEventListener('click', () => { lang = 'en'; track('lang_switch', { to: 'en' }); applyLang(); if ($('panel-garage').classList.contains('show')) renderGarage(); if ($('panel-maps').classList.contains('show')) renderMaps(); });
 // HIZLI OYNA = solo dalga koşusu (FTUE ile tutarlı; bot düellosu ARKADAŞLA DÜELLO menüsünden hâlâ erişilir).
 // Öne çıkan haritalar arasında döner (kilitliler atlanır).
 $('btn-quickplay').addEventListener('click', () => {
@@ -4104,7 +4115,7 @@ $('res-again').addEventListener('click', () => { const fn = harvestReplay; harve
 $('res-menu').addEventListener('click', () => { harvestReplay = null; harvestEndless = null; openMenu(); });
 $('res-endless').addEventListener('click', () => { const fn = harvestEndless; harvestEndless = null; harvestReplay = null; if (fn) fn(); });
 $('rv-yes').addEventListener('click', doRevive);
-$('rv-no').addEventListener('click', () => { if ($('reviveoffer').classList.contains('hidden')) return; $('reviveoffer').classList.add('hidden'); gameOver(); });
+$('rv-no').addEventListener('click', () => { if ($('reviveoffer').classList.contains('hidden')) return; $('reviveoffer').classList.add('hidden'); track('revive_declined'); gameOver(); });
 $('res-rewarded').addEventListener('click', async () => {
   const rb = $('res-rewarded'); if (rb.disabled || !harvestReward) return;
   rb.disabled = true; rb.textContent = T().adLoading;
@@ -4459,7 +4470,7 @@ function trackTransitions() {
   if (state !== lastTrackedState) {
     if (state === 'play') { matchMode = mode; matchStartT = clock.elapsedTime; matchStartKills = profile.kills || 0; track('gameplay_start', { mode }); }
     else if (lastTrackedState === 'play') {
-      track('match_end', { mode: matchMode, dur: Math.round(clock.elapsedTime - matchStartT), reason: matchEndReason || 'quit' });
+      track('match_end', { mode: matchMode, dur: Math.round(clock.elapsedTime - matchStartT), reason: matchEndReason || 'quit', wave }); // wave: dalga-bazlı düşüş eğrisi için
       matchEndReason = '';
       questProgress('match', 1);                                   // görev: maç oyna
       questProgress('kill', (profile.kills || 0) - matchStartKills); // görev: tank patlat
