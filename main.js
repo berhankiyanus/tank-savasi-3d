@@ -513,6 +513,9 @@ function applyQuality() {
   renderer.setPixelRatio(low ? LOW_PR : Math.min(devicePixelRatio, IS_TOUCH ? 1.7 : 2));
   renderer.shadowMap.enabled = !low;
   renderer.shadowMap.needsUpdate = true;
+  // gölge dokusu da ölçeklensin (2048² düşük kalitede bile ayrılı kalıyordu — VRAM)
+  const sz = low ? 1024 : 2048;
+  if (sun.shadow.mapSize.x !== sz) { sun.shadow.mapSize.set(sz, sz); if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; } }
   scene.traverse(o => {
     if (o.material) { (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => { m.needsUpdate = true; }); }
   });
@@ -542,6 +545,7 @@ addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight);
+  renderer.setPixelRatio(settings.quality === 'low' ? LOW_PR : Math.min(devicePixelRatio, IS_TOUCH ? 1.7 : 2)); // monitör değişiminde DPR tazelensin
 });
 
 // ---------------------------------------------------------------- varlık yükleme
@@ -2451,6 +2455,7 @@ function updateRunCoins() {
   }
 }
 const _camFwd = new THREE.Vector3();
+const _camTarget = new THREE.Vector3();
 function updateEnemyArrow() {
   let target = null, count = 0;
   if (state === 'play' && !paused && (mode === 'solo' || (mode === 'coop' && isAuthority))) {
@@ -3923,7 +3928,7 @@ function updateCoop(dt) {
       coop.enemT = 0.06;
       netSend({ t: 'enemies', list: enemies.map(e => ({ id: e.id, x: +e.x.toFixed(2), z: +e.z.toFixed(2), a: +e.a.toFixed(2), c: e.color })) });
     }
-    enemies = enemies.filter(e => e.alive);
+    if (enemies.some(e => !e.alive)) enemies = enemies.filter(e => e.alive);
     if (enemies.length === 0 && !coop.over) coopNextWave();
   } else {
     for (const ce of coopEnemies.values()) {
@@ -4724,7 +4729,7 @@ function tick() {
     }
 
     if (mode === 'solo') {
-      enemies = enemies.filter(e => e.alive);
+      if (enemies.some(e => !e.alive)) enemies = enemies.filter(e => e.alive); // alloc yalnız ölüm olduğunda
       if (enemies.length === 0 && player.alive) {
         wave++;
         if (wave > profile.bestWave) { profile.bestWave = wave; saveProfile(); }
@@ -4784,9 +4789,8 @@ function tick() {
 
   const portrait = camera.aspect < 1;
   const camBack = portrait ? 10 : 11.5;
-  const camTarget = new THREE.Vector3(
-    player.x - fwdX(player.a) * camBack, portrait ? 15 : 9.0, player.z - fwdZ(player.a) * camBack);
-  camera.position.lerp(camTarget, 1 - Math.exp(-4 * dt));
+  _camTarget.set(player.x - fwdX(player.a) * camBack, portrait ? 15 : 9.0, player.z - fwdZ(player.a) * camBack); // kare başı alloc yok
+  camera.position.lerp(_camTarget, 1 - Math.exp(-4 * dt));
   shake = Math.max(0, shake - dt * 1.2);
   if (shake > 0) {
     camera.position.x += (Math.random() - 0.5) * shake;
