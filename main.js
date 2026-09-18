@@ -21,7 +21,7 @@ const L = {
     patrolMsg: (c, h) => `🛡️ Tankın devriyedeydi: +🪙${c} (${h} saat)`,
     nextGoal: 'Sıradaki', weeklyLbl: '📅 HAFTANIN MODU', weeklyWin: 'Haftalık mod zaferi',
     modNames: { doubleBoss: 'Çift Boss', fast: 'Hızlı Düşmanlar', tough: 'Zırhlı Düşmanlar' },
-    gemTip: 'Elmas al', namePh: 'İsmin', midW: 'KISIK',
+    gemTip: 'Elmas al', namePh: 'İsmin', midW: 'KISIK', streakFrozen: '🧊 Serin donduruldu — kaldığın yerden devam!', pityLine: n => `🛡️ Garanti: ${n} çekilişte Efsanevi`,
     setHaptic: 'Titreşim', privacyLbl: 'Gizlilik Politikası',
     connWaking: '⏳ Sunucu uyanıyor — birkaç saniye sürebilir...', offlineMsg: '📡 İnternet yok — bağlanınca tekrar dene',
     lbWeekTitle: 'HAFTANIN EN İYİLERİ',
@@ -101,7 +101,7 @@ const L = {
     patrolMsg: (c, h) => `🛡️ Your tank was on patrol: +🪙${c} (${h}h)`,
     nextGoal: 'Next up', weeklyLbl: '📅 WEEKLY MODE', weeklyWin: 'Weekly mode victory',
     modNames: { doubleBoss: 'Double Boss', fast: 'Fast Enemies', tough: 'Armored Enemies' },
-    gemTip: 'Get gems', namePh: 'Your name', midW: 'LOW',
+    gemTip: 'Get gems', namePh: 'Your name', midW: 'LOW', streakFrozen: '🧊 Streak frozen — pick up where you left off!', pityLine: n => `🛡️ Guaranteed Epic within ${n} spins`,
     setHaptic: 'Haptics', privacyLbl: 'Privacy Policy',
     connWaking: '⏳ Server waking up — may take a few seconds...', offlineMsg: '📡 No internet — try again when connected',
     lbWeekTitle: "THIS WEEK'S BEST",
@@ -2066,10 +2066,13 @@ function tokenOdds() {
 function spinToken() {
   if ((profile.tokens || 0) < 1) return;
   profile.tokens--;
-  const pool = SKINS.filter(s => s.id !== 'default');
+  const pity = (profile.pity || 0) + 1; // P1: 30 çekilişte garanti Efsanevi (kötü-şans koruması)
+  let pool = SKINS.filter(s => s.id !== 'default');
+  if (pity >= 30) { const ep = pool.filter(s => s.r === 'e'); if (ep.length) pool = ep; }
   let total = 0; for (const s of pool) total += RARITY[s.r].w;
   let roll = Math.random() * total, pick = pool[pool.length - 1];
   for (const s of pool) { roll -= RARITY[s.r].w; if (roll <= 0) { pick = s; break; } }
+  profile.pity = pick.r === 'e' ? 0 : pity;
   const t = T();
   if (profile.skins.includes(pick.id)) {
     const coins = RARITY[pick.r].coin;
@@ -2091,6 +2094,7 @@ function renderMachine() {
     <div class="tm-count">${t.tmCount}: <b>${profile.tokens || 0}</b></div>
     <button id="tm-spin" class="mbtn"${(profile.tokens || 0) < 1 ? ' disabled' : ''}>${t.tmSpin}</button>
     <div class="tm-odds">${RARITY.c[lang]} %${o.c.toFixed(0)} · ${RARITY.r[lang]} %${o.r.toFixed(0)} · ${RARITY.e[lang]} %${o.e.toFixed(0)}</div>
+    <div class="tm-odds" style="color:#ffd76a">${t.pityLine(Math.max(1, 30 - (profile.pity || 0)))}</div>
   </div>`;
   const sp = $('tm-spin'); if (sp) sp.onclick = spinToken;
 }
@@ -2467,7 +2471,13 @@ function checkDaily() {
   const today = new Date().toDateString();
   if (profile.lastDaily === today) return;
   const yest = new Date(Date.now() - 864e5).toDateString();
-  profile.streak = (profile.lastDaily === yest) ? (profile.streak || 0) + 1 : 1;
+  const prev2 = new Date(Date.now() - 2 * 864e5).toDateString();
+  const monthKey = new Date().toISOString().slice(0, 7);
+  if (profile.lastDaily === yest) profile.streak = (profile.streak || 0) + 1;
+  else if (profile.lastDaily === prev2 && profile.freezeMonth !== monthKey && (profile.streak || 0) >= 2) {
+    profile.freezeMonth = monthKey; // P1: ayda 1 kez, tek günlük kaçırma seriyi öldürmez
+    showToast(T().streakFrozen, 3800);
+  } else profile.streak = 1;
   profile.lastDaily = today;
   const day = ((profile.streak - 1) % 7) + 1; // 7 günlük döngü (artan)
   const reward = 40 + day * 20;               // gün 7 = 180
