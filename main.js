@@ -18,6 +18,7 @@ const L = {
     lockedLv: n => `🔒 Seviye ${n}'te açılır — oynadıkça XP kazan!`,
     gateOpen: '🔓 Yeni özellik açıldı — menüye göz at!',
     gemTip: 'Elmas al', namePh: 'İsmin',
+    connWaking: '⏳ Sunucu uyanıyor — birkaç saniye sürebilir...', offlineMsg: '📡 İnternet yok — bağlanınca tekrar dene',
     lbWeekTitle: 'HAFTANIN EN İYİLERİ',
     timeNewRec: d => `⏱ Süre ${d} — YENİ REKOR!`, timeLine: (d, b) => `⏱ Süre ${d} · Rekorun ${b}`,
     reviveTitle: '💥 NEREDEYSE!', reviveSub: 'Yeni komutanlara özel: aynı dalgadan ücretsiz devam et!',
@@ -92,6 +93,7 @@ const L = {
     lockedLv: n => `🔒 Unlocks at level ${n} — play to earn XP!`,
     gateOpen: '🔓 New feature unlocked — check the menu!',
     gemTip: 'Get gems', namePh: 'Your name',
+    connWaking: '⏳ Server waking up — may take a few seconds...', offlineMsg: '📡 No internet — try again when connected',
     lbWeekTitle: "THIS WEEK'S BEST",
     timeNewRec: d => `⏱ Time ${d} — NEW RECORD!`, timeLine: (d, b) => `⏱ Time ${d} · Your best ${b}`,
     reviveTitle: '💥 SO CLOSE!', reviveSub: 'New commander bonus: continue from this wave for free!',
@@ -308,7 +310,7 @@ function submitScore(score) {
 }
 async function fetchLeaderboard(period) {
   try { const r = await fetch(apiBase() + '/lb?p=' + period, { cache: 'no-store' }); return await r.json(); }
-  catch { return []; }
+  catch { return null; } // null = ağ hatası (boş liste "henüz skor yok" ile karışmasın — denetim)
 }
 let paused = false;
 let matchSeq = 0; // gecikmiş timer'ların eski maça ait sonuç üretmesini önler
@@ -2347,6 +2349,7 @@ async function renderLeaderboard(period) {
   $('lblist').innerHTML = `<div class="lbempty">${t.lbLoad}</div>`;
   const rows = await fetchLeaderboard(period);
   if (lbPeriod !== period) return; // sekme değiştiyse iptal
+  if (rows === null) { $('lblist').innerHTML = `<div class="lbempty">${navigator.onLine === false ? t.offlineMsg : t.connFail}</div>`; return; }
   if (!rows.length) { $('lblist').innerHTML = `<div class="lbempty">${t.lbEmpty}</div>`; return; }
   const myName = profile.name || 'Oyuncu';
   $('lblist').innerHTML = rows.map((r, i) => {
@@ -3222,10 +3225,15 @@ function connLost() {
 }
 function connectNet(onOpen) {
   netYou = null; netMode = null; netBegun = false; netMapIdx = null;
+  if (navigator.onLine === false) { duelStatusEl.textContent = T().offlineMsg; return; } // hiç deneme — net mesaj
   try { ws = new WebSocket(wsBase()); }
   catch { duelStatusEl.textContent = T().connFail; return; }
-  ws.onopen = onOpen;
-  ws.onerror = () => { duelStatusEl.textContent = T().connFail; };
+  // Render cold-start (30-60sn) panelde süresiz asılı bırakıyordu: 4sn'de "uyanıyor", 50sn'de pes
+  const myWs = ws;
+  const slowT = setTimeout(() => { if (ws === myWs && myWs.readyState === 0) duelStatusEl.textContent = T().connWaking; }, 4000);
+  const failT = setTimeout(() => { if (ws === myWs && myWs.readyState === 0) { try { myWs.close(); } catch (e) {} duelStatusEl.textContent = T().connFail; } }, 50000);
+  ws.onopen = e => { clearTimeout(slowT); clearTimeout(failT); onOpen(e); };
+  ws.onerror = () => { clearTimeout(slowT); clearTimeout(failT); duelStatusEl.textContent = T().connFail; };
   ws.onclose = () => {
     if (state === 'play' && (mode === 'duel' || mode === 'ball')) peerLeft();
     else if (state === 'play' && (mode === 'coop' || mode === 'team')) connLost(); // sunucu bağlantısı koptu: asılı kalma yok, düzgün sonuç ekranı
