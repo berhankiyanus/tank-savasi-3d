@@ -15,6 +15,8 @@ const L = {
     fairNote: '⚔️ Düellolarda herkes eşit tankla savaşır — yetenek kazanır!',
     questReady: '🎯 Görev tamam — GÖREVLER\'den ödülünü AL!', claimBtn: 'ÖDÜLÜ AL',
     daysLeft: d => `${d} gün kaldı`,
+    lockedLv: n => `🔒 Seviye ${n}'te açılır — oynadıkça XP kazan!`,
+    gateOpen: '🔓 Yeni özellik açıldı — menüye göz at!',
     lbWeekTitle: 'HAFTANIN EN İYİLERİ',
     timeNewRec: d => `⏱ Süre ${d} — YENİ REKOR!`, timeLine: (d, b) => `⏱ Süre ${d} · Rekorun ${b}`,
     reviveTitle: '💥 NEREDEYSE!', reviveSub: 'Yeni komutanlara özel: aynı dalgadan ücretsiz devam et!',
@@ -86,6 +88,8 @@ const L = {
     fairNote: '⚔️ Duels are fought with equal tanks — skill wins!',
     questReady: '🎯 Quest complete — claim it in QUESTS!', claimBtn: 'CLAIM',
     daysLeft: d => `${d} days left`,
+    lockedLv: n => `🔒 Unlocks at level ${n} — play to earn XP!`,
+    gateOpen: '🔓 New feature unlocked — check the menu!',
     lbWeekTitle: "THIS WEEK'S BEST",
     timeNewRec: d => `⏱ Time ${d} — NEW RECORD!`, timeLine: (d, b) => `⏱ Time ${d} · Your best ${b}`,
     reviveTitle: '💥 SO CLOSE!', reviveSub: 'New commander bonus: continue from this wave for free!',
@@ -2131,6 +2135,7 @@ function onLevelUp(lvl) {
   if (big) { grantTokens(2, true); addGems(2); } // her 5. seviye → 2 jeton + 2 elmas (banner anons ediyor; ayrı toast yok)
   banner(`⭐ ${lang === 'tr' ? 'SEVİYE' : 'LEVEL'} ${lvl}!  +🪙${reward}${big ? '  +💎2 +🎰2' : ''}`); // 🎰 banner'da eksikti (denetim)
   sfxPower();
+  if (lvl === LEVEL_GATES.duel || lvl === LEVEL_GATES.skins || lvl === LEVEL_GATES.acc) { applyLang(); showToast(T().gateOpen, 3600); } // kilit açıldı — etiketlerden 🔒 düşsün + kutlama
   track('level_up', { level: lvl });
 }
 // maç sonunda kazanılan XP (mod + performansa göre)
@@ -2564,7 +2569,7 @@ function applyLang() {
   document.title = t.title;
   $('keys').innerHTML = IS_TOUCH ? t.keysTouch : t.keysDesk;
   $('btn-single').innerHTML = gi('crosshair') + ' ' + t.single;
-  $('btn-duel').innerHTML = gi('swords') + ' ' + t.duel;
+  $('btn-duel').innerHTML = gi('swords') + ' ' + t.duel + gateSuffix('duel');
   $('duel-fair').textContent = t.fairNote;
   $('btn-bot-rookie').textContent = t.botRookie;
   $('btn-bot-pro').textContent = t.botPro;
@@ -2599,7 +2604,8 @@ function applyLang() {
   $('hlabel').textContent = t.health;
   $('firebtn').textContent = t.fire;
   $('gt-tanks').textContent = t.tabTanks;
-  $('gt-skins').textContent = t.tabSkins;
+  $('gt-skins').textContent = t.tabSkins + gateSuffix('skins');
+  $('gt-acc').textContent = t.accTab + gateSuffix('acc'); // ölü anahtar bağlandı (EN'de 'AKSESUAR' kalıyordu)
   $('btn-back-maps').textContent = t.back;
   $('btn-back-garage').textContent = t.back;
   $('btn-back-profile').textContent = t.back;
@@ -3351,6 +3357,11 @@ function duelReceiveHit() {
 // ---------------------------------------------------------------- BOTLAR: hızlı oyna (bota karşı 1v1, tamamen yerel)
 const BOT_NAMES = ['Kaplan', 'Yıldırım', 'Panzer', 'Volkan', 'Şahin', 'Bora', 'Demir', 'Atlas', 'Zafer', 'Kobra', 'Tayfun', 'Ejder', 'Fırtına', 'Çelik', 'Reis', 'Alpay', 'Doruk', 'Yağız'];
 function botName() { return BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)]; }
+// SEVİYE KAPILARI (denetim 4.3: seviye hiçbir şeyi açmıyordu — anlamsız progres çubuğu).
+// FTUE pacing: yeni oyuncu önce çekirdek döngüyü öğrenir, özellikler seviyeyle "açılır" (hepsi 1-2 saatte açık).
+const LEVEL_GATES = { duel: 3, skins: 4, acc: 6 };
+const gateOk = k => (profile.level || 1) >= LEVEL_GATES[k];
+const gateSuffix = k => (gateOk(k) ? '' : ` 🔒${LEVEL_GATES[k]}`);
 // bot zorluk kademeleri — inceleme: tek ayarlı bot yeni oyuncuyu 5-1 eziyordu; Çaylak yenilebilir olmalı,
 // Efsane ustalara meydan okumalı. Galibiyet ödülü kademeyle artar (rekabet motivasyonu).
 const BOT_DIFFS = {
@@ -4118,12 +4129,12 @@ function renderMapPicker(containerId, rerender) {
 }
 function renderDuelMaps() { renderMapPicker('duelmapsrow', renderDuelMaps); }
 function renderCoopMaps() { renderMapPicker('coopmapsrow', renderCoopMaps); }
-$('btn-duel').addEventListener('click', () => { pendingMode = 'duel'; myRoomCode = null; $('btn-duel-share').style.display = 'none'; duelStatusEl.textContent = ''; $('title').textContent = T().duel; $('submsg').textContent = T().duelSub(KILL_TARGET); $('duelmapsrow').style.display = 'flex'; renderDuelMaps(); showPanel('panel-duel'); });
+$('btn-duel').addEventListener('click', () => { if (!gateOk('duel')) return showToast(T().lockedLv(LEVEL_GATES.duel)); pendingMode = 'duel'; myRoomCode = null; $('btn-duel-share').style.display = 'none'; duelStatusEl.textContent = ''; $('title').textContent = T().duel; $('submsg').textContent = T().duelSub(KILL_TARGET); $('duelmapsrow').style.display = 'flex'; renderDuelMaps(); showPanel('panel-duel'); });
 $('btn-ball').addEventListener('click', () => { pendingMode = 'ball'; myRoomCode = null; $('btn-duel-share').style.display = 'none'; duelStatusEl.textContent = ''; $('title').textContent = T().ballBtn; $('submsg').textContent = T().ballSub(BALL_TARGET); $('duelmapsrow').style.display = 'none'; showPanel('panel-duel'); });
 $('btn-garage').addEventListener('click', openGarage);
 $('gt-tanks').addEventListener('click', () => { garageTab = 'tanks'; renderGarageTabs(); });
-$('gt-skins').addEventListener('click', () => { garageTab = 'skins'; renderGarageTabs(); });
-$('gt-acc').addEventListener('click', () => { garageTab = 'acc'; renderGarageTabs(); });
+$('gt-skins').addEventListener('click', () => { if (!gateOk('skins')) return showToast(T().lockedLv(LEVEL_GATES.skins)); garageTab = 'skins'; renderGarageTabs(); });
+$('gt-acc').addEventListener('click', () => { if (!gateOk('acc')) return showToast(T().lockedLv(LEVEL_GATES.acc)); garageTab = 'acc'; renderGarageTabs(); });
 $('statsline').addEventListener('click', openProfile);
 $('playername').value = profile.name;
 $('playername').addEventListener('input', e => {
