@@ -21,7 +21,7 @@ const L = {
     patrolMsg: (c, h) => `🛡️ Tankın devriyedeydi: +🪙${c} (${h} saat)`,
     nextGoal: 'Sıradaki', weeklyLbl: '📅 HAFTANIN MODU', weeklyWin: 'Haftalık mod zaferi',
     modNames: { doubleBoss: 'Çift Boss', fast: 'Hızlı Düşmanlar', tough: 'Zırhlı Düşmanlar' },
-    gemTip: 'Elmas al', namePh: 'İsmin', midW: 'KISIK', streakFrozen: '🧊 Serin donduruldu — kaldığın yerden devam!', pityLine: n => `🛡️ Garanti: ${n} çekilişte Efsanevi`,
+    gemTip: 'Elmas al', namePh: 'İsmin', midW: 'KISIK', setNotifs: 'Bildirimler', streakFrozen: '🧊 Serin donduruldu — kaldığın yerden devam!', pityLine: n => `🛡️ Garanti: ${n} çekilişte Efsanevi`,
     setHaptic: 'Titreşim', privacyLbl: 'Gizlilik Politikası',
     connWaking: '⏳ Sunucu uyanıyor — birkaç saniye sürebilir...', offlineMsg: '📡 İnternet yok — bağlanınca tekrar dene',
     lbWeekTitle: 'HAFTANIN EN İYİLERİ',
@@ -101,7 +101,7 @@ const L = {
     patrolMsg: (c, h) => `🛡️ Your tank was on patrol: +🪙${c} (${h}h)`,
     nextGoal: 'Next up', weeklyLbl: '📅 WEEKLY MODE', weeklyWin: 'Weekly mode victory',
     modNames: { doubleBoss: 'Double Boss', fast: 'Fast Enemies', tough: 'Armored Enemies' },
-    gemTip: 'Get gems', namePh: 'Your name', midW: 'LOW', streakFrozen: '🧊 Streak frozen — pick up where you left off!', pityLine: n => `🛡️ Guaranteed Epic within ${n} spins`,
+    gemTip: 'Get gems', namePh: 'Your name', midW: 'LOW', setNotifs: 'Notifications', streakFrozen: '🧊 Streak frozen — pick up where you left off!', pityLine: n => `🛡️ Guaranteed Epic within ${n} spins`,
     setHaptic: 'Haptics', privacyLbl: 'Privacy Policy',
     connWaking: '⏳ Server waking up — may take a few seconds...', offlineMsg: '📡 No internet — try again when connected',
     lbWeekTitle: "THIS WEEK'S BEST",
@@ -209,6 +209,7 @@ catch { settings = { muted: false, quality: 'high', music: true }; }
 if (typeof settings.music !== 'boolean') settings.music = true;
 if (typeof settings.haptics !== 'boolean') settings.haptics = true; // titreşim tercihi (yeni ayar)
 // E2: oto-ateş — araştırma: tek-parmak kontrol 9/10 başarılı oyunda; dokunmatikte varsayılan AÇIK (D0 sürtünmesi), PvE'de geçerli
+if (typeof settings.notifs !== 'boolean') settings.notifs = true; // günlük hatırlatma bildirimi (yalnız native)
 if (typeof settings.volSfx !== 'number') settings.volSfx = 1;
 if (typeof settings.volMusic !== 'number') settings.volMusic = 1;
 if (typeof settings.autoFire !== 'boolean') settings.autoFire = ('ontouchstart' in window || navigator.maxTouchPoints > 0); // (IS_TOUCH henüz tanımsız — TDZ)
@@ -227,9 +228,27 @@ const V1_SIMPLE = true;
 function wsBase() { return isNativeApp() ? 'wss://' + REMOTE_HOST : (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host; }
 function capPlugins() { return (window.Capacitor && window.Capacitor.Plugins) || {}; }
 function haptic(style) { try { if (!settings.haptics) return; const H = capPlugins().Haptics; if (isNativeApp() && H) H.impact({ style: style || 'MEDIUM' }); } catch {} }
+// P1: günlük yerel bildirim — 20:00 "görevlerin hazır" (izin FTUE sonrası, ayarlardan kapatılabilir; server-push değil)
+async function setupNotifs() {
+  try {
+    const LN = capPlugins().LocalNotifications;
+    if (!isNativeApp() || !LN) return;
+    if (!settings.notifs) { LN.cancel({ notifications: [{ id: 101 }] }).catch(() => {}); return; }
+    if ((profile.games || 0) <= 3) return; // izin sorusu FTUE'den sonra (2. gün civarı)
+    const perm = await LN.requestPermissions();
+    if (!perm || perm.display !== 'granted') return;
+    await LN.schedule({ notifications: [{
+      id: 101,
+      title: lang === 'tr' ? '🎯 Görevlerin hazır!' : '🎯 Your quests are ready!',
+      body: lang === 'tr' ? 'Günlük görevler + sandık seni bekliyor — seri bozulmasın!' : 'Daily quests + chest are waiting — keep your streak!',
+      schedule: { on: { hour: 20, minute: 0 }, allowWhileIdle: true },
+    }] });
+  } catch (e) {}
+}
 function nativeInit() {
   if (!isNativeApp()) return;
   const P = capPlugins();
+  setupNotifs();
   try { P.SplashScreen && P.SplashScreen.hide(); } catch {}
   try { P.StatusBar && P.StatusBar.hide(); } catch {}          // tam ekran
   try {
@@ -4330,6 +4349,8 @@ function updateSettingsLabels() {
   $('set-quality').textContent = `${t.setQuality}: ${settings.quality === 'low' ? t.qLow : t.qHigh}`;
   $('set-haptic').textContent = `${t.setHaptic}: ${settings.haptics ? t.onW : t.offW}`;
   $('set-autofire').textContent = `${t.setAutoFire}: ${settings.autoFire ? t.onW : t.offW}`;
+  const nb2 = $('set-notifs'); nb2.style.display = isNativeApp() ? '' : 'none';
+  nb2.textContent = `${t.setNotifs}: ${settings.notifs ? t.onW : t.offW}`;
   $('set-privacy').textContent = t.privacyLbl;
   $('set-privacy').href = isNativeApp() ? 'https://' + REMOTE_HOST + '/privacy' : 'privacy.html'; // privacy.html native pakette yok — canlıya git
   $('set-ver').textContent = 'v' + GAME_VER;
@@ -4357,6 +4378,7 @@ $('set-sound').addEventListener('click', () => { // 3 kademe: AÇIK → KISIK �
 });
 $('set-haptic').addEventListener('click', () => { settings.haptics = !settings.haptics; saveSettings(); updateSettingsLabels(); haptic('MEDIUM'); });
 $('set-autofire').addEventListener('click', () => { settings.autoFire = !settings.autoFire; saveSettings(); updateSettingsLabels(); });
+$('set-notifs').addEventListener('click', () => { settings.notifs = !settings.notifs; saveSettings(); updateSettingsLabels(); setupNotifs(); });
 $('set-music').addEventListener('click', () => { // 3 kademe: AÇIK → KISIK → KAPALI
   if (!settings.music) { settings.music = true; settings.volMusic = 1; startMusic(); }
   else if ((settings.volMusic || 1) >= 1) settings.volMusic = 0.4;
