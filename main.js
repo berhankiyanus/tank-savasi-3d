@@ -1050,6 +1050,7 @@ function damageEnemy(e, dmg) {
   if (e.hp <= 0) {
     e.alive = false; explode(e.x, 1.0, e.z, true); scene.remove(e.mesh); disposeTank(e.mesh);
     popFloater(e.x, 2.2, e.z, '+' + e.score, e.type === 'boss' ? '#ff7a3a' : '#ffe86a');
+    popFloater(e.x, 3.1, e.z, '+🪙' + e.coins, '#ffd76a');
     if (mode === 'coop') netSend({ t: 'ekill', id: e.id });
     score += e.score; roundCoins += e.coins; profile.kills++; addCoins(e.coins); updateHUD();
   } else { e.hitT = 0.14; }
@@ -1960,11 +1961,11 @@ const duelStatusEl = $('duelstatus'), coinsEl = $('coins');
 function updateCoinBar() { coinsEl.textContent = profile.coins; updateTokenBar(); updateGemBar(); }
 function updateTokenBar() { const el = $('tokens'); if (el) el.textContent = profile.tokens || 0; }
 function updateGemBar() { const el = $('gems'); if (el) el.textContent = profile.gems || 0; }
-function grantTokens(n) {
+function grantTokens(n, silent) {
   if (!n || n <= 0) return;
   profile.tokens = (profile.tokens || 0) + n;
   saveProfile(); updateTokenBar();
-  showToast(T().tokenGot(n), 2600);
+  if (!silent) showToast(T().tokenGot(n), 2600); // silent: çağıran kendi birleşik mesajını gösteriyorsa
 }
 // jeton makinesi (gacha) — ağırlıklı rastgele kaplama; kopya çıkarsa coin'e döner (GDD kuralı)
 function tokenOdds() {
@@ -2009,8 +2010,21 @@ function updateStats() {
   $('statsline').innerHTML = `🏆 D.${profile.bestWave}${brt} &nbsp;·&nbsp; ⚔️ ${profile.kills} &nbsp;·&nbsp; 🥇 ${profile.wins} &nbsp;·&nbsp; 🏅`;
 }
 let toastT = 0, statsCheckT = 2;
+// TOAST KUYRUĞU (denetim bulgusu: tek #toast elementinde bildirimler birbirini eziyordu —
+// görev toast'ı jeton toast'ını yutuyor, çok kademeli sezon pop'ları kayboluyordu). Artık sırayla akar.
+const toastQ = [];
+let toastBusy = false;
 function showToast(text, dur = 2800) {
-  const el = $('toast'); el.textContent = text; el.style.opacity = '1'; toastT = dur / 1000;
+  if (toastQ.length > 6) toastQ.shift(); // sel durumunda en eskisini düşür
+  toastQ.push({ text, dur });
+  pumpToast();
+}
+function pumpToast() {
+  if (toastBusy || !toastQ.length) return;
+  const { text, dur } = toastQ.shift();
+  const el = $('toast'); el.textContent = text; el.style.opacity = '1';
+  toastT = Math.min(dur / 1000, toastQ.length ? 1.7 : dur / 1000); // sırada bekleyen varsa hızlan
+  toastBusy = true;
 }
 // FTUE: ilk düşman öldürüldüğünde bedava kozmetik hediye (erken dopamin + ödül döngüsünü öğret)
 function checkFtue() {
@@ -2110,8 +2124,8 @@ function onLevelUp(lvl) {
   const big = lvl % 5 === 0;
   const reward = big ? (100 + lvl * 12) : (20 + lvl * 3);
   addCoins(reward);
-  if (big) { grantTokens(2); addGems(2); } // her 5. seviye → 2 jeton + 2 elmas (ücretsiz premium akışı)
-  banner(`⭐ ${lang === 'tr' ? 'SEVİYE' : 'LEVEL'} ${lvl}!  +🪙${reward}${big ? '  +💎2' : ''}`);
+  if (big) { grantTokens(2, true); addGems(2); } // her 5. seviye → 2 jeton + 2 elmas (banner anons ediyor; ayrı toast yok)
+  banner(`⭐ ${lang === 'tr' ? 'SEVİYE' : 'LEVEL'} ${lvl}!  +🪙${reward}${big ? '  +💎2 +🎰2' : ''}`); // 🎰 banner'da eksikti (denetim)
   sfxPower();
   track('level_up', { level: lvl });
 }
@@ -2229,7 +2243,7 @@ function questProgress(type, amount) {
     // tüm günlük görevler bitince günlük sandık (günde bir)
     if (!profile.quests.chest && dailyQuests().every(q => q.claimed)) {
       profile.quests.chest = true;
-      addCoins(120); profile.tokens = (profile.tokens || 0) + 2; updateTokenBar();
+      addCoins(120); grantTokens(2, true); // chestMsg zaten +🎰2 diyor (bypass kırılganlığı giderildi)
       showToast(T().chestMsg, 4200); sfxCoin(); track('daily_chest');
     }
     saveProfile();
@@ -2378,6 +2392,19 @@ function updateBuffs() {
 // "son düşman avı" fix'i (inceleme: dalga sonunda 45sn hedef arandı): ≤2 düşman kalınca
 // en yakın uzak düşmana ekran kenarında yön oku + minimap'te büyüyen nokta
 const enemyArrowEl = $('enemyarrow');
+// oyun içi koşu-parası sayacı: kazandıkça ortada ufak zıplama yapar (ödül görünürlüğü denetimi)
+const runCoinsEl = $('runcoins'), runCoinsNEl = $('runcoins-n');
+let runCoinsShown = -1;
+function updateRunCoins() {
+  const show = state === 'play' && !paused && (mode === 'solo' || mode === 'coop');
+  if (!show) { if (runCoinsEl.style.display !== 'none') runCoinsEl.style.display = 'none'; runCoinsShown = -1; return; }
+  if (runCoinsEl.style.display !== 'block') runCoinsEl.style.display = 'block';
+  if (runCoinsShown !== roundCoins) {
+    runCoinsShown = roundCoins;
+    runCoinsNEl.textContent = roundCoins;
+    runCoinsEl.classList.remove('pop'); void runCoinsEl.offsetWidth; runCoinsEl.classList.add('pop');
+  }
+}
 const _camFwd = new THREE.Vector3();
 function updateEnemyArrow() {
   let target = null, count = 0;
@@ -4536,6 +4563,7 @@ function tick() {
                 if (e.hp <= 0) {
                   e.alive = false; explode(e.x, 1.0, e.z, true); scene.remove(e.mesh); disposeTank(e.mesh);
                   popFloater(e.x, 2.2, e.z, '+' + e.score, e.type === 'boss' ? '#ff7a3a' : '#ffe86a');
+                popFloater(e.x, 3.1, e.z, '+🪙' + e.coins, '#ffd76a'); // denetim: en büyük musluk görünmezdi — kill parası artık ekranda
                   netSend({ t: 'ekill', id: e.id });
                   score += e.score; roundCoins += e.coins; profile.kills++; addCoins(e.coins); updateHUD();
                 } else { e.hitT = 0.14; explode(b.mesh.position.x, 1.0, b.mesh.position.z, false); }
@@ -4591,6 +4619,7 @@ function tick() {
               if (e.hp <= 0) {
                 e.alive = false; explode(e.x, 1.0, e.z, true); scene.remove(e.mesh); disposeTank(e.mesh);
                 popFloater(e.x, 2.2, e.z, '+' + e.score, e.type === 'boss' ? '#ff7a3a' : '#ffe86a');
+                popFloater(e.x, 3.1, e.z, '+🪙' + e.coins, '#ffd76a'); // denetim: en büyük musluk görünmezdi — kill parası artık ekranda
                 score += e.score; roundCoins += e.coins; profile.kills++; addCoins(e.coins); updateHUD();
               } else { e.hitT = 0.14; explode(b.mesh.position.x, 1.0, b.mesh.position.z, false); }
               dead = true; break;
@@ -4643,7 +4672,7 @@ function tick() {
   updateParticles(dt);
   updateFlashes(dt);
   updateFloaters(dt);
-  if (toastT > 0) { toastT -= dt; if (toastT <= 0) $('toast').style.opacity = '0'; }
+  if (toastT > 0) { toastT -= dt; if (toastT <= 0) { $('toast').style.opacity = '0'; setTimeout(() => { toastBusy = false; pumpToast(); }, 240); } }
   statsCheckT -= dt; if (statsCheckT <= 0) { statsCheckT = 1.2; checkAchievements(); checkFtue(); }
   tutUpdate();
   if (ftueHintOn && state === 'play') {
@@ -4655,6 +4684,7 @@ function tick() {
   const bossE = (state === 'play' && (mode === 'solo' || (mode === 'coop' && isAuthority))) ? enemies.find(e => e.type === 'boss' && e.alive) : null;
   updateBossBar(bossE);
   updateEnemyArrow();
+  updateRunCoins();
   updateBuffs();
   drawMinimap();
   updateEngine();

@@ -197,6 +197,13 @@
   .tm-odds { font-size: 12px; color: #b8b8b8; }
   #buildchoice { inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
                  background: rgba(6,10,4,.82); z-index: 40; gap: 22px; pointer-events: auto; }
+  /* oyun içi koşu-parası sayacı (denetim: kill geliri oyun sırasında görünmüyordu) */
+  #runcoins { display: none; position: fixed; top: 44px; left: 50%; transform: translateX(-50%);
+              font-size: 15px; font-weight: bold; color: #ffd76a; letter-spacing: .5px;
+              text-shadow: 0 1px 4px rgba(0,0,0,.85); z-index: 12; pointer-events: none; }
+  #runcoins .gi { width: 14px; height: 14px; vertical-align: -2px; }
+  #runcoins.pop { animation: coinpop .35s ease; }
+  @keyframes coinpop { 0% { transform: translateX(-50%) scale(1); } 45% { transform: translateX(-50%) scale(1.28); } 100% { transform: translateX(-50%) scale(1); } }
   /* son düşman yön oku (≤2 düşman kalınca ekran kenarında) */
   #enemyarrow { display: none; position: fixed; left: 0; top: 0; z-index: 25; pointer-events: none;
                 font-size: 30px; line-height: 32px; width: 32px; height: 32px; text-align: center; color: #ff5a4a;
@@ -378,6 +385,7 @@
 <div id="killfeed" class="hud"></div>
 <div id="ftuehint" class="hud"></div>
 <div id="enemyarrow">➤</div>
+<div id="runcoins" class="hud"><svg class="gi" style="color:#ffd76a"><use href="#gi-coins"/></svg> <span id="runcoins-n">0</span></div>
 <div id="reviveoffer" class="hidden">
   <div id="rv-title">💥 NEREDEYSE!</div>
   <div id="rv-sub"></div>
