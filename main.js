@@ -21,7 +21,7 @@ const L = {
     patrolMsg: (c, h) => `🛡️ Tankın devriyedeydi: +🪙${c} (${h} saat)`,
     nextGoal: 'Sıradaki', weeklyLbl: '📅 HAFTANIN MODU', weeklyWin: 'Haftalık mod zaferi',
     modNames: { doubleBoss: 'Çift Boss', fast: 'Hızlı Düşmanlar', tough: 'Zırhlı Düşmanlar' },
-    gemTip: 'Elmas al', namePh: 'İsmin',
+    gemTip: 'Elmas al', namePh: 'İsmin', midW: 'KISIK',
     setHaptic: 'Titreşim', privacyLbl: 'Gizlilik Politikası',
     connWaking: '⏳ Sunucu uyanıyor — birkaç saniye sürebilir...', offlineMsg: '📡 İnternet yok — bağlanınca tekrar dene',
     lbWeekTitle: 'HAFTANIN EN İYİLERİ',
@@ -101,7 +101,7 @@ const L = {
     patrolMsg: (c, h) => `🛡️ Your tank was on patrol: +🪙${c} (${h}h)`,
     nextGoal: 'Next up', weeklyLbl: '📅 WEEKLY MODE', weeklyWin: 'Weekly mode victory',
     modNames: { doubleBoss: 'Double Boss', fast: 'Fast Enemies', tough: 'Armored Enemies' },
-    gemTip: 'Get gems', namePh: 'Your name',
+    gemTip: 'Get gems', namePh: 'Your name', midW: 'LOW',
     setHaptic: 'Haptics', privacyLbl: 'Privacy Policy',
     connWaking: '⏳ Server waking up — may take a few seconds...', offlineMsg: '📡 No internet — try again when connected',
     lbWeekTitle: "THIS WEEK'S BEST",
@@ -209,6 +209,8 @@ catch { settings = { muted: false, quality: 'high', music: true }; }
 if (typeof settings.music !== 'boolean') settings.music = true;
 if (typeof settings.haptics !== 'boolean') settings.haptics = true; // titreşim tercihi (yeni ayar)
 // E2: oto-ateş — araştırma: tek-parmak kontrol 9/10 başarılı oyunda; dokunmatikte varsayılan AÇIK (D0 sürtünmesi), PvE'de geçerli
+if (typeof settings.volSfx !== 'number') settings.volSfx = 1;
+if (typeof settings.volMusic !== 'number') settings.volMusic = 1;
 if (typeof settings.autoFire !== 'boolean') settings.autoFire = ('ontouchstart' in window || navigator.maxTouchPoints > 0); // (IS_TOUCH henüz tanımsız — TDZ)
 const GAME_VER = '0.9.0'; // ayarlar panelinde görünür; mağaza sürümleriyle birlikte artır
 function saveSettings() { try { localStorage.setItem('tanksettings', JSON.stringify(settings)); } catch (e) { /* engelli depolama: ayar kalıcı olmaz ama oyun çalışır */ } }
@@ -1476,11 +1478,14 @@ const headingTo = (fx, fz, tx, tz) => Math.atan2(-(tx - fx), -(tz - fz));
 
 // ---------------------------------------------------------------- ses
 let AC = null;
+let sfxBus = null; // tüm efektler tek gain'den geçer → SES seviyesi tek noktadan (P1 ses paketi)
 function audio() {
   if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)();
   if (AC.state === 'suspended') AC.resume();
+  if (!sfxBus) { sfxBus = AC.createGain(); sfxBus.connect(AC.destination); applySfxVol(); }
   return AC;
 }
+function applySfxVol() { if (sfxBus && AC) sfxBus.gain.setTargetAtTime(settings.muted ? 0 : (settings.volSfx || 1), AC.currentTime, 0.05); }
 function noiseBuf(ac, dur) {
   const b = ac.createBuffer(1, ac.sampleRate * dur, ac.sampleRate);
   const d = b.getChannelData(0);
@@ -1494,11 +1499,11 @@ function sfxFire() {
   o.type = 'square'; o.frequency.setValueAtTime(240, t);
   o.frequency.exponentialRampToValueAtTime(50, t + 0.16);
   g.gain.setValueAtTime(0.12, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
-  o.connect(g).connect(ac.destination); o.start(t); o.stop(t + 0.2);
+  o.connect(g).connect(sfxBus); o.start(t); o.stop(t + 0.2);
   const n = ac.createBufferSource(), ng = ac.createGain(), f = ac.createBiquadFilter();
   n.buffer = noiseBuf(ac, 0.12); f.type = 'lowpass'; f.frequency.value = 2400;
   ng.gain.setValueAtTime(0.1, t); ng.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
-  n.connect(f).connect(ng).connect(ac.destination); n.start(t);
+  n.connect(f).connect(ng).connect(sfxBus); n.start(t);
 }
 function sfxBounce() {
   if (settings.muted) return;
@@ -1507,7 +1512,7 @@ function sfxBounce() {
   o.type = 'triangle'; o.frequency.setValueAtTime(900, t);
   o.frequency.exponentialRampToValueAtTime(300, t + 0.08);
   g.gain.setValueAtTime(0.07, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.09);
-  o.connect(g).connect(ac.destination); o.start(t); o.stop(t + 0.1);
+  o.connect(g).connect(sfxBus); o.start(t); o.stop(t + 0.1);
 }
 let lastBoom = 0;
 function sfxBoom(big = false) {
@@ -1522,7 +1527,7 @@ function sfxBoom(big = false) {
   f.frequency.exponentialRampToValueAtTime(60, t + (big ? 0.8 : 0.45));
   g.gain.setValueAtTime(big ? 0.5 : 0.3, t);
   g.gain.exponentialRampToValueAtTime(0.001, t + (big ? 0.9 : 0.5));
-  n.connect(f).connect(g).connect(ac.destination); n.start(t);
+  n.connect(f).connect(g).connect(sfxBus); n.start(t);
 }
 function sfxCoin() {
   if (settings.muted) return;
@@ -1531,7 +1536,7 @@ function sfxCoin() {
   o.type = 'sine'; o.frequency.setValueAtTime(880, t);
   o.frequency.setValueAtTime(1320, t + 0.06);
   g.gain.setValueAtTime(0.08, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
-  o.connect(g).connect(ac.destination); o.start(t); o.stop(t + 0.2);
+  o.connect(g).connect(sfxBus); o.start(t); o.stop(t + 0.2);
 }
 // ---- prosedürel arka plan müziği (özgün, WebAudio ile üretilir) ----
 let musicGain = null, musicPlaying = false, musicTimer = null, musicNext = 0, musicChord = 0;
@@ -1564,9 +1569,11 @@ function scheduleMusic() {
     musicNext += beat; musicChord++;
   }
 }
+let musicDuck = 1; // pause'ta müzik kısılır (low-pass yerine ucuz duck)
 function updateMusicGain() {
   if (!musicGain || !AC) return;
-  musicGain.gain.setTargetAtTime((settings.muted || !settings.music) ? 0 : 1, AC.currentTime, 0.3);
+  const v = (settings.muted || !settings.music) ? 0 : (settings.volMusic || 1) * musicDuck;
+  musicGain.gain.setTargetAtTime(v, AC.currentTime, 0.3);
 }
 function startMusic() {
   audio();
@@ -1582,15 +1589,18 @@ function sting(notes, dur = 0.14, type = 'square', vol = 0.12) {
     const o = ac.createOscillator(), g = ac.createGain();
     o.type = type; o.frequency.value = f;
     g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    o.connect(g).connect(ac.destination); o.start(t); o.stop(t + dur + 0.03);
+    o.connect(g).connect(sfxBus); o.start(t); o.stop(t + dur + 0.03);
     t += dur;
   }
 }
 const stingWave = () => sting([523, 659, 784], 0.12);
 const stingBoss = () => sting([146, 123, 98, 82], 0.26, 'sawtooth', 0.14);
 const stingWin = () => sting([523, 659, 784, 1047], 0.13);
+const stingVictory = () => { sting([523, 659, 784, 1047], 0.12); setTimeout(() => sting([1319, 1047, 1568, 2093], 0.15, 'triangle', 0.11), 500); }; // zafer fanfarı (P1)
 const stingLose = () => sting([392, 330, 262, 196], 0.2, 'triangle', 0.12);
 const stingGoal = () => sting([659, 880], 0.1);
+function sfxUI() { if (settings.muted) return; const ac = audio(), t = ac.currentTime; const o = ac.createOscillator(), g = ac.createGain(); o.type = 'triangle'; o.frequency.value = 620; g.gain.setValueAtTime(0.05, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.05); o.connect(g).connect(sfxBus); o.start(t); o.stop(t + 0.06); }
+document.addEventListener('click', e => { if (e.target.closest && e.target.closest('.mbtn, .navbtn, .buildcard, .pill')) sfxUI(); }); // UI tık sesi (P1)
 
 // motor sesi (sürüşe göre uğultu)
 let engineOsc = null, engineGain = null, engineFreq = null;
@@ -1603,7 +1613,7 @@ function startEngine() {
   engineOsc.type = 'sawtooth'; engineOsc.frequency.value = 55;
   filter.type = 'lowpass'; filter.frequency.value = 380;
   engineGain.gain.value = 0;
-  engineOsc.connect(filter).connect(engineGain).connect(ac.destination);
+  engineOsc.connect(filter).connect(engineGain).connect(sfxBus);
   engineOsc.start();
   engineFreq = engineOsc.frequency;
 }
@@ -1622,7 +1632,7 @@ function sfxPower() {
   o.frequency.setValueAtTime(440, t);
   o.frequency.exponentialRampToValueAtTime(1200, t + 0.18);
   g.gain.setValueAtTime(0.11, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.32);
-  o.connect(g).connect(ac.destination); o.start(t); o.stop(t + 0.34);
+  o.connect(g).connect(sfxBus); o.start(t); o.stop(t + 0.34);
 }
 
 // ---------------------------------------------------------------- efektler
@@ -3237,7 +3247,7 @@ function soloVictory() {
   if (timeRec) profile.bestRunTime = runDur;
   const timeTxt = '<br>' + (timeRec ? t.timeNewRec(fmtTime(runDur)) : t.timeLine(fmtTime(runDur), fmtTime(profile.bestRunTime)));
   saveProfile();
-  sfxPower();
+  stingVictory();
   track('run_victory', { map: lastSoloMap, dur: runDur });
   showHarvest({
     title: t.victoryTitle, won: true,
@@ -4305,8 +4315,8 @@ $('btn-leave').addEventListener('click', () => { closeNet(); clearBallMode(); bu
 function updateSettingsLabels() {
   const t = T();
   $('set-title').textContent = paused ? t.pausedW : t.setTitle;
-  $('set-sound').textContent = `${t.setSound}: ${settings.muted ? t.offW : t.onW}`;
-  $('set-music').textContent = `${t.setMusic}: ${settings.music ? t.onW : t.offW}`;
+  $('set-sound').textContent = `${t.setSound}: ${settings.muted ? t.offW : ((settings.volSfx || 1) < 1 ? t.midW : t.onW)}`;
+  $('set-music').textContent = `${t.setMusic}: ${!settings.music ? t.offW : ((settings.volMusic || 1) < 1 ? t.midW : t.onW)}`;
   $('set-quality').textContent = `${t.setQuality}: ${settings.quality === 'low' ? t.qLow : t.qHigh}`;
   $('set-haptic').textContent = `${t.setHaptic}: ${settings.haptics ? t.onW : t.offW}`;
   $('set-autofire').textContent = `${t.setAutoFire}: ${settings.autoFire ? t.onW : t.offW}`;
@@ -4320,21 +4330,33 @@ function updateSettingsLabels() {
 function openSettings() {
   const inGame = state === 'play';
   if (inGame && mode === 'solo') paused = true;
+  musicDuck = 0.35; updateMusicGain(); // pause'ta müzik kısılır
   $('set-ingame').style.display = inGame ? 'flex' : 'none';
   updateSettingsLabels();
   $('settings').classList.remove('hidden');
 }
-function closeSettings() { paused = false; $('settings').classList.add('hidden'); }
+function closeSettings() {
+  musicDuck = 1; updateMusicGain(); paused = false; $('settings').classList.add('hidden'); }
 $('btn-settings').addEventListener('click', openSettings);
 $('btn-settings-menu').addEventListener('click', openSettings);
-$('set-sound').addEventListener('click', () => { settings.muted = !settings.muted; saveSettings(); updateSettingsLabels(); updateMusicGain(); if (!settings.muted) sfxCoin(); });
+$('set-sound').addEventListener('click', () => { // 3 kademe: AÇIK → KISIK → KAPALI
+  if (settings.muted) { settings.muted = false; settings.volSfx = 1; }
+  else if ((settings.volSfx || 1) >= 1) settings.volSfx = 0.4;
+  else settings.muted = true;
+  saveSettings(); updateSettingsLabels(); updateMusicGain(); applySfxVol(); if (!settings.muted) sfxCoin();
+});
 $('set-haptic').addEventListener('click', () => { settings.haptics = !settings.haptics; saveSettings(); updateSettingsLabels(); haptic('MEDIUM'); });
 $('set-autofire').addEventListener('click', () => { settings.autoFire = !settings.autoFire; saveSettings(); updateSettingsLabels(); });
-$('set-music').addEventListener('click', () => { settings.music = !settings.music; saveSettings(); updateSettingsLabels(); if (settings.music) startMusic(); else updateMusicGain(); });
+$('set-music').addEventListener('click', () => { // 3 kademe: AÇIK → KISIK → KAPALI
+  if (!settings.music) { settings.music = true; settings.volMusic = 1; startMusic(); }
+  else if ((settings.volMusic || 1) >= 1) settings.volMusic = 0.4;
+  else settings.music = false;
+  saveSettings(); updateSettingsLabels(); updateMusicGain();
+});
 $('set-quality').addEventListener('click', () => { settings.quality = settings.quality === 'low' ? 'high' : 'low'; saveSettings(); applyQuality(); updateSettingsLabels(); });
 $('set-resume').addEventListener('click', closeSettings);
 $('set-close').addEventListener('click', closeSettings);
-$('set-quit').addEventListener('click', () => { paused = false; $('settings').classList.add('hidden'); closeNet(); clearBallMode(); clearCoop(); clearTeam(); buildArena(0); openMenu(); });
+$('set-quit').addEventListener('click', () => { musicDuck = 1; updateMusicGain(); paused = false; $('settings').classList.add('hidden'); closeNet(); clearBallMode(); clearCoop(); clearTeam(); buildArena(0); openMenu(); });
 $('btn-create').addEventListener('click', () => { duel = { code: null }; duelStatusEl.textContent = '...'; connectNet(() => netSend({ t: 'create' })); });
 $('btn-join').addEventListener('click', () => {
   const code = $('joincode').value.trim().toUpperCase();
