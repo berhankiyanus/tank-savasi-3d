@@ -14,6 +14,7 @@ const L = {
     botRookie: '🟢 ÇAYLAK · +🪙30', botPro: '🟡 USTA · +🪙70', botElite: '🔴 EFSANE · +🪙150',
     fairNote: '⚔️ Düellolarda herkes eşit tankla savaşır — yetenek kazanır!',
     questReady: '🎯 Görev tamam — GÖREVLER\'den ödülünü AL!', claimBtn: 'ÖDÜLÜ AL',
+    daysLeft: d => `${d} gün kaldı`,
     lbWeekTitle: 'HAFTANIN EN İYİLERİ',
     timeNewRec: d => `⏱ Süre ${d} — YENİ REKOR!`, timeLine: (d, b) => `⏱ Süre ${d} · Rekorun ${b}`,
     reviveTitle: '💥 NEREDEYSE!', reviveSub: 'Yeni komutanlara özel: aynı dalgadan ücretsiz devam et!',
@@ -84,6 +85,7 @@ const L = {
     botRookie: '🟢 ROOKIE · +🪙30', botPro: '🟡 PRO · +🪙70', botElite: '🔴 LEGEND · +🪙150',
     fairNote: '⚔️ Duels are fought with equal tanks — skill wins!',
     questReady: '🎯 Quest complete — claim it in QUESTS!', claimBtn: 'CLAIM',
+    daysLeft: d => `${d} days left`,
     lbWeekTitle: "THIS WEEK'S BEST",
     timeNewRec: d => `⏱ Time ${d} — NEW RECORD!`, timeLine: (d, b) => `⏱ Time ${d} · Your best ${b}`,
     reviveTitle: '💥 SO CLOSE!', reviveSub: 'New commander bonus: continue from this wave for free!',
@@ -2272,7 +2274,7 @@ function updateNavDots() {
   $('btn-quests').classList.toggle('claim', claimable);
 }
 // ---------------------------------------------------------------- sezon (30 kademe, ücretsiz ray, oynayarak dolar)
-const SEASON_TIER_XP = 120, SEASON_LEN = 30;
+const SEASON_TIER_XP = 90, SEASON_LEN = 30; // denetim: 120 XP/kademe = 46 zafer/sezon çok dikti → ~30 zafer (görev XP'si de artık sayılıyor)
 const SEASON_THEMES = [
   { tr: 'Lav Sezonu', en: 'Lava Season' }, { tr: 'Ayaz Sezonu', en: 'Frost Season' },
   { tr: 'Uzay Sezonu', en: 'Space Season' }, { tr: 'Çöl Sezonu', en: 'Desert Season' },
@@ -2319,8 +2321,12 @@ function grantSeasonXp(amount) {
 function renderSeason() {
   const s = ensureSeason(), t = T();
   const pct = s.tier >= SEASON_LEN ? 100 : (s.xp / SEASON_TIER_XP * 100);
+  // sezon geri sayımı (denetim: 6 haftalık wipe hiç haber verilmiyordu)
+  const epoch = Date.UTC(2026, 0, 1);
+  const endMs = epoch + s.id * 6 * 7 * 86400000;
+  const daysLeft = Math.max(0, Math.ceil((endMs - Date.now()) / 86400000));
   $('season-head').innerHTML = `<div class="sh-name">${seasonName(s.id)}</div>` +
-    `<div class="sh-sub">${t.seasonTier} ${s.tier}/${SEASON_LEN}</div>` +
+    `<div class="sh-sub">${t.seasonTier} ${s.tier}/${SEASON_LEN} &nbsp;·&nbsp; ⏳ ${t.daysLeft(daysLeft)}</div>` +
     `<div class="sh-bar"><div class="sh-fill" style="width:${pct}%"></div></div>`;
   $('season-track').innerHTML = SEASON_REWARDS.map((r, i) => {
     const tier = i + 1, got = tier <= s.tier, cur = tier === s.tier + 1;
