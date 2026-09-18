@@ -19,7 +19,7 @@ function copy(src, dst) {
     }
   } else if (path.basename(src) === 'sw.js') {
     // native sürüm damgası: her paket taze önbellek adıyla çıkar (offline eski kabukta kalmaz)
-    const stamped = fs.readFileSync(src, 'utf8').replace('__BUILDSTAMP__', Date.now().toString(36));
+    const stamped = fs.readFileSync(src, 'utf8').replaceAll('__BUILDSTAMP__', Date.now().toString(36)); // damga yorumda da geçiyor → replaceAll
     fs.writeFileSync(dst, stamped);
   } else {
     fs.copyFileSync(src, dst);
