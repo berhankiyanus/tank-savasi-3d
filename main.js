@@ -13,6 +13,7 @@ const L = {
     victoryTitle: '🏆 ZAFER!', victorySub: (s, c) => `Görev tamam — 10 dalga temizlendi!<br>Skor ${s} · +🪙${c}`, endlessBtn: '∞ SONSUZ DEVAM',
     botRookie: '🟢 ÇAYLAK · +🪙30', botPro: '🟡 USTA · +🪙70', botElite: '🔴 EFSANE · +🪙150',
     fairNote: '⚔️ Düellolarda herkes eşit tankla savaşır — yetenek kazanır!',
+    questReady: '🎯 Görev tamam — GÖREVLER\'den ödülünü AL!', claimBtn: 'ÖDÜLÜ AL',
     lbWeekTitle: 'HAFTANIN EN İYİLERİ',
     timeNewRec: d => `⏱ Süre ${d} — YENİ REKOR!`, timeLine: (d, b) => `⏱ Süre ${d} · Rekorun ${b}`,
     reviveTitle: '💥 NEREDEYSE!', reviveSub: 'Yeni komutanlara özel: aynı dalgadan ücretsiz devam et!',
@@ -82,6 +83,7 @@ const L = {
     victoryTitle: '🏆 VICTORY!', victorySub: (s, c) => `Mission complete — 10 waves cleared!<br>Score ${s} · +🪙${c}`, endlessBtn: '∞ CONTINUE ENDLESS',
     botRookie: '🟢 ROOKIE · +🪙30', botPro: '🟡 PRO · +🪙70', botElite: '🔴 LEGEND · +🪙150',
     fairNote: '⚔️ Duels are fought with equal tanks — skill wins!',
+    questReady: '🎯 Quest complete — claim it in QUESTS!', claimBtn: 'CLAIM',
     lbWeekTitle: "THIS WEEK'S BEST",
     timeNewRec: d => `⏱ Time ${d} — NEW RECORD!`, timeLine: (d, b) => `⏱ Time ${d} · Your best ${b}`,
     reviveTitle: '💥 SO CLOSE!', reviveSub: 'New commander bonus: continue from this wave for free!',
@@ -2230,25 +2232,44 @@ function questProgress(type, amount) {
   for (const q of dailyQuests()) {
     const def = questDef(q.id);
     if (!def || def.type !== type || q.claimed) continue;
+    const was = q.prog;
     q.prog = Math.min(def.goal, q.prog + amount);
     changed = true;
-    if (q.prog >= def.goal) {
-      q.claimed = true;
-      addCoins(def.reward); grantXp(25); grantTokens(1); // görev → 1 jeton
-      showToast(`✅ ${def.text[lang]}  +🪙${def.reward}`, 3400);
+    if (q.prog >= def.goal && was < def.goal) {
+      // ARTIK OTOMATİK VERİLMEZ: oyuncu GÖREVLER'den kendisi alır (claim anı = dopamin + panele ziyaret sebebi)
+      showToast(T().questReady, 3200);
       track('quest_complete', { id: q.id });
     }
   }
   if (changed) {
-    // tüm günlük görevler bitince günlük sandık (günde bir)
-    if (!profile.quests.chest && dailyQuests().every(q => q.claimed)) {
-      profile.quests.chest = true;
-      addCoins(120); grantTokens(2, true); // chestMsg zaten +🎰2 diyor (bypass kırılganlığı giderildi)
-      showToast(T().chestMsg, 4200); sfxCoin(); track('daily_chest');
-    }
     saveProfile();
+    updateNavDots();
     if ($('panel-quests').classList.contains('show')) renderQuests();
   }
+}
+function claimQuest(qid) {
+  const q = dailyQuests().find(x => x.id === qid);
+  const def = questDef(qid);
+  if (!q || !def || q.claimed || q.prog < def.goal) return;
+  q.claimed = true;
+  addCoins(def.reward); grantXp(25); grantSeasonXp(25); grantTokens(1, true);
+  showToast(`✅ ${def.text[lang]}  +🪙${def.reward} +25XP +🎰1`, 3400);
+  sfxCoin(); haptic('LIGHT');
+  track('quest_claim', { id: qid });
+  // tüm günlük görevler alınınca günlük sandık (günde bir)
+  if (!profile.quests.chest && dailyQuests().every(x => x.claimed)) {
+    profile.quests.chest = true;
+    addCoins(120); grantTokens(2, true); // chestMsg zaten +🎰2 diyor
+    showToast(T().chestMsg, 4200); track('daily_chest');
+  }
+  saveProfile();
+  updateNavDots();
+  renderQuests();
+}
+// nav kırmızı-nokta: alınabilir ödül varken GÖREVLER butonunda yanar (denetim: claim yüzeyi görünmezdi)
+function updateNavDots() {
+  const claimable = (profile.quests && profile.quests.list || []).some(q => { const d = questDef(q.id); return d && !q.claimed && q.prog >= d.goal; });
+  $('btn-quests').classList.toggle('claim', claimable);
 }
 // ---------------------------------------------------------------- sezon (30 kademe, ücretsiz ray, oynayarak dolar)
 const SEASON_TIER_XP = 120, SEASON_LEN = 30;
@@ -2329,12 +2350,14 @@ function renderQuests() {
   $('questlist').innerHTML = header + list.map(q => {
     const def = questDef(q.id);
     const pct = Math.min(100, (q.prog / def.goal) * 100);
-    return `<div class="qrow${q.claimed ? ' done' : ''}">
+    const ready = !q.claimed && q.prog >= def.goal;
+    return `<div class="qrow${q.claimed ? ' done' : ''}${ready ? ' ready' : ''}">
       <div class="qtext"><span>${q.claimed ? '✅ ' : ''}${def.text[lang]}</span><span class="qrew">+🪙${def.reward}</span></div>
       <div class="qbar"><div class="qfill" style="width:${pct}%"></div></div>
-      <div class="qprog">${q.prog}/${def.goal}</div>
+      ${ready ? `<button class="mbtn small gold qclaim" data-q="${q.id}">🎁 ${t.claimBtn}</button>` : `<div class="qprog">${q.prog}/${def.goal}</div>`}
     </div>`;
   }).join('');
+  for (const b of $('questlist').querySelectorAll('.qclaim')) b.onclick = () => claimQuest(b.dataset.q);
 }
 function checkAchievements() {
   for (const a of ACHIEVEMENTS) {
@@ -2510,6 +2533,7 @@ function openMenu() {
   abortTutorial();
   $('reviveoffer').classList.add('hidden');
   if (dailyPending) { dailyPending = false; checkDaily(); } // FTUE: günlük ödül toastı oyun başında değil, ilk menü ziyaretinde
+  updateNavDots();
   clearBallMode(); clearCoop(); clearTeam(); clearPowerups();
   hideFtueHint();
   $('buildchoice').classList.add('hidden'); buildChoosing = false;

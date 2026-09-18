@@ -82,7 +82,14 @@
                padding: 7px 8px calc(7px + env(safe-area-inset-bottom));
                background: linear-gradient(180deg, rgba(10,16,10,.88), rgba(5,9,5,.96));
                border-top: 1px solid rgba(125,255,155,.28); backdrop-filter: blur(8px); }
-  .navbtn { flex: 1; max-width: 96px; display: flex; flex-direction: column; align-items: center; gap: 3px;
+  /* alınabilir ödül rozeti (kırmızı nokta) */
+  .navbtn .navdot { display: none; position: absolute; top: 3px; right: 18px; width: 9px; height: 9px;
+                    border-radius: 50%; background: #ff4a3a; box-shadow: 0 0 7px #ff4a3a; }
+  .navbtn.claim .navdot { display: block; animation: dotpulse 1.2s ease-in-out infinite; }
+  @keyframes dotpulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.35); } }
+  .qrow.ready { border-color: #ffd24a; box-shadow: 0 0 10px rgba(255, 210, 74, .35); }
+  .qrow .qclaim { margin-top: 5px; padding: 6px 10px; font-size: 12px; }
+  .navbtn { position: relative; flex: 1; max-width: 96px; display: flex; flex-direction: column; align-items: center; gap: 3px;
             background: none; border: none; border-radius: 12px; padding: 6px 4px 5px; cursor: pointer;
             font-family: 'Russo One', "Courier New", monospace; color: #9fb8a4;
             transition: color .15s, background .15s, transform .08s; }
@@ -571,7 +578,7 @@
   <!-- alt gezinme çubuğu (menüde her panelde görünür; vitrinde gizli) -->
   <nav id="bottomnav">
     <button class="navbtn" id="btn-garage"><span class="nicon"><svg class="gi"><use href="#gi-garage"/></svg></span><span class="nlbl">GARAJ</span></button>
-    <button class="navbtn" id="btn-quests"><span class="nicon"><svg class="gi"><use href="#gi-quests"/></svg></span><span class="nlbl">GÖREVLER</span></button>
+    <button class="navbtn" id="btn-quests"><span class="nicon"><svg class="gi"><use href="#gi-quests"/></svg></span><span class="nlbl">GÖREVLER</span><span class="navdot"></span></button>
     <button class="navbtn" id="btn-shop-nav"><span class="nicon"><svg class="gi"><use href="#gi-gem"/></svg></span><span class="nlbl">DÜKKAN</span></button>
     <button class="navbtn" id="btn-lb"><span class="nicon"><svg class="gi"><use href="#gi-podium"/></svg></span><span class="nlbl">LİDER</span></button>
     <button class="navbtn" id="btn-season"><span class="nicon"><svg class="gi"><use href="#gi-ticket"/></svg></span><span class="nlbl">SEZON</span></button>
