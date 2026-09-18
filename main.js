@@ -900,6 +900,7 @@ function addTeleport(cell) {
 // ufuk görünmüyordu, her sahne "kutunun içi" hissi veriyordu; sis içinde eriyen siluetler derinlik katar
 const silConeGeo = new THREE.ConeGeometry(1, 1, 7);
 const silBoxGeo = new THREE.BoxGeometry(1, 1, 1);
+const silDotGeo = new THREE.BoxGeometry(0.35, 0.55, 0.35); // gece/uzay silüetlerindeki uzak ışık noktaları
 let silGroup = null;
 const SIL_SPECS = {
   default: { c: 0x6b5a40, t: 'hill' },   // tozlu tepeler
@@ -924,6 +925,10 @@ function buildSilhouettes(theme, mapIdx) {
   const mat = new THREE.MeshStandardMaterial({ color: spec.c, roughness: 1, metalness: 0 });
   const rng = makeRng((mapIdx + 7) * 0x51ed2701); // deterministik: aynı harita hep aynı ufku kurar
   silGroup = new THREE.Group();
+  // gece/uzayda ufuktaki şekillere minik pencere/istasyon ışıkları — karanlık temalar yaşasın
+  const dotMat = (theme === 'night' || theme === 'space')
+    ? new THREE.MeshBasicMaterial({ color: theme === 'night' ? 0xffd98a : 0x8be8ff, toneMapped: false })
+    : null;
   const R0 = arenaHalf + 14;
   for (let i = 0; i < 14; i++) {
     const a = (i / 14) * Math.PI * 2 + (rng() - 0.5) * 0.35;
@@ -937,6 +942,15 @@ function buildSilhouettes(theme, mapIdx) {
     m.position.set(Math.cos(a) * r, h / 2 - 0.05, Math.sin(a) * r);
     m.rotation.y = rng() * Math.PI;
     silGroup.add(m);
+    if (dotMat) for (let d = 0; d < 3; d++) { // arenaya bakan yüzün önüne 3 ışık noktası
+      const dm = new THREE.Mesh(silDotGeo, dotMat);
+      const off = Math.max(m.scale.x, m.scale.z) * 0.5 + 0.3;
+      dm.position.set(
+        m.position.x - Math.cos(a) * off + (rng() - 0.5) * m.scale.x * 0.5,
+        0.8 + rng() * h * 0.7,
+        m.position.z - Math.sin(a) * off + (rng() - 0.5) * m.scale.z * 0.5);
+      silGroup.add(dm);
+    }
   }
   scene.add(silGroup);
 }
@@ -1129,21 +1143,43 @@ function buildTank(def) {
 // her tank bir kez data-URI'ye çizilir ve oturum boyunca önbellekte kalır (tembel model inince tazelenir)
 let thumbGl = null, thumbScene = null, thumbCam = null;
 const tankThumbs = {};
+const accThumbs = {}; // aksesuar kartı görselleri (aynı offscreen renderer)
+function ensureThumbGl() {
+  if (thumbGl) return;
+  thumbGl = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+  thumbGl.setSize(240, 150); thumbGl.setPixelRatio(1);
+  thumbGl.toneMapping = THREE.ACESFilmicToneMapping;
+  thumbScene = new THREE.Scene();
+  thumbScene.environment = envTex;
+  thumbScene.add(new THREE.HemisphereLight(0xcfe0ff, 0x3a2f22, 0.9));
+  const k = new THREE.DirectionalLight(0xffffff, 2.6); k.position.set(4, 7, 5); thumbScene.add(k);
+  const r = new THREE.DirectionalLight(0x88bbff, 1.5); r.position.set(-5, 4, -6); thumbScene.add(r);
+  thumbCam = new THREE.PerspectiveCamera(30, 240 / 150, 0.1, 80);
+}
+function renderAccThumb(a) {
+  if (accThumbs[a.id]) return accThumbs[a.id];
+  try {
+    ensureThumbGl();
+    const g = a.build();
+    g.rotation.y = Math.PI * 0.15;
+    thumbScene.add(g);
+    const box = new THREE.Box3().setFromObject(g), size = new THREE.Vector3(), ctr = new THREE.Vector3();
+    box.getSize(size); box.getCenter(ctr);
+    const R = Math.max(size.x, size.y, size.z, 0.4);
+    thumbCam.position.set(ctr.x + R * 1.0, ctr.y + R * 0.85, ctr.z + R * 1.45);
+    thumbCam.lookAt(ctr.x, ctr.y, ctr.z);
+    thumbGl.render(thumbScene, thumbCam);
+    const url = thumbGl.domElement.toDataURL('image/png');
+    thumbScene.remove(g); disposeSubtree(g); // build() her seferinde taze geo/malzeme üretir — güvenle bırakılır
+    accThumbs[a.id] = url;
+    return url;
+  } catch (e) { return null; } // üretilemezse kart emojiyle kalır
+}
 function renderTankThumb(base) {
   if (tankThumbs[base.id]) return tankThumbs[base.id];
   if (base.model && !loadedModels[base.model]) return null; // özel model henüz inmedi — çağıran ensureModel sonrası yeniler
   try {
-    if (!thumbGl) {
-      thumbGl = new THREE.WebGLRenderer({ alpha: true, antialias: true });
-      thumbGl.setSize(240, 150); thumbGl.setPixelRatio(1);
-      thumbGl.toneMapping = THREE.ACESFilmicToneMapping;
-      thumbScene = new THREE.Scene();
-      thumbScene.environment = envTex;
-      thumbScene.add(new THREE.HemisphereLight(0xcfe0ff, 0x3a2f22, 0.9));
-      const k = new THREE.DirectionalLight(0xffffff, 2.6); k.position.set(4, 7, 5); thumbScene.add(k);
-      const r = new THREE.DirectionalLight(0x88bbff, 1.5); r.position.set(-5, 4, -6); thumbScene.add(r);
-      thumbCam = new THREE.PerspectiveCamera(30, 240 / 150, 0.1, 80);
-    }
+    ensureThumbGl();
     const m = buildTank(base);
     m.rotation.y = Math.PI * 0.78; // çeyrek açı: namlu sola-öne, gövde okunur
     thumbScene.add(m);
@@ -1863,6 +1899,7 @@ function spawnEnemies(types) {
     if (type === 'boss') {
       // rapor: boss "okunabilir" olmalı — atış öncesi TELEGRAF halkası (turuncu), atış sonrası SAVUNMASIZ an halkası (yeşil, 2x hasar)
       e.windup = 0; e.vulnT = 0;
+      e.bossName = 'GENERAL ' + botName(); // boss bar'da isimli düşman (kişilik hissi)
       const mkRing = col => {
         const r = new THREE.Mesh(new THREE.RingGeometry(1.12, 1.34, 40),
           new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.85, side: THREE.DoubleSide, toneMapped: false, depthWrite: false }));
@@ -2277,7 +2314,7 @@ function updateBossBar(boss) {
   const el = $('bossbar');
   if (boss) {
     el.style.display = 'flex';
-    $('bosslabel').textContent = T().bossLbl;
+    $('bosslabel').textContent = boss.bossName ? '☠️ ' + boss.bossName : T().bossLbl; // isimli boss (kişilik/rekabet hissi)
     $('bosshp').style.width = Math.max(0, (boss.hp / boss.maxHp) * 100) + '%';
   } else if (el.style.display !== 'none') el.style.display = 'none';
 }
@@ -2804,8 +2841,11 @@ function renderAccessories() {
     const owned = (profile.accessories || []).includes(a.id), equipped = profile.accessory === a.id;
     const rar = RARITY[a.r];
     const card = document.createElement('div'); card.className = 'card' + (equipped ? ' sel' : '');
-    card.innerHTML = `<div class="cname" style="color:${rar.col}">${a.name[lang]}</div>` +
-      `<div class="cswatch cswatch-3d" style="background:radial-gradient(circle at 50% 42%,#2b3440,#12161c);display:flex;align-items:center;justify-content:center;font-size:30px"><span>${a.icon}</span><span class="cs-3d">🔍 3B</span></div>`;
+    const ath = renderAccThumb(a); // gerçek 3B aksesuar görseli (emoji yalnız fallback)
+    card.innerHTML = `<div class="cname" style="color:${rar.col}">${a.icon} ${a.name[lang]}</div>` +
+      (ath
+        ? `<div class="cswatch cswatch-3d has-thumb"><img class="tankthumb" src="${ath}" alt=""><span class="cs-3d">🔍 3B</span></div>`
+        : `<div class="cswatch cswatch-3d" style="background:radial-gradient(circle at 50% 42%,#2b3440,#12161c);display:flex;align-items:center;justify-content:center;font-size:30px"><span>${a.icon}</span><span class="cs-3d">🔍 3B</span></div>`);
     card.querySelector('.cswatch').onclick = () => openAccShowroom(a.id); // ikona dokun → 3B önizleme (tanka takılı hali)
     const btn = document.createElement('button'); btn.className = 'mbtn small' + (a.gem || a.r === 'e' ? ' gold' : '');
     if (equipped) { btn.textContent = t.accRemove; btn.onclick = () => { profile.accessory = ''; saveProfile(); setPlayerTank(); renderAccessories(); }; }
@@ -2841,19 +2881,24 @@ function renderShop() {
   const wrap = $('shoplist');
   wrap.style.cssText = 'display:flex;flex-wrap:wrap;justify-content:center;gap:12px;margin:12px 8px';
   wrap.innerHTML = '';
-  for (const p of GEM_PACKS) {
+  GEM_PACKS.forEach((p, pi) => {
     const total = p.gems + p.bonus;
     const card = document.createElement('div'); card.className = 'card';
+    // kademe görseli: paket büyüdükçe yığın büyür + zemin ısınır (soğuk mavi → mor-altın)
+    const pile = ['💎', '💎💎', '💎💎💎', '👑💎💎💎'][pi] || '💎';
+    const pileSize = [34, 30, 27, 25][pi] || 30;
+    const grad = ['#1c6a86,#0c1620', '#1f7aa0,#0c1a26', '#3a62c0,#101434', '#7a4ae0,#1c0e34'][pi] || '#1c6a86,#0c1620';
+    if (pi === 3) card.style.boxShadow = '0 0 16px rgba(160,110,255,.5)'; // en büyük paket raftan parlar
     card.innerHTML =
       `<div class="cname" style="color:#6fe0ff">💎 ${total}</div>` +
-      `<div class="cswatch" style="background:radial-gradient(circle at 50% 38%,#1c6a86,#0c1620);display:flex;align-items:center;justify-content:center;font-size:34px">💎</div>` +
+      `<div class="cswatch" style="background:radial-gradient(circle at 50% 38%,${grad});display:flex;align-items:center;justify-content:center;font-size:${pileSize}px;letter-spacing:-4px;text-shadow:0 0 12px rgba(120,220,255,.8)">${pile}</div>` +
       (p.bonus ? `<div class="cstat" style="text-align:center;color:#7dff9b">+${p.bonus} bonus 🎁</div>` : `<div class="cstat" style="text-align:center">&nbsp;</div>`) +
       `<div class="cstat" style="text-align:center;color:#ffd76a;font-weight:bold;min-height:16px">${p.tagKey ? T()[p.tagKey] : (p.tag || '')}</div>`;
     const btn = document.createElement('button'); btn.className = 'mbtn small gold';
     btn.textContent = p.price;
     btn.onclick = () => buyGems(p, btn);
     card.appendChild(btn); wrap.appendChild(card);
-  }
+  });
 }
 async function buyGems(pack, btn) {
   btn.disabled = true; const old = btn.textContent; btn.textContent = '...';
