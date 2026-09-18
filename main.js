@@ -17,6 +17,10 @@ const L = {
     daysLeft: d => `${d} gün kaldı`,
     lockedLv: n => `🔒 Seviye ${n}'te açılır — oynadıkça XP kazan!`,
     gateOpen: '🔓 Yeni özellik açıldı — menüye göz at!',
+    megaBounce: '💥 MEGA SEKME!', setAutoFire: 'Oto Ateş',
+    patrolMsg: (c, h) => `🛡️ Tankın devriyedeydi: +🪙${c} (${h} saat)`,
+    nextGoal: 'Sıradaki', weeklyLbl: '📅 HAFTANIN MODU', weeklyWin: 'Haftalık mod zaferi',
+    modNames: { doubleBoss: 'Çift Boss', fast: 'Hızlı Düşmanlar', tough: 'Zırhlı Düşmanlar' },
     gemTip: 'Elmas al', namePh: 'İsmin',
     setHaptic: 'Titreşim', privacyLbl: 'Gizlilik Politikası',
     connWaking: '⏳ Sunucu uyanıyor — birkaç saniye sürebilir...', offlineMsg: '📡 İnternet yok — bağlanınca tekrar dene',
@@ -93,6 +97,10 @@ const L = {
     daysLeft: d => `${d} days left`,
     lockedLv: n => `🔒 Unlocks at level ${n} — play to earn XP!`,
     gateOpen: '🔓 New feature unlocked — check the menu!',
+    megaBounce: '💥 MEGA RICOCHET!', setAutoFire: 'Auto Fire',
+    patrolMsg: (c, h) => `🛡️ Your tank was on patrol: +🪙${c} (${h}h)`,
+    nextGoal: 'Next up', weeklyLbl: '📅 WEEKLY MODE', weeklyWin: 'Weekly mode victory',
+    modNames: { doubleBoss: 'Double Boss', fast: 'Fast Enemies', tough: 'Armored Enemies' },
     gemTip: 'Get gems', namePh: 'Your name',
     setHaptic: 'Haptics', privacyLbl: 'Privacy Policy',
     connWaking: '⏳ Server waking up — may take a few seconds...', offlineMsg: '📡 No internet — try again when connected',
@@ -200,6 +208,8 @@ try { settings = Object.assign({ muted: false, quality: 'high', music: true }, J
 catch { settings = { muted: false, quality: 'high', music: true }; }
 if (typeof settings.music !== 'boolean') settings.music = true;
 if (typeof settings.haptics !== 'boolean') settings.haptics = true; // titreşim tercihi (yeni ayar)
+// E2: oto-ateş — araştırma: tek-parmak kontrol 9/10 başarılı oyunda; dokunmatikte varsayılan AÇIK (D0 sürtünmesi), PvE'de geçerli
+if (typeof settings.autoFire !== 'boolean') settings.autoFire = ('ontouchstart' in window || navigator.maxTouchPoints > 0); // (IS_TOUCH henüz tanımsız — TDZ)
 const GAME_VER = '0.9.0'; // ayarlar panelinde görünür; mağaza sürümleriyle birlikte artır
 function saveSettings() { try { localStorage.setItem('tanksettings', JSON.stringify(settings)); } catch (e) { /* engelli depolama: ayar kalıcı olmaz ama oyun çalışır */ } }
 
@@ -323,8 +333,32 @@ let matchEndReason = ''; // analitik: maç neden bitti (death/victory/win/lose/d
 // game-icons stencil yardımcıları (index.html'deki #gisprite sembollerine referans; renk currentColor'dan)
 const gi = id => `<svg class="gi"><use href="#gi-${id}"/></svg>`;
 let dailyPending = false; // FTUE: günlük ödülü ilk menü ziyaretine ertele (mesaj bombardımanını önle)
+// E3: offline devriye kazancı — oyuncu yokken tank "devriyede" coin biriktirir (saatte 40, 8 saat tavan).
+// Araştırma: idle kazanç ucuz + bildirime içerik verir; koşu gelirinin çok altında tutuldu (ekonomiyi bozmaz).
+let patrolPending = 0, patrolHours = 0;
+(() => {
+  try {
+    const last = +profile.lastSeen || 0;
+    if (last > 0) {
+      const hrs = Math.min(8, (Date.now() - last) / 3600e3);
+      if (hrs >= 0.5) { patrolPending = Math.round(hrs * 40); patrolHours = Math.round(hrs * 10) / 10; }
+    }
+    profile.lastSeen = Date.now(); saveProfile();
+  } catch (e) {}
+})();
 let soloStartBest = 1;    // ölüm ekranı teşviki: bu koşu başındaki rekor (yeni rekor tespiti)
 let soloRunStart = 0;     // sonlu koşu kronometresi (zafer süresi — speedrun rekabeti)
+let slowmoT = 0;          // E1: MEGA SEKME anı — kısa slow-motion sayacı
+// çift-sekmeli kill: klip üretilebilir "vay be" anı — slow-mo + altın kutlama + bonus
+function megaBounce(e) {
+  slowmoT = 0.55;
+  const bonus = 25;
+  roundCoins += bonus; addCoins(bonus);
+  popFloater(e.x, 3.8, e.z, '💥 MEGA SEKME +🪙' + bonus, '#ffd24a');
+  banner(T().megaBounce);
+  sfxPower(); haptic('HEAVY');
+  track('mega_bounce');
+}
 const fmtTime = s => Math.floor(s / 60) + ':' + String(Math.floor(s) % 60).padStart(2, '0');
 
 // ---------------------------------------------------------------- tanklar
@@ -477,6 +511,26 @@ const MAPS = [
 const mapUnlocked = i => profile.bestWave >= MAPS[i].req;
 // v1 içerik küratörlüğü: öne çıkan üçlü (Klasik / Şehir Harabesi / Kanyon) — HIZLI OYNA rotasyonu + harita listesinde ⭐
 const QUICK_MAPS = [0, 9, 11];
+// E4: "sıradaki hedef" kartı — en ucuz sahip olunmayan coin-tank (bitince aksesuar); goal-gradient etkisi
+function updateNextGoal() {
+  const el = $('nextgoal'), t = T();
+  let target = null, price = Infinity, icon = '🎯';
+  for (const b of TANKS) if (!b.gem && b.price > 0 && !profile.owned.includes(b.id) && b.price < price) { target = b.name[lang]; price = b.price; }
+  if (!target) { icon = '🎁'; for (const a of ACCESSORIES) if (!a.gem && !(profile.accessories || []).includes(a.id) && a.price < price) { target = a.name[lang]; price = a.price; } }
+  if (!target) { el.style.display = 'none'; return; }
+  const pct = Math.min(100, Math.round(profile.coins / price * 100));
+  el.style.display = '';
+  el.innerHTML = `${icon} ${t.nextGoal}: ${target} — ${Math.min(profile.coins, price)}/${price}🪙` +
+    `<span style="display:inline-block;width:64px;height:7px;background:#20261c;border-radius:4px;vertical-align:1px;margin-left:7px;overflow:hidden"><i style="display:block;height:100%;width:${pct}%;background:#ffd24a"></i></span>`;
+}
+// E5: haftanın modu — mevcut içerikten sunucusuz haftalık rotasyon (hafta no deterministik)
+const WEEK_MODS = ['doubleBoss', 'fast', 'tough'];
+function weeklySpec() {
+  const d = new Date(), onejan = new Date(d.getFullYear(), 0, 1);
+  const w = Math.floor(((d - onejan) / 86400000 + onejan.getDay()) / 7) + d.getFullYear() * 53;
+  return { map: [0, 2, 3, 4, 5, 6, 9, 10, 11][w % 9], mod: WEEK_MODS[w % 3] };
+}
+let weeklyRun = null; // aktif koşu haftalık modda mı ({map, mod})
 
 // ---------------------------------------------------------------- sabitler
 const CELL = 4.5;
@@ -1825,7 +1879,9 @@ function fire(owner, angOff = 0, playerShot = null) {
   // takım modunda mermi hangi takımdan / kimden (dost ateşi + skor için)
   const bTeam = (mode === 'team' && team) ? (isPlayer ? team.mine : owner.team) : null;
   const bOwner = (mode === 'team' && team) ? (isPlayer ? team.you : owner.pid) : null;
-  bullets.push({ mesh, fromPlayer: isPlayer, playerShot: playerShot == null ? isPlayer : playerShot, vx: fwdX(a) * sp, vz: fwdZ(a) * sp, life: 2.6, bounces: 1, team: bTeam, owner: bOwner });
+  // E1: oyuncu mermisi PvE'de 2 sekme yapar (MEGA SEKME klip anının hammaddesi); düşman/PvP 1 sekme (denge)
+  const nB = (isPlayer && (mode === 'solo' || mode === 'coop')) ? 2 : 1;
+  bullets.push({ mesh, fromPlayer: isPlayer, playerShot: playerShot == null ? isPlayer : playerShot, vx: fwdX(a) * sp, vz: fwdZ(a) * sp, life: 2.6, bounces: nB, b0: nB, team: bTeam, owner: bOwner });
   muzzleFlash(bx, 1.3, bz);
   sfxFire();
   if (isPlayer && playerTurret) recoil = 0.14;
@@ -1927,6 +1983,7 @@ const enemyMercy = () => (mode === 'solo' && wave <= 2 ? 1.35 : 1);
 function waveComposition(w, extra = 0) {
   if (w % 5 === 0) {
     const list = ['boss'];
+    if (weeklyRun && weeklyRun.mod === 'doubleBoss') list.push('boss'); // haftalık mod: çift boss
     const n = 1 + Math.floor(w / 10) + extra;
     for (let i = 0; i < n; i++) list.push(Math.random() < 0.5 ? 'scout' : 'normal');
     return list;
@@ -1968,6 +2025,7 @@ function spawnEnemies(types) {
       };
       e.teleRing = mkRing(0xff8c1a); e.vulnRing = mkRing(0x54ff7a);
     }
+    if (weeklyRun && weeklyRun.mod === 'tough') { e.hp += 1; e.maxHp += 1; } // haftalık mod: zırhlı düşmanlar
     e.mesh.position.set(e.x, 0, e.z);
     scene.add(e.mesh); enemies.push(e);
   }
@@ -2563,7 +2621,11 @@ function openMenu() {
   abortTutorial();
   $('reviveoffer').classList.add('hidden');
   if (dailyPending) { dailyPending = false; checkDaily(); } // FTUE: günlük ödül toastı oyun başında değil, ilk menü ziyaretinde
+  if (patrolPending > 0) { addCoins(patrolPending); showToast(T().patrolMsg(patrolPending, patrolHours), 4200); track('patrol_claim', { c: patrolPending }); patrolPending = 0; }
+  weeklyRun = null;
   updateNavDots();
+  updateNextGoal();
+  { const ws = weeklySpec(), t2 = T(); const wb = $('btn-weekly'); wb.style.display = ''; wb.textContent = `${t2.weeklyLbl}: ${MAPS[ws.map].name[lang]} · ${t2.modNames[ws.mod]}`; }
   clearBallMode(); clearCoop(); clearTeam(); clearPowerups();
   hideFtueHint();
   $('buildchoice').classList.add('hidden'); buildChoosing = false;
@@ -3101,8 +3163,9 @@ let lastSoloMap = 0;
 // sonlu koşu formatı: solo = 10 dalgalık görev (boss finali) → ZAFER ekranı; oradan sonsuz moda devam seçilebilir
 const RUN_WAVES = 10;
 let soloEndless = false;
-function startSolo(mapIdx) {
+function startSolo(mapIdx, weekly) {
   matchSeq++;
+  weeklyRun = weekly || null;
   soloEndless = false;
   soloStartBest = profile.bestWave || 1;
   soloRunStart = clock.elapsedTime;
@@ -3167,6 +3230,7 @@ function soloVictory() {
   let gemTxt = '';
   const today = new Date().toISOString().slice(0, 10);
   if (profile.lastVictoryDay !== today) { profile.lastVictoryDay = today; addGems(1); gemTxt = ' &nbsp;·&nbsp; +💎1'; }
+  if (weeklyRun) { const wb2 = 100; roundCoins += wb2; addCoins(wb2); gemTxt += ` &nbsp;·&nbsp; ${t.weeklyWin} +🪙${wb2}`; track('weekly_win', { mod: weeklyRun.mod }); }
   // zafer süresi (speedrun rekabeti): en hızlı 10-dalga koşusu profile.bestRunTime'da tutulur
   const runDur = Math.max(1, Math.round(clock.elapsedTime - soloRunStart));
   const timeRec = !profile.bestRunTime || runDur < profile.bestRunTime;
@@ -4120,6 +4184,8 @@ if (V1_SIMPLE) {
 // 3 zorluk kademesi — Çaylak yeni oyuncunun kazanma tadı alması için, Efsane ustalar için (ödül kademeyle artar)
 for (const [bid, did] of [['btn-bot-rookie', 'rookie'], ['btn-bot-pro', 'pro'], ['btn-bot-elite', 'elite']])
   $(bid).addEventListener('click', () => { track('botduel_click', { diff: did }); startBotDuel(did); });
+$('nextgoal').addEventListener('click', () => { track('nextgoal_click'); openGarage(); });
+$('btn-weekly').addEventListener('click', () => { const ws = weeklySpec(); track('weekly_start', { mod: ws.mod, map: ws.map }); startSolo(ws.map, ws); });
 $('res-again').addEventListener('click', () => { const fn = harvestReplay; harvestReplay = null; maybeInterstitial(); if (fn) { track('retry_click', { mode: matchMode }); fn(); } else openMenu(); });
 $('res-menu').addEventListener('click', () => { harvestReplay = null; harvestEndless = null; openMenu(); });
 $('res-endless').addEventListener('click', () => { const fn = harvestEndless; harvestEndless = null; harvestReplay = null; if (fn) fn(); });
@@ -4243,6 +4309,7 @@ function updateSettingsLabels() {
   $('set-music').textContent = `${t.setMusic}: ${settings.music ? t.onW : t.offW}`;
   $('set-quality').textContent = `${t.setQuality}: ${settings.quality === 'low' ? t.qLow : t.qHigh}`;
   $('set-haptic').textContent = `${t.setHaptic}: ${settings.haptics ? t.onW : t.offW}`;
+  $('set-autofire').textContent = `${t.setAutoFire}: ${settings.autoFire ? t.onW : t.offW}`;
   $('set-privacy').textContent = t.privacyLbl;
   $('set-privacy').href = isNativeApp() ? 'https://' + REMOTE_HOST + '/privacy' : 'privacy.html'; // privacy.html native pakette yok — canlıya git
   $('set-ver').textContent = 'v' + GAME_VER;
@@ -4262,6 +4329,7 @@ $('btn-settings').addEventListener('click', openSettings);
 $('btn-settings-menu').addEventListener('click', openSettings);
 $('set-sound').addEventListener('click', () => { settings.muted = !settings.muted; saveSettings(); updateSettingsLabels(); updateMusicGain(); if (!settings.muted) sfxCoin(); });
 $('set-haptic').addEventListener('click', () => { settings.haptics = !settings.haptics; saveSettings(); updateSettingsLabels(); haptic('MEDIUM'); });
+$('set-autofire').addEventListener('click', () => { settings.autoFire = !settings.autoFire; saveSettings(); updateSettingsLabels(); });
 $('set-music').addEventListener('click', () => { settings.music = !settings.music; saveSettings(); updateSettingsLabels(); if (settings.music) startMusic(); else updateMusicGain(); });
 $('set-quality').addEventListener('click', () => { settings.quality = settings.quality === 'low' ? 'high' : 'low'; saveSettings(); applyQuality(); updateSettingsLabels(); });
 $('set-resume').addEventListener('click', closeSettings);
@@ -4335,7 +4403,7 @@ function updateEnemy(e, dt, tgt) {
   e.cool -= dt; e.thinkT -= dt;
   const tp = tgt || player;
   const alive = tgt ? true : player.alive;
-  const et = e.turn || ENEMY_TURN, es = e.speed || ENEMY_SPEED, keep = e.keep || 11;
+  const et = e.turn || ENEMY_TURN, es = (e.speed || ENEMY_SPEED) * (weeklyRun && weeklyRun.mod === 'fast' ? 1.3 : 1), keep = e.keep || 11;
   const distP = Math.hypot(tp.x - e.x, tp.z - e.z);
   const seen = alive && distP < (e.sight || 55) && losClear(e.x, e.z, tp.x, tp.z);
   let wantMove = 0;
@@ -4496,7 +4564,8 @@ function trackTransitions() {
 
 function tick() {
   requestAnimationFrame(tick);
-  const dt = Math.min(clock.getDelta(), 0.05);
+  let dt = Math.min(clock.getDelta(), 0.05);
+  if (slowmoT > 0) { slowmoT -= dt; dt *= 0.35; } // MEGA SEKME slow-mo (gerçek zamanla söner, sim yavaşlar)
   monitorPerf(dt, state === 'play' && !paused);
   trackTransitions();
 
@@ -4539,7 +4608,14 @@ function tick() {
           if (e.solid !== false) { e.x -= (dx / d) * push; e.z -= (dz / d) * push; }
         }
       }
-      if ((keys.Space || touchCtl.fire) && player.cool <= 0) {
+      // E2: oto-ateş — menzildeki görünür en yakın düşmana namlu yaklaşık bakıyorsa kendiliğinden ateşle (yalnız PvE)
+      let autoF = false;
+      if (settings.autoFire && (mode === 'solo' || mode === 'coop') && player.cool <= 0) {
+        let best = 32, tgt = null;
+        for (const e of enemies) if (e.alive) { const d = Math.hypot(e.x - player.x, e.z - player.z); if (d < best) { best = d; tgt = e; } }
+        if (tgt && Math.abs(angNorm(headingTo(player.x, player.z, tgt.x, tgt.z) - player.a)) < 0.38 && losClear(player.x, player.z, tgt.x, tgt.z)) autoF = true;
+      }
+      if ((keys.Space || touchCtl.fire || autoF) && player.cool <= 0) {
         if (player.tripleT > 0 || bMulti()) { fire(player, -0.17); fire(player, 0); fire(player, 0.17); }
         else fire(player);
         player.cool = player.stat.cool * bFire();
@@ -4646,6 +4722,7 @@ function tick() {
                 popFloater(e.x, 3.1, e.z, '+🪙' + e.coins, '#ffd76a'); // denetim: en büyük musluk görünmezdi — kill parası artık ekranda
                   netSend({ t: 'ekill', id: e.id });
                   score += e.score; roundCoins += e.coins; profile.kills++; addCoins(e.coins); updateHUD();
+                  if ((b.b0 || 1) - b.bounces >= 2) megaBounce(e); // E1: çift sekmeyle kill
                 } else { e.hitT = 0.14; explode(b.mesh.position.x, 1.0, b.mesh.position.z, false); }
                 dead = true; break;
               }
@@ -4701,6 +4778,7 @@ function tick() {
                 popFloater(e.x, 2.2, e.z, '+' + e.score, e.type === 'boss' ? '#ff7a3a' : '#ffe86a');
                 popFloater(e.x, 3.1, e.z, '+🪙' + e.coins, '#ffd76a'); // denetim: en büyük musluk görünmezdi — kill parası artık ekranda
                 score += e.score; roundCoins += e.coins; profile.kills++; addCoins(e.coins); updateHUD();
+                if ((b.b0 || 1) - b.bounces >= 2) megaBounce(e); // E1: çift sekmeyle kill
               } else { e.hitT = 0.14; explode(b.mesh.position.x, 1.0, b.mesh.position.z, false); }
               dead = true; break;
             }
@@ -4807,5 +4885,5 @@ window.__gameLoaded = true;
 { const ls = document.getElementById('loading'); if (ls) { ls.classList.add('gone'); setTimeout(() => ls.remove(), 600); } }
 // analitik: yükleme tamam + oturum çıkışı
 track('load_end', { touch: IS_TOUCH, lang, native: isNativeApp() });
-addEventListener('pagehide', () => track('quit', { atState: state, mode: matchMode }));
+addEventListener('pagehide', () => { profile.lastSeen = Date.now(); saveProfile(); track('quit', { atState: state, mode: matchMode }); }); // devriye sayacı çıkışta damgalanır
 nativeInit(); // native app cilası (splash gizle, tam ekran, geri tuşu, haptik)
