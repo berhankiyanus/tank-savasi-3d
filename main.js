@@ -310,6 +310,8 @@ const TANKS = [
   { id: 'heavy',    name: { tr: 'Ağır Tank',   en: 'Heavy Tank'}, price: 2500, color: 0x6b6f4a, scale: 0.95, health: 12, speed: 5.6, turn: 1.8, cool: 0.50, bspeed: 30, model: 'heavy', metal: true, turretTop: 1.8 },
   { id: 'twin',     name: { tr: 'İkiz Namlu',  en: 'Twin Cannon'}, price: 3000, color: 0x556047, scale: 0.95, health: 7,  speed: 8.4, turn: 2.8, cool: 0.26, bspeed: 30, model: 'twin', turretTop: 1.62 },
   { id: 'arty',     name: { tr: 'Obüs',        en: 'Howitzer'  }, price: 3500, color: 0x6a6248, scale: 0.95, health: 6,  speed: 5.4, turn: 1.7, cool: 0.60, bspeed: 46, model: 'arty', turretTop: 1.55 },
+  // coin merdiveninin tepesi — dozer bıçaklı süper-ağır; SIDEGRADE felsefesi: güç değil karakter (yavaş+tanky, ateş hızı ORTALAMA ALTINDA)
+  { id: 'mamut',    name: { tr: 'Mamut',       en: 'Mammoth'   }, price: 5000, color: 0x525a3a, scale: 1.18, health: 13, speed: 5.0, turn: 1.6, cool: 0.48, bspeed: 28, model: 'mamut', metal: true, turretTop: 1.9 },
   { id: 'hover',    name: { tr: 'Hover Tank',  en: 'Hover Tank'}, gem: 40, color: 0x3a4450, scale: 1.00, health: 5, speed: 12.0, turn: 3.5, cool: 0.34, bspeed: 34, model: 'hover', metal: true, glow: true, turretTop: 1.5 },
   { id: 'titan',    name: { tr: 'Titan',       en: 'Titan'     }, gem: 60, color: 0x40444a, scale: 1.05, health: 14, speed: 5.2, turn: 1.6, cool: 0.44, bspeed: 32, model: 'titan', metal: true, glow: true, turretTop: 2.05 },
 ];
@@ -546,7 +548,7 @@ scene.environment = envTex;
 
 // ---------------------------------------------------------------- tank modelleri (tembel-yükleme)
 // farklı GLB gövde modelleri; ilk pakete girmez, seçilince/önizlenince yüklenir (performans bütçesi)
-const MODEL_PATHS = { heavy: 'assets/tank_heavy.glb', hover: 'assets/tank_hover.glb', twin: 'assets/tank_twin.glb', arty: 'assets/tank_arty.glb', titan: 'assets/tank_titan.glb' };
+const MODEL_PATHS = { heavy: 'assets/tank_heavy.glb', hover: 'assets/tank_hover.glb', twin: 'assets/tank_twin.glb', arty: 'assets/tank_arty.glb', titan: 'assets/tank_titan.glb', mamut: 'assets/tank_mamut.glb' };
 const loadedModels = {}; // modelId -> gltf.scene
 const _modelLoader = new GLTFLoader();
 async function ensureModel(modelId) {
@@ -1247,6 +1249,16 @@ function buildDuck() {
   g.add(aMesh(new THREE.SphereGeometry(0.03, 8, 8), accMat(0x101010), -0.08, 0.68, 0.26));
   return g;
 }
+function buildDisco() {
+  const g = new THREE.Group();
+  // ayna top: düz-yüzeyli ikosahedron — env yansımasıyla disko parıltısı (metal 1.0 + düşük pürüz)
+  const ball = new THREE.Mesh(new THREE.IcosahedronGeometry(0.3, 1),
+    new THREE.MeshStandardMaterial({ color: 0xdfe8f2, metalness: 1.0, roughness: 0.07, flatShading: true, emissive: 0x2a3a55, emissiveIntensity: 0.3 }));
+  ball.position.y = 0.62; ball.castShadow = true; g.add(ball);
+  g.add(aMesh(new THREE.CylinderGeometry(0.03, 0.03, 0.42, 8), accMat(0x8a939e, { metal: 0.8, rough: 0.3 }), 0, 0.24, 0)); // askı çubuğu
+  g.add(aMesh(new THREE.TorusGeometry(0.31, 0.025, 8, 20), accMat(0xffd24d, { metal: 0.7, rough: 0.3, glow: 0.25 }), 0, 0.62, 0)); // altın ekvator bandı
+  return g;
+}
 function buildCrown() {
   const g = new THREE.Group();
   const gold = accMat(0xffcf3a, { metal: 0.9, rough: 0.2 });
@@ -1283,13 +1295,14 @@ const ACCESSORIES = [
   { id: 'tophat', name: { tr: 'Silindir Şapka', en: 'Top Hat' }, icon: '🎩', price: 750, r: 'c', build: buildTophat, mount: { x: 0, y: 1.48, z: 0.12 } },
   { id: 'spoiler', name: { tr: 'Spoiler', en: 'Spoiler' }, icon: '🏁', price: 1000, r: 'r', build: buildSpoiler, mount: { x: 0, y: 0.72, z: 1.28 } },
   { id: 'duck', name: { tr: 'Lastik Ördek', en: 'Rubber Duck' }, icon: '🦆', price: 600, r: 'r', build: buildDuck, mount: { x: 0, y: 1.46, z: 0.12 } },
+  { id: 'disco', name: { tr: 'Disko Topu', en: 'Disco Ball' }, icon: '🪩', gem: 15, r: 'e', build: buildDisco, mount: { x: 0, y: 1.5, z: 0.12 } },
   { id: 'crown', name: { tr: 'Altın Taç', en: 'Golden Crown' }, icon: '👑', gem: 20, r: 'e', build: buildCrown, mount: { x: 0, y: 1.5, z: 0.12 } },
   { id: 'wings', name: { tr: 'Melek Kanatları', en: 'Angel Wings' }, icon: '🪽', gem: 30, r: 'e', build: buildWings, mount: { x: 0, y: 0.75, z: 0.35 } },
   { id: 'jetpack', name: { tr: 'Jetpack', en: 'Jetpack' }, icon: '🚀', gem: 25, r: 'e', build: buildJetpack, mount: { x: 0, y: 0.7, z: 1.15 } },
 ];
 const accById = id => ACCESSORIES.find(a => a.id === id);
 // kule-üstü oturan aksesuarlar (tank kule yüksekliğine göre kaydırılır); diğerleri gövdeye sabit
-const ACC_TURRET_SLOT = new Set(['surf', 'cone', 'tophat', 'duck', 'crown']);
+const ACC_TURRET_SLOT = new Set(['surf', 'cone', 'tophat', 'duck', 'crown', 'disco']);
 function disposeSubtree(o) { o.traverse(n => { if (n.isMesh) { if (n.geometry) n.geometry.dispose(); if (n.material) (Array.isArray(n.material) ? n.material : [n.material]).forEach(m => m.dispose()); } }); }
 // tank klonu temizliği (GPU sızıntısı fix): yalnız örneğe ÖZEL kaynaklar bırakılır (userData.owned malzeme klonları,
 // ownGeo işaretli geometriler — boss halkaları). Paylaşılan glTF geometri/malzemesine dokunmak diğer klonları bozar.
