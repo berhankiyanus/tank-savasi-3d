@@ -9,7 +9,7 @@ const L = {
     sub: 'Duvarların arkasına saklanan düşman tankları yok et!',
     keysDesk: 'W / ↑ &nbsp;→&nbsp; ileri &nbsp;|&nbsp; S / ↓ &nbsp;→&nbsp; geri &nbsp;|&nbsp; A / D &nbsp;→&nbsp; dön &nbsp;|&nbsp; BOŞLUK &nbsp;→&nbsp; ateş',
     keysTouch: 'Soldaki joystick &nbsp;→&nbsp; sür ve dön &nbsp;|&nbsp; Sağdaki buton &nbsp;→&nbsp; ateş',
-    quickPlay: 'HIZLI OYNA', quickPlaySub: 'Tek dokunuş — dalga savaşına anında gir!',
+    quickPlay: 'HIZLI OYNA',
     victoryTitle: '🏆 ZAFER!', victorySub: (s, c) => `Görev tamam — 10 dalga temizlendi!<br>Skor ${s} · +🪙${c}`, endlessBtn: '∞ SONSUZ DEVAM',
     botRookie: '🟢 ÇAYLAK · +🪙30', botPro: '🟡 USTA · +🪙70', botElite: '🔴 EFSANE · +🪙150',
     fairNote: '⚔️ Düellolarda herkes eşit tankla savaşır — yetenek kazanır!',
@@ -17,6 +17,7 @@ const L = {
     daysLeft: d => `${d} gün kaldı`,
     lockedLv: n => `🔒 Seviye ${n}'te açılır — oynadıkça XP kazan!`,
     gateOpen: '🔓 Yeni özellik açıldı — menüye göz at!',
+    gemTip: 'Elmas al', namePh: 'İsmin',
     lbWeekTitle: 'HAFTANIN EN İYİLERİ',
     timeNewRec: d => `⏱ Süre ${d} — YENİ REKOR!`, timeLine: (d, b) => `⏱ Süre ${d} · Rekorun ${b}`,
     reviveTitle: '💥 NEREDEYSE!', reviveSub: 'Yeni komutanlara özel: aynı dalgadan ücretsiz devam et!',
@@ -30,9 +31,9 @@ const L = {
     freeGems: '🎁 Ücretsiz 💎 kazan: her 5. seviyede +2 · sezon kademeleri 8/16/24 · günün ilk koşu zaferi +1',
     packPop: '★ POPÜLER', packBest: '★ EN AVANTAJLI',
     againBtn: '↻ TEKRAR OYNA', rewardedBtn: '📺 Reklam izle → x2 ödül', rewardedGot: '🎉 x2 ödül alındı!', adLoading: '📺 Yükleniyor...',
-    questsBtn: '🎯 GÖREVLER', questsTitle: 'GÜNLÜK GÖREVLER', questsSub: 'Her gece yenilenir',
-    lbBtn: '🏆 LİDER', lbTitle: 'LİDER TABLOSU', lbDaily: 'BUGÜN', lbWeekly: 'BU HAFTA', lbEmpty: 'Henüz skor yok — ilk sen ol!', lbLoad: 'Yükleniyor...', lbScore: 'Dalga',
-    seasonBtn: '🎟️ SEZON', seasonWord: 'Sezon', seasonTier: 'Kademe', seasonTierUp: (n, r) => `🎟️ Sezon ${n}. kademe: ${r}`,
+    , questsTitle: 'GÜNLÜK GÖREVLER', questsSub: 'Her gece yenilenir',
+    , lbTitle: 'LİDER TABLOSU', lbDaily: 'BUGÜN', lbWeekly: 'BU HAFTA', lbEmpty: 'Henüz skor yok — ilk sen ol!', lbLoad: 'Yükleniyor...',
+    , seasonWord: 'Sezon', seasonTier: 'Kademe', seasonTierUp: (n, r) => `🎟️ Sezon ${n}. kademe: ${r}`,
     chestMsg: '📦 Günlük sandık açıldı! +🪙120 +🎰2', streakLabel: n => `🔥 ${n} günlük seri`, chestReady: '📦 Tüm görevleri bitir → günlük sandık', chestDone: '📦 Günlük sandık alındı ✓',
     tmTitle: '🎰 Jeton Makinesi', tmCount: 'Jetonların', tmSpin: '🎲 ÇEVİR · 1 🎰', tmNeed: 'Jeton kazanmak için görev tamamla / seviye atla',
     buildTitle: 'YÜKSELTME SEÇ',
@@ -54,14 +55,14 @@ const L = {
     youWin: 'KAZANDIN! 🏆', youLose: 'KAYBETTİN',
     duelOverSub: (a, b) => `Sonuç: ${a} - ${b}`,
     peerLeft: 'Rakip oyundan ayrıldı',
-    chooseMap: 'HARİTA SEÇ', garageTitle: 'GARAJ — Tank Al & Değiştir',
+    chooseMap: 'HARİTA SEÇ',
     buy: 'SATIN AL', owned: 'SEÇ', selected: '✓ SEÇİLİ', locked: w => `🔒 Dalga ${w}`,
     accTab: 'AKSESUAR', accEquip: 'TAK', accRemove: '✓ ÇIKAR', accNone: 'Aksesuar yok', shopTitle: 'ELMAS DÜKKÂNI',
     shopSoon: '🔒 Satın alma yakında — mağaza sürümüyle birlikte gelecek',
     noMoney: 'Yetersiz 🪙!', sHealth: 'Can', sSpeed: 'Hız', sFire: 'Ateş',
     reward: '🪙', bestWave: w => `En iyi: Dalga ${w}`, maxLevel: 'MAKS',
     ballBtn: '⚽ 1v1 TOP MAÇI', ballSub: t => `Topu ateşle karşı base'e sok! İlk ${t} gol kazanır.`,
-    golYou: 'GOL! 🎉', golOpp: 'Gol yediniz!', ballScore: 'GOL',
+    golYou: 'GOL! 🎉', golOpp: 'Gol yediniz!',
     rematchBtn: 'TEKRAR OYNA', leaveBtn: 'ÇIKIŞ',
     rematchWait: 'Rakip bekleniyor...', rematchPeerReady: 'Rakip tekrar oynamak istiyor!',
     puSpeed: 'HIZ! ⚡', puTriple: "3'LÜ ATIŞ!", puShield: 'KALKAN! 🛡',
@@ -82,7 +83,7 @@ const L = {
     sub: 'Destroy the enemy tanks hiding behind the walls!',
     keysDesk: 'W / ↑ &nbsp;→&nbsp; forward &nbsp;|&nbsp; S / ↓ &nbsp;→&nbsp; back &nbsp;|&nbsp; A / D &nbsp;→&nbsp; turn &nbsp;|&nbsp; SPACE &nbsp;→&nbsp; fire',
     keysTouch: 'Left joystick &nbsp;→&nbsp; drive & turn &nbsp;|&nbsp; Right button &nbsp;→&nbsp; fire',
-    quickPlay: 'QUICK PLAY', quickPlaySub: 'One tap — straight into wave battle!',
+    quickPlay: 'QUICK PLAY',
     victoryTitle: '🏆 VICTORY!', victorySub: (s, c) => `Mission complete — 10 waves cleared!<br>Score ${s} · +🪙${c}`, endlessBtn: '∞ CONTINUE ENDLESS',
     botRookie: '🟢 ROOKIE · +🪙30', botPro: '🟡 PRO · +🪙70', botElite: '🔴 LEGEND · +🪙150',
     fairNote: '⚔️ Duels are fought with equal tanks — skill wins!',
@@ -90,6 +91,7 @@ const L = {
     daysLeft: d => `${d} days left`,
     lockedLv: n => `🔒 Unlocks at level ${n} — play to earn XP!`,
     gateOpen: '🔓 New feature unlocked — check the menu!',
+    gemTip: 'Get gems', namePh: 'Your name',
     lbWeekTitle: "THIS WEEK'S BEST",
     timeNewRec: d => `⏱ Time ${d} — NEW RECORD!`, timeLine: (d, b) => `⏱ Time ${d} · Your best ${b}`,
     reviveTitle: '💥 SO CLOSE!', reviveSub: 'New commander bonus: continue from this wave for free!',
@@ -103,9 +105,9 @@ const L = {
     freeGems: '🎁 Earn free 💎: +2 every 5th level · season tiers 8/16/24 · first run victory each day +1',
     packPop: '★ POPULAR', packBest: '★ BEST VALUE',
     againBtn: '↻ PLAY AGAIN', rewardedBtn: '📺 Watch ad → 2x reward', rewardedGot: '🎉 2x reward claimed!', adLoading: '📺 Loading...',
-    questsBtn: '🎯 QUESTS', questsTitle: 'DAILY QUESTS', questsSub: 'Refreshes every night',
-    lbBtn: '🏆 RANKS', lbTitle: 'LEADERBOARD', lbDaily: 'TODAY', lbWeekly: 'THIS WEEK', lbEmpty: 'No scores yet — be the first!', lbLoad: 'Loading...', lbScore: 'Wave',
-    seasonBtn: '🎟️ SEASON', seasonWord: 'Season', seasonTier: 'Tier', seasonTierUp: (n, r) => `🎟️ Season tier ${n}: ${r}`,
+    , questsTitle: 'DAILY QUESTS', questsSub: 'Refreshes every night',
+    , lbTitle: 'LEADERBOARD', lbDaily: 'TODAY', lbWeekly: 'THIS WEEK', lbEmpty: 'No scores yet — be the first!', lbLoad: 'Loading...',
+    , seasonWord: 'Season', seasonTier: 'Tier', seasonTierUp: (n, r) => `🎟️ Season tier ${n}: ${r}`,
     chestMsg: '📦 Daily chest opened! +🪙120 +🎰2', streakLabel: n => `🔥 ${n}-day streak`, chestReady: '📦 Finish all quests → daily chest', chestDone: '📦 Daily chest claimed ✓',
     tmTitle: '🎰 Token Machine', tmCount: 'Your tokens', tmSpin: '🎲 SPIN · 1 🎰', tmNeed: 'Complete quests / level up to earn tokens',
     buildTitle: 'CHOOSE UPGRADE',
@@ -127,14 +129,14 @@ const L = {
     youWin: 'YOU WIN! 🏆', youLose: 'YOU LOSE',
     duelOverSub: (a, b) => `Result: ${a} - ${b}`,
     peerLeft: 'Your rival left the game',
-    chooseMap: 'CHOOSE MAP', garageTitle: 'GARAGE — Buy & Switch Tanks',
+    chooseMap: 'CHOOSE MAP',
     buy: 'BUY', owned: 'SELECT', selected: '✓ SELECTED', locked: w => `🔒 Wave ${w}`,
     accTab: 'ACCESSORY', accEquip: 'EQUIP', accRemove: '✓ REMOVE', accNone: 'No accessory', shopTitle: 'GEM SHOP',
     shopSoon: '🔒 Purchases coming soon — with the store release',
     noMoney: 'Not enough 🪙!', sHealth: 'HP', sSpeed: 'Speed', sFire: 'Fire',
     reward: '🪙', bestWave: w => `Best: Wave ${w}`, maxLevel: 'MAX',
     ballBtn: '⚽ 1v1 BALL MATCH', ballSub: t => `Shoot the ball into the rival base! First to ${t} goals wins.`,
-    golYou: 'GOAL! 🎉', golOpp: 'They scored!', ballScore: 'GOAL',
+    golYou: 'GOAL! 🎉', golOpp: 'They scored!',
     rematchBtn: 'PLAY AGAIN', leaveBtn: 'LEAVE',
     rematchWait: 'Waiting for opponent...', rematchPeerReady: 'Opponent wants a rematch!',
     puSpeed: 'SPEED! ⚡', puTriple: 'TRIPLE SHOT!', puShield: 'SHIELD! 🛡',
@@ -477,7 +479,6 @@ const WALL_H = 3.0;
 const TANK_R = 1.25;
 const ENEMY_SPEED = 4.6, ENEMY_TURN = 1.9, ENEMY_BSPEED = 17;
 const KILL_TARGET = 5;
-const KILL_COINS = 15;
 const BALL_R = 1.7;
 const BALL_TARGET = 3;
 const BULLET_IMPULSE = 11;
@@ -2079,7 +2080,7 @@ function startTutorial() {
 function abortTutorial() { if (tut) { tut = null; $('tutcard').classList.remove('on'); } } // maç bitti/menüye dönüldü; sıradaki maçta baştan
 function renderTut() {
   const s = TUT_STEPS[tut.step];
-  $('tut-step').textContent = (tut.step + 1) + '/' + TUT_STEPS.length;
+  $('tut-step').textContent = T().tutTitle + ' ' + (tut.step + 1) + '/' + TUT_STEPS.length; // tutTitle bağlandı (başlıksızdı)
   $('tut-ic').textContent = s.icon;
   $('tut-txt').textContent = T().tutSteps[tut.step];
   $('tut-fill').style.width = Math.min(100, (tut.prog / s.goal) * 100) + '%';
@@ -2576,7 +2577,12 @@ function applyLang() {
   $('btn-bot-elite').textContent = t.botElite;
   $('btn-ball').textContent = t.ballBtn;
   $('btn-quickplay').innerHTML = gi('tank') + ' ' + t.quickPlay;
-  { const sn = document.querySelector('.shop-note'); if (sn) sn.textContent = t.shopNote; } // dükkân dip notu (EN çevirisi eksikti)
+  { const sn = $('shop-disclaimer'); if (sn) sn.textContent = t.shopNote; } // dükkân dip notu (BUG: .shop-note seçicisi #shop-free'yi eziyordu)
+  { const sb = $('sr-back'); if (sb) sb.textContent = t.back; }
+  { const bs = $('btn-back-shop'); if (bs) bs.textContent = t.back; }
+  $('gembar').title = t.gemTip;
+  $('playername').placeholder = t.namePh;
+  updateSettingsLabels(); // dil değişince ayarlar paneli de tazelensin (yalnız openSettings'te kalıyordu)
   { const fg = $('shop-free'); if (fg) fg.textContent = t.freeGems; } // "elmas nasıl kazanılır" — dükkân çıkmaz sokak hissi vermesin
   // alt nav etiketleri (ikon sabit, .nlbl metni dile göre)
   $('btn-quests').querySelector('.nlbl').textContent = t.navQuests;
@@ -2740,10 +2746,10 @@ function renderShowroomUI() {
   } else {
     const isGem = !!base.gem;
     act.innerHTML = `${t.buy} · ${isGem ? '💎' + base.gem : '🪙' + base.price}`;
-    act.disabled = isGem ? (profile.gems || 0) < base.gem : profile.coins < base.price;
+    act.classList.toggle('cant', isGem ? (profile.gems || 0) < base.gem : profile.coins < base.price);
     act.className = 'mbtn sr-btn gold' + (isGem ? ' breath' : ''); // premium: nefes animasyonu (istek yaratma)
     act.onclick = () => {
-      if (isGem ? (profile.gems || 0) < base.gem : profile.coins < base.price) return;
+      if (isGem ? (profile.gems || 0) < base.gem : profile.coins < base.price) return showToast(T().noMoney);
       if (isGem) profile.gems -= base.gem; else profile.coins -= base.price;
       profile.owned.push(base.id); profile.selected = base.id;
       saveProfile(); sfxCoin(); setPlayerTank(); updateCoinBar(); showroom.accId = profile.accessory; buildShowroomTank(); renderShowroomUI();
@@ -2765,10 +2771,10 @@ function renderShowroomAcc(t, act) {
     act.onclick = () => { profile.accessory = a.id; saveProfile(); setPlayerTank(); renderShowroomUI(); };
   } else {
     act.innerHTML = `${t.buy} · ${a.gem ? '💎' + a.gem : '🪙' + a.price}`;
-    act.disabled = a.gem ? (profile.gems || 0) < a.gem : profile.coins < a.price;
+    act.classList.toggle('cant', a.gem ? (profile.gems || 0) < a.gem : profile.coins < a.price);
     if (a.gem) act.className += ' breath';
     act.onclick = () => {
-      if (a.gem) { if ((profile.gems || 0) < a.gem) return; profile.gems -= a.gem; } else { if (profile.coins < a.price) return; profile.coins -= a.price; }
+      if (a.gem) { if ((profile.gems || 0) < a.gem) return showToast(T().noMoney); profile.gems -= a.gem; } else { if (profile.coins < a.price) return showToast(T().noMoney); profile.coins -= a.price; }
       profile.accessories = profile.accessories || []; profile.accessories.push(a.id); profile.accessory = a.id;
       saveProfile(); sfxCoin(); updateCoinBar(); setPlayerTank(); renderShowroomUI();
     };
@@ -2845,9 +2851,9 @@ function renderGarage() {
     else {
       const isGem = !!base.gem;
       btn.innerHTML = `${t.buy} · ${isGem ? '💎' + base.gem : '🪙' + base.price}`;
-      btn.disabled = isGem ? (profile.gems || 0) < base.gem : profile.coins < base.price;
+      btn.classList.toggle('cant', isGem ? (profile.gems || 0) < base.gem : profile.coins < base.price);
       btn.onclick = async () => {
-        if (isGem ? (profile.gems || 0) < base.gem : profile.coins < base.price) return;
+        if (isGem ? (profile.gems || 0) < base.gem : profile.coins < base.price) return showToast(T().noMoney);
         await ensureModel(base.model);
         if (isGem) profile.gems -= base.gem; else profile.coins -= base.price;
         profile.owned.push(base.id); profile.selected = base.id;
@@ -2919,8 +2925,8 @@ function renderSkins() {
     else if (owned) { btn.textContent = t.owned; btn.onclick = () => { profile.skin = s.id; saveProfile(); setPlayerTank(); renderSkins(); }; }
     else {
       btn.innerHTML = `${t.buy} · 🪙${s.price}`;
-      btn.disabled = profile.coins < s.price;
-      btn.onclick = () => { if (profile.coins < s.price) return; profile.coins -= s.price; profile.skins.push(s.id); profile.skin = s.id; saveProfile(); sfxCoin(); setPlayerTank(); updateCoinBar(); renderSkins(); };
+      btn.classList.toggle('cant', profile.coins < s.price);
+      btn.onclick = () => { if (profile.coins < s.price) return showToast(T().noMoney); profile.coins -= s.price; profile.skins.push(s.id); profile.skin = s.id; saveProfile(); sfxCoin(); setPlayerTank(); updateCoinBar(); renderSkins(); };
     }
     card.appendChild(btn); wrap.appendChild(card);
   }
@@ -2954,9 +2960,9 @@ function renderAccessories() {
     else if (owned) { btn.textContent = t.accEquip; btn.onclick = () => { profile.accessory = a.id; saveProfile(); setPlayerTank(); renderAccessories(); }; }
     else {
       btn.innerHTML = `${t.buy} · ${a.gem ? '💎' + a.gem : '🪙' + a.price}`;
-      btn.disabled = a.gem ? (profile.gems || 0) < a.gem : profile.coins < a.price;
+      btn.classList.toggle('cant', a.gem ? (profile.gems || 0) < a.gem : profile.coins < a.price);
       btn.onclick = () => {
-        if (a.gem) { if ((profile.gems || 0) < a.gem) return; profile.gems -= a.gem; } else { if (profile.coins < a.price) return; profile.coins -= a.price; }
+        if (a.gem) { if ((profile.gems || 0) < a.gem) return showToast(T().noMoney); profile.gems -= a.gem; } else { if (profile.coins < a.price) return showToast(T().noMoney); profile.coins -= a.price; }
         profile.accessories = profile.accessories || []; profile.accessories.push(a.id); profile.accessory = a.id;
         saveProfile(); sfxCoin(); updateCoinBar(); setPlayerTank(); renderAccessories();
       };
