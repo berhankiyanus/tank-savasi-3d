@@ -21,6 +21,7 @@ const L = {
     patrolMsg: (c, h) => `🛡️ Tankın devriyedeydi: +🪙${c} (${h} saat)`,
     nextGoal: 'Sıradaki', weeklyLbl: '📅 HAFTANIN MODU', weeklyWin: 'Haftalık mod zaferi',
     modNames: { doubleBoss: 'Çift Boss', fast: 'Hızlı Düşmanlar', tough: 'Zırhlı Düşmanlar', bossRush: 'Boss Rush' },
+    shareBtn: '📤 PAYLAŞ', shareText: (w, d) => `Tank Savaşı 3D'de ${w}. dalgaya ulaştım${d ? ' — ' + d : ''}! Sen kaçta bitirirsin?`, shareSaved: '📤 Kart indirildi — paylaşabilirsin', shareFail: '📤 Paylaşım yapılamadı',
     kitsTitle: '🎒 SEFER KİTLERİ — bir sonraki koşuda kullanılır', kitReady: '✓ HAZIR', kitsArmed: k => `🎒 Kitler devrede: ${k}`, premBuy: '👑 Komutan Rayı · 💎120', premActive: '👑 Komutan Rayı aktif — her kademe ×2', premBought: n => `👑 Komutan Rayı alındı! Geriye dönük ${n} kademe ödülü verildi`, starterTitle: '🎁 BAŞLANGIÇ PAKETİ', starterDesc: '💎60 + Hover Tank + 🪙1000 + 🎰3', starterOnce: 'Tek seferlik · yeni komutan fırsatı', starterGot: '🎁 Başlangıç paketi alındı: Hover Tank garajda!',
     chapterWord: 'BÖLÜM', chVictories: 'zafer', chapterDone: (n, nm) => `📖 Bölüm ${n} tamamlandı: ${nm} — +🎰2 +💎1`,
     eventNames: { doubleGold: '🎉 ÇİFTE ALTIN', bossRush: '💀 BOSS RUSH' }, eventLeft: (h, m) => `${h}sa ${m}dk`, eventDoubleTip: '🎉 Çifte Altın: hafta sonu tüm koşularda yok etme parası ×2!', eventBossTip: '💀 Boss Rush: 5 dalga, her dalga boss — boss başı 150🪙, zaferde +🎰2', lbSpeed: '⏱ HIZ', lbSpeedTitle: '⏱ HAFTANIN EN HIZLI ZAFERLERİ',
@@ -104,6 +105,7 @@ const L = {
     patrolMsg: (c, h) => `🛡️ Your tank was on patrol: +🪙${c} (${h}h)`,
     nextGoal: 'Next up', weeklyLbl: '📅 WEEKLY MODE', weeklyWin: 'Weekly mode victory',
     modNames: { doubleBoss: 'Double Boss', fast: 'Fast Enemies', tough: 'Armored Enemies', bossRush: 'Boss Rush' },
+    shareBtn: '📤 SHARE', shareText: (w, d) => `I reached wave ${w} in Tank Battle 3D${d ? ' — ' + d : ''}! Can you beat it?`, shareSaved: '📤 Card downloaded — ready to share', shareFail: '📤 Could not share',
     kitsTitle: '🎒 SORTIE KITS — used on your next run', kitReady: '✓ READY', kitsArmed: k => `🎒 Kits active: ${k}`, premBuy: '👑 Commander Track · 💎120', premActive: '👑 Commander Track active — every tier ×2', premBought: n => `👑 Commander Track unlocked! ${n} tier rewards granted retroactively`, starterTitle: '🎁 STARTER PACK', starterDesc: '💎60 + Hover Tank + 🪙1000 + 🎰3', starterOnce: 'One time · new commander offer', starterGot: '🎁 Starter pack claimed: Hover Tank is in your garage!',
     chapterWord: 'CHAPTER', chVictories: 'wins', chapterDone: (n, nm) => `📖 Chapter ${n} complete: ${nm} — +🎰2 +💎1`,
     eventNames: { doubleGold: '🎉 DOUBLE GOLD', bossRush: '💀 BOSS RUSH' }, eventLeft: (h, m) => `${h}h ${m}m`, eventDoubleTip: '🎉 Double Gold: kill coins ×2 in every run this weekend!', eventBossTip: '💀 Boss Rush: 5 waves, a boss every wave — 150🪙 per boss, +🎰2 on victory', lbSpeed: '⏱ SPEED', lbSpeedTitle: "⏱ THIS WEEK'S FASTEST VICTORIES",
@@ -2443,9 +2445,48 @@ function grantMatchXp(kind, opts) {
 }
 // maç-sonu "hasat" ekranı — GDD retention hub'ı: XP çubuğu dolar → seviye → ödüller → tek tuş tekrar
 let harvestReplay = null, harvestReward = null, harvestEndless = null;
+// FAZ1 (plan B-5): PAYLAŞIM KARTI — 1080×1350 PNG: oyun karesi + sonuç + istatistik + marka; navigator.share(files) yoksa indirme.
+let snapshotCb = null, lastMatch = null;
+function grabFrame() { return new Promise(res => { snapshotCb = () => res(renderer.domElement); }); }
+async function makeShareCard(m) {
+  const W = 1080, H = 1350, c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d');
+  try { await document.fonts.load('80px "Russo One"'); } catch (e) {}
+  const bg = g.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, '#0d1409'); bg.addColorStop(1, '#1a2412'); g.fillStyle = bg; g.fillRect(0, 0, W, H);
+  try { // oyun karesi (üst 900px, kapak-sığdır)
+    const src = state === 'over' || state === 'play' ? await Promise.race([grabFrame(), new Promise(r => setTimeout(() => r(null), 400))]) : null;
+    if (src) { const sw = src.width, sh = src.height, sc = Math.max(W / sw, 900 / sh), dw = sw * sc, dh = sh * sc; g.save(); g.beginPath(); g.roundRect(0, 0, W, 900, [0, 0, 36, 36]); g.clip(); g.drawImage(src, (W - dw) / 2, (900 - dh) / 2, dw, dh); const vg = g.createLinearGradient(0, 560, 0, 900); vg.addColorStop(0, 'rgba(13,20,9,0)'); vg.addColorStop(1, 'rgba(13,20,9,1)'); g.fillStyle = vg; g.fillRect(0, 560, W, 340); g.restore(); }
+  } catch (e) {}
+  const txt = (str, x, y, size, col, align = 'center') => { g.font = `${size}px "Russo One", "Courier New", monospace`; g.textAlign = align; g.textBaseline = 'middle'; g.lineWidth = size * 0.14; g.lineJoin = 'round'; g.strokeStyle = '#0b0f08'; g.strokeText(str, x, y); g.fillStyle = col; g.fillText(str, x, y); };
+  txt('TANK SAVAŞI 3D', W / 2, 70, 54, '#ffd76a');
+  txt(m.title, W / 2, 800, 110, m.won ? '#7dff9b' : '#ffb04a');
+  const stats = `🌊 ${T().wave} ${m.wave}   ·   ⏱ ${fmtTime(m.dur)}   ·   ⚔️ ${m.kills}`;
+  txt(stats, W / 2, 960, 46, '#fff');
+  txt(`${(tankById(profile.selected).name[lang]).toUpperCase()}  ·  ${profile.name || ''}`, W / 2, 1040, 38, '#cfe6bf');
+  g.fillStyle = '#ff9a1e'; g.beginPath(); g.roundRect(W / 2 - 330, 1130, 660, 90, 45); g.fill();
+  txt(lang === 'tr' ? 'ÜCRETSİZ OYNA' : 'PLAY FREE', W / 2, 1176, 42, '#1a1000');
+  txt('tank-savasi-3d.onrender.com', W / 2, 1280, 34, '#9fc0a0');
+  return c;
+}
+async function shareCard(ctx) {
+  const m = lastMatch; if (!m) return;
+  const t = T(), btn = $('res-share'); if (btn) btn.disabled = true;
+  try {
+    const c = await makeShareCard(m);
+    const blob = await new Promise(r => c.toBlob(r, 'image/png'));
+    const file = new File([blob], 'tank-savasi.png', { type: 'image/png' });
+    const text = t.shareText(m.wave, m.won ? fmtTime(m.dur) : '');
+    let method = 'download';
+    if (navigator.canShare && navigator.canShare({ files: [file] })) { method = 'share'; await navigator.share({ files: [file], title: 'Tank Savaşı 3D', text }); }
+    else { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'tank-savasi.png'; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000); showToast(t.shareSaved, 3000); }
+    track('share_card', { ctx: ctx || 'harvest', method });
+  } catch (e) { if (!/abort/i.test(String(e && e.name))) showToast(t.shareFail, 2400); }
+  if (btn) btn.disabled = false;
+}
 function showHarvest(opts) {
   state = 'over';
   abortTutorial();
+  lastMatch = { title: opts.title, won: opts.won === true, wave, dur: Math.max(1, Math.round(clock.elapsedTime - matchStartT)), kills: Math.max(0, (profile.kills || 0) - (matchStartKills || 0)) };
+  { const sb = $('res-share'); if (sb) { sb.style.display = mode === 'solo' ? '' : 'none'; sb.textContent = T().shareBtn; } }
   if (isNativeApp()) setupNotifs(); // bildirim planı seri/sezon durumuna göre tazelenir
   const t = T();
   const preLvl = profile.level || 1, prePct = ((profile.xp || 0) / xpForLevel(preLvl)) * 100;
@@ -4517,6 +4558,7 @@ $('btn-weekly').addEventListener('click', () => { const ws = weeklySpec(); track
 $('res-again').addEventListener('click', () => { const fn = harvestReplay; harvestReplay = null; maybeInterstitial(); if (fn) { track('retry_click', { mode: matchMode }); fn(); } else openMenu(); });
 $('res-menu').addEventListener('click', () => { harvestReplay = null; harvestEndless = null; openMenu(); });
 $('res-endless').addEventListener('click', () => { const fn = harvestEndless; harvestEndless = null; harvestReplay = null; if (fn) fn(); });
+$('res-share').addEventListener('click', () => shareCard('harvest'));
 $('rv-yes').addEventListener('click', acceptRevive);
 $('rv-no').addEventListener('click', () => { if ($('reviveoffer').classList.contains('hidden')) return; $('reviveoffer').classList.add('hidden'); track('revive_declined', { tier: reviveOfferTier, wave }); gameOver(); });
 $('res-rewarded').addEventListener('click', async () => {
@@ -5288,6 +5330,7 @@ function tick() {
   camera.lookAt(player.x + fwdX(player.a) * ahead, 1.0, player.z + fwdZ(player.a) * ahead);
 
   renderer.render(scene, camera);
+  if (snapshotCb) { const f = snapshotCb; snapshotCb = null; try { f(); } catch (e) {} } // paylaşım kartı: render sonrası aynı karede canvas okunur
 }
 tick();
 window.__gameLoaded = true;
