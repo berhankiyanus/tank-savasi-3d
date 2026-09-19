@@ -2108,7 +2108,40 @@ function fire(owner, angOff = 0, playerShot = null) {
   if (isPlayer && playerTurret) recoil = 0.14;
 }
 function clearBullets() { for (const b of bullets) scene.remove(b.mesh); bullets.length = 0; }
-function clearEnemies() { for (const e of enemies) { scene.remove(e.mesh); disposeTank(e.mesh); } enemies = []; }
+function clearEnemies() { for (const e of enemies) { scene.remove(e.mesh); disposeTank(e.mesh); } enemies = []; clearMines(); }
+// ---- mayınlar (Mayıncı düşmanı; yalnız solo)
+const mines = [];
+const mineGeo = new THREE.CylinderGeometry(0.45, 0.5, 0.22, 12), mineMat = new THREE.MeshStandardMaterial({ color: 0x2a2a30, roughness: 0.6 }), mineLedMat = new THREE.MeshBasicMaterial({ color: 0xff2020 }), mineLedGeo = new THREE.SphereGeometry(0.1, 8, 8);
+function dropMine(e) {
+  const g = new THREE.Group(); const body = new THREE.Mesh(mineGeo, mineMat); body.position.y = 0.11; body.castShadow = true; g.add(body);
+  const led = new THREE.Mesh(mineLedGeo, mineLedMat); led.position.y = 0.26; g.add(led);
+  g.position.set(e.x - fwdX(e.a) * 1.6, 0, e.z - fwdZ(e.a) * 1.6); scene.add(g);
+  mines.push({ x: g.position.x, z: g.position.z, mesh: g, led, armT: 1.0, owner: e.id });
+}
+function mineBlast(m) {
+  const i = mines.indexOf(m); if (i < 0) return;
+  mines.splice(i, 1); scene.remove(m.mesh);
+  explode(m.x, 0.6, m.z, true); sfxBoom(false); shake = Math.max(shake, 0.6);
+  if (player.alive && Math.hypot(player.x - m.x, player.z - m.z) < 2.5 && player.inv <= 0 && player.shieldT <= 0) { player.inv = 1.0; player.health--; renderHealth(); hitFlash(); if (player.health <= 0) soloPlayerDied(); }
+  for (const e of enemies) if (e.alive && Math.hypot(e.x - m.x, e.z - m.z) < 2.5) soloDamage(e, 1, null);
+}
+function updateMines(dt) {
+  for (let i = mines.length - 1; i >= 0; i--) {
+    const m = mines[i];
+    if (m.armT > 0) { m.armT -= dt; continue; }
+    m.led.visible = Math.sin(clock.elapsedTime * 10) > 0;
+    if (player.alive && Math.hypot(player.x - m.x, player.z - m.z) < 1.6) { mineBlast(m); continue; }
+    for (const e of enemies) if (e.alive && Math.hypot(e.x - m.x, e.z - m.z) < 1.4) { mineBlast(m); break; }
+  }
+}
+function clearMines() { for (const m of mines) scene.remove(m.mesh); mines.length = 0; }
+// kamikaze patlaması: oyuncu (r3, 1 hasar) + diğer düşmanlar (zincir); kendini patlattıysa ödül yok
+function kamikazeBlast(e, byPlayer) {
+  explode(e.x, 1.0, e.z, true); sfxBoom(true); shake = Math.max(shake, 0.8);
+  if (!byPlayer && player.alive && Math.hypot(player.x - e.x, player.z - e.z) < 3.8 && player.inv <= 0 && player.shieldT <= 0) { player.inv = 1.0; player.health--; renderHealth(); hitFlash(); if (player.health <= 0) soloPlayerDied(); }
+  for (const o of enemies) if (o !== e && o.alive && Math.hypot(o.x - e.x, o.z - e.z) < 3.4) soloDamage(o, 1, null);
+  if (e.alive) { e.alive = false; scene.remove(e.mesh); disposeTank(e.mesh); }
+}
 
 // ---------------------------------------------------------------- güç-yükseltmeleri
 const POWERUPS = [
@@ -2200,6 +2233,9 @@ const ENEMY_TYPES = {
   // FAZ1 (plan A-3) 2. boss arketipi YILDIRIM: ateş etmez; 1.2sn kırmızı telegraf → 2sn düz dash (3× hız, temasta 1 hasar) → 1.5sn sersem (savunmasız ×2)
   boss_blitz: { hp: 10, speed: 5.0, turn: 2.2, cool: [3, 4.5], bspeed: 0, keep: 9, sight: 80, scale: 1.8, color: 0xc9401a, coins: 100, score: 2400, glow: true, blitz: true },
 };
+// FAZ2 (plan A-5): KAMİKAZE (ateş etmez, dalar, 0.6sn fitil → r3 patlama: oyuncu VE düşmanlara 1) · MAYINCI (5sn'de bir arkasına mayın, maks 4; 1sn kurulma, r2.5, herkese 1; mermi mayını patlatır)
+ENEMY_TYPES.kamikaze = { hp: 1, speed: 9.0, turn: 3.2, cool: [1e9, 1e9], bspeed: 0, keep: 0, sight: 60, scale: 0.8, color: 0xff7a1a, coins: 7, score: 120, kamikaze: true, glow: true };
+ENEMY_TYPES.miner = { hp: 2, speed: 3.4, turn: 1.6, cool: [2.6, 4.2], bspeed: 18, keep: 14, sight: 60, scale: 1.0, color: 0x6a4a9a, coins: 12, score: 220, miner: true };
 const BOSS_TYPES = new Set(['boss', 'boss_blitz']);
 const isBoss = t => BOSS_TYPES.has(t);
 let enemyIdC = 0;
@@ -2221,9 +2257,11 @@ function waveComposition(w, extra = 0) {
   const list = [];
   for (let i = 0; i < count; i++) {
     const r = Math.random();
-    if (w >= 6 && r < 0.18) list.push('sniper');
-    else if (w >= 4 && r < 0.38) list.push('heavy');
-    else if (w >= 3 && r < 0.62) list.push('scout');
+    if (w >= 7 && r < 0.10) list.push('miner');          // FAZ2 A-5: 7+ dalgada %10 mayıncı
+    else if (w >= 5 && r < 0.22) list.push('kamikaze');  // 5+ dalgada %12 kamikaze (bantlar aşağıya kayar)
+    else if (w >= 6 && r < 0.18 + 0.22) list.push('sniper');
+    else if (w >= 4 && r < 0.38 + (w >= 5 ? 0.22 : 0)) list.push('heavy');
+    else if (w >= 3 && r < 0.62 + (w >= 5 ? 0.22 : 0)) list.push('scout');
     else list.push('normal');
   }
   return list;
@@ -2235,7 +2273,7 @@ function spawnEnemies(types) {
     const e = {
       id: ++enemyIdC, type, color: d.color, hp: d.hp, maxHp: d.hp, baseScale: d.scale, hitT: 0,
       speed: d.speed, turn: d.turn, bspeed: d.bspeed, keep: d.keep, sight: d.sight,
-      triple: !!d.triple, coins: d.coins, score: d.score,
+      triple: !!d.triple, coins: d.coins, score: d.score, kamikaze: !!d.kamikaze, miner: !!d.miner, mineT: 3, fuseT: 0,
       mesh: buildTank({ color: d.color, scale: d.scale, glow: d.glow }),
       x: cell.x, z: cell.z, a: Math.random() * Math.PI * 2,
       cool: (d.cool[0] + Math.random() * (d.cool[1] - d.cool[0])) * enemyMercy(),
@@ -4863,8 +4901,12 @@ function updateEnemy(e, dt, tgt) {
   e.cool -= dt; e.thinkT -= dt;
   const tp = tgt || player;
   const alive = tgt ? true : player.alive;
-  const et = e.turn || ENEMY_TURN, es = (e.speed || ENEMY_SPEED) * (weeklyRun && weeklyRun.mod === 'fast' ? 1.3 : 1), keep = e.keep || 11;
+  const et = e.turn || ENEMY_TURN, es = (e.speed || ENEMY_SPEED) * (weeklyRun && weeklyRun.mod === 'fast' ? 1.3 : 1), keep = e.keep != null ? e.keep : 11;
   const distP = Math.hypot(tp.x - e.x, tp.z - e.z);
+  if (e.kamikaze) { // fitil: yakına gelince 0.6sn yanıp söner, sonra patlar
+    if (e.fuseT > 0) { e.fuseT -= dt; e.mesh.scale.setScalar((e.baseScale || 1) * (1 + 0.3 * Math.abs(Math.sin(clock.elapsedTime * 40)))); if (e.fuseT <= 0) kamikazeBlast(e, false); return; }
+    if (!tgt && alive && distP < 3.4) { e.fuseT = 0.6; return; }
+  }
   if (e.knockT > 0) { e.knockT -= dt; e.mesh.position.set(e.x, 0, e.z); return; } // Titan: sersem
   if (e.ramCool > 0) e.ramCool -= dt;
   const seen = alive && distP < (e.sight || 55) * (!tgt && player.stealth ? 0.45 : 1) && losClear(e.x, e.z, tp.x, tp.z); // Hayalet gizliyken görüş kısalır
@@ -4927,6 +4969,7 @@ function updateEnemy(e, dt, tgt) {
   const pos = { x: e.x, z: e.z };
   circleVsWalls(pos, TANK_R);
   e.x = pos.x; e.z = pos.z;
+  if (e.miner && mode === 'solo') { e.mineT -= dt; if (e.mineT <= 0) { e.mineT = 5; if (mines.length < 10 && mines.filter(m => m.owner === e.id).length < 4) dropMine(e); } }
   if (e.hitT > 0) { e.hitT -= dt; e.mesh.scale.setScalar((e.baseScale || 1) * (1 + Math.max(0, e.hitT) * 1.8)); }
   e.mesh.position.set(e.x, 0, e.z);
   e.mesh.rotation.y = e.a;
@@ -4983,6 +5026,7 @@ function soloDamage(e, dmg, b) {
     popFloater(e.x, 3.1, e.z, '+🪙' + killCoins(e), '#ffd76a');
     onEnemyKilled(e);
     if (b && (b.b0 || 1) - b.bounces >= 2) megaBounce(e); // E1: çift sekmeyle kill
+    if (e.kamikaze) kamikazeBlast(e, true); // oyuncu vurduysa yine patlar (zincir), oyuncuya zarar vermez
     return true;
   }
   e.hitT = 0.14; if (b) explode(b.mesh.position.x, 1.0, b.mesh.position.z, false);
@@ -5142,6 +5186,7 @@ function tick() {
 
     if (mode === 'solo' || mode === 'duel' || mode === 'coop') updatePowerups(dt);
     updateHazards(dt);
+    if (mode === 'solo' && mines.length) updateMines(dt);
 
     if (mode === 'coop' && coop) updateCoop(dt);
     if (mode === 'team' && team) updateTeam(dt);
@@ -5208,6 +5253,7 @@ function tick() {
       }
       if (!dead) b.mesh.rotation.y = Math.atan2(-b.vx, -b.vz);
 
+      if (!dead && b.fromPlayer && mines.length) { for (const m of mines) if (Math.hypot(b.mesh.position.x - m.x, b.mesh.position.z - m.z) < 0.9) { mineBlast(m); dead = true; break; } } // mermi mayını patlatır
       if (!dead && covers.length) {
         for (const cv of covers) {
           if (Math.hypot(b.mesh.position.x - cv.x, b.mesh.position.z - cv.z) < cv.r + 0.25) {
