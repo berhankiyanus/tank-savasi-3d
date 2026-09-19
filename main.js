@@ -10,7 +10,7 @@ const L = {
     keysDesk: 'W / ↑ &nbsp;→&nbsp; ileri &nbsp;|&nbsp; S / ↓ &nbsp;→&nbsp; geri &nbsp;|&nbsp; A / D &nbsp;→&nbsp; dön &nbsp;|&nbsp; BOŞLUK &nbsp;→&nbsp; ateş',
     keysTouch: 'Soldaki joystick &nbsp;→&nbsp; sür ve dön &nbsp;|&nbsp; Sağdaki buton &nbsp;→&nbsp; ateş',
     quickPlay: 'HIZLI OYNA',
-    victoryTitle: '🏆 ZAFER!', victorySub: (s, c) => `Görev tamam — 10 dalga temizlendi!<br>Skor ${s} · +🪙${c}`, endlessBtn: '∞ SONSUZ DEVAM',
+    victoryTitle: '🏆 ZAFER!', victorySub: (s, c, n) => `Görev tamam — ${n || 10} dalga temizlendi!<br>Skor ${s} · +🪙${c}`, endlessBtn: '∞ SONSUZ DEVAM',
     botRookie: '🟢 ÇAYLAK · +🪙30', botPro: '🟡 USTA · +🪙70', botElite: '🔴 EFSANE · +🪙150',
     fairNote: '⚔️ Düellolarda herkes eşit tankla savaşır — yetenek kazanır!',
     questReady: '🎯 Görev tamam — GÖREVLER\'den ödülünü AL!', claimBtn: 'ÖDÜLÜ AL',
@@ -20,7 +20,8 @@ const L = {
     megaBounce: '💥 MEGA SEKME!', setAutoFire: 'Oto Ateş',
     patrolMsg: (c, h) => `🛡️ Tankın devriyedeydi: +🪙${c} (${h} saat)`,
     nextGoal: 'Sıradaki', weeklyLbl: '📅 HAFTANIN MODU', weeklyWin: 'Haftalık mod zaferi',
-    modNames: { doubleBoss: 'Çift Boss', fast: 'Hızlı Düşmanlar', tough: 'Zırhlı Düşmanlar' },
+    modNames: { doubleBoss: 'Çift Boss', fast: 'Hızlı Düşmanlar', tough: 'Zırhlı Düşmanlar', bossRush: 'Boss Rush' },
+    eventNames: { doubleGold: '🎉 ÇİFTE ALTIN', bossRush: '💀 BOSS RUSH' }, eventLeft: (h, m) => `${h}sa ${m}dk`, eventDoubleTip: '🎉 Çifte Altın: hafta sonu tüm koşularda yok etme parası ×2!', eventBossTip: '💀 Boss Rush: 5 dalga, her dalga boss — boss başı 150🪙, zaferde +🎰2', lbSpeed: '⏱ HIZ', lbSpeedTitle: '⏱ HAFTANIN EN HIZLI ZAFERLERİ',
     gemTip: 'Elmas al', namePh: 'İsmin', midW: 'KISIK', setNotifs: 'Bildirimler', streakFrozen: '🧊 Serin donduruldu — kaldığın yerden devam!', pityLine: n => `🛡️ Garanti: ${n} çekilişte Efsanevi`,
     setHaptic: 'Titreşim', privacyLbl: 'Gizlilik Politikası',
     connWaking: '⏳ Sunucu uyanıyor — birkaç saniye sürebilir...', offlineMsg: '📡 İnternet yok — bağlanınca tekrar dene',
@@ -90,7 +91,7 @@ const L = {
     keysDesk: 'W / ↑ &nbsp;→&nbsp; forward &nbsp;|&nbsp; S / ↓ &nbsp;→&nbsp; back &nbsp;|&nbsp; A / D &nbsp;→&nbsp; turn &nbsp;|&nbsp; SPACE &nbsp;→&nbsp; fire',
     keysTouch: 'Left joystick &nbsp;→&nbsp; drive & turn &nbsp;|&nbsp; Right button &nbsp;→&nbsp; fire',
     quickPlay: 'QUICK PLAY',
-    victoryTitle: '🏆 VICTORY!', victorySub: (s, c) => `Mission complete — 10 waves cleared!<br>Score ${s} · +🪙${c}`, endlessBtn: '∞ CONTINUE ENDLESS',
+    victoryTitle: '🏆 VICTORY!', victorySub: (s, c, n) => `Mission complete — ${n || 10} waves cleared!<br>Score ${s} · +🪙${c}`, endlessBtn: '∞ CONTINUE ENDLESS',
     botRookie: '🟢 ROOKIE · +🪙30', botPro: '🟡 PRO · +🪙70', botElite: '🔴 LEGEND · +🪙150',
     fairNote: '⚔️ Duels are fought with equal tanks — skill wins!',
     questReady: '🎯 Quest complete — claim it in QUESTS!', claimBtn: 'CLAIM',
@@ -100,7 +101,8 @@ const L = {
     megaBounce: '💥 MEGA RICOCHET!', setAutoFire: 'Auto Fire',
     patrolMsg: (c, h) => `🛡️ Your tank was on patrol: +🪙${c} (${h}h)`,
     nextGoal: 'Next up', weeklyLbl: '📅 WEEKLY MODE', weeklyWin: 'Weekly mode victory',
-    modNames: { doubleBoss: 'Double Boss', fast: 'Fast Enemies', tough: 'Armored Enemies' },
+    modNames: { doubleBoss: 'Double Boss', fast: 'Fast Enemies', tough: 'Armored Enemies', bossRush: 'Boss Rush' },
+    eventNames: { doubleGold: '🎉 DOUBLE GOLD', bossRush: '💀 BOSS RUSH' }, eventLeft: (h, m) => `${h}h ${m}m`, eventDoubleTip: '🎉 Double Gold: kill coins ×2 in every run this weekend!', eventBossTip: '💀 Boss Rush: 5 waves, a boss every wave — 150🪙 per boss, +🎰2 on victory', lbSpeed: '⏱ SPEED', lbSpeedTitle: "⏱ THIS WEEK'S FASTEST VICTORIES",
     gemTip: 'Get gems', namePh: 'Your name', midW: 'LOW', setNotifs: 'Notifications', streakFrozen: '🧊 Streak frozen — pick up where you left off!', pityLine: n => `🛡️ Guaranteed Epic within ${n} spins`,
     setHaptic: 'Haptics', privacyLbl: 'Privacy Policy',
     connWaking: '⏳ Server waking up — may take a few seconds...', offlineMsg: '📡 No internet — try again when connected',
@@ -388,6 +390,15 @@ function submitScore(score) {
     else fetch(url, { method: 'POST', body: payload, keepalive: true }).catch(() => {});
   } catch {}
 }
+function submitTime(sec) {
+  if (!sec || sec < 60) return;
+  try {
+    const payload = JSON.stringify({ cid: CLIENT_ID, name: profile.name || 'Oyuncu', time: sec | 0 });
+    const url = apiBase() + '/lb';
+    if (navigator.sendBeacon) navigator.sendBeacon(url, payload);
+    else fetch(url, { method: 'POST', body: payload, keepalive: true }).catch(() => {});
+  } catch {}
+}
 async function fetchLeaderboard(period) {
   try { const r = await fetch(apiBase() + '/lb?p=' + period, { cache: 'no-store' }); return await r.json(); }
   catch { return null; } // null = ağ hatası (boş liste "henüz skor yok" ile karışmasın — denetim)
@@ -598,7 +609,35 @@ function weeklySpec() {
   const w = Math.floor(((d - onejan) / 86400000 + onejan.getDay()) / 7) + d.getFullYear() * 53;
   return { map: [0, 2, 3, 4, 5, 6, 9, 10, 11][w % 9], mod: WEEK_MODS[w % 3] };
 }
-let weeklyRun = null; // aktif koşu haftalık modda mı ({map, mod})
+let weeklyRun = null; // aktif koşu haftalık modda mı ({map, mod, waves?})
+// FAZ1 (plan B-1): HAFTA SONU ETKİNLİĞİ — Cuma 18:00 → Pazar 24:00 TR; şablon ISO hafta % 2 (doubleGold / bossRush).
+// Sunucu /events aynı formülü uygular + EVENT_FORCE ile elle açabilir (sürümsüz canlı-ops); fetch başarısızsa yerel formül.
+const EVENT_TYPES = ['doubleGold', 'bossRush'];
+let activeEvent = { active: false }, eventFetchedAt = 0;
+function eventSpec() {
+  const now = Date.now(), tr = new Date(now + 3 * 3600e3);
+  const dow = tr.getUTCDay(), h = tr.getUTCHours();
+  if (!((dow === 5 && h >= 18) || dow === 6 || dow === 0)) return { active: false };
+  const fri = new Date(tr); fri.setUTCDate(tr.getUTCDate() - ((dow + 2) % 7)); fri.setUTCHours(18, 0, 0, 0);
+  const wk = Math.floor(fri.getTime() / (7 * 86400000));
+  const end = new Date(fri); end.setUTCDate(fri.getUTCDate() + 3); end.setUTCHours(0, 0, 0, 0);
+  return { active: true, type: EVENT_TYPES[wk % EVENT_TYPES.length], endsAt: end.getTime() - 3 * 3600e3 };
+}
+function eventLive() { return !!(activeEvent.active && activeEvent.type && (!activeEvent.endsAt || Date.now() < activeEvent.endsAt)); }
+function isDoubleGold() { return eventLive() && activeEvent.type === 'doubleGold' && (mode === 'solo' || mode === 'coop'); }
+async function fetchEvent(force) {
+  if (!force && Date.now() - eventFetchedAt < 5 * 60e3) return;
+  eventFetchedAt = Date.now();
+  activeEvent = eventSpec();
+  try { const r = await fetch(apiBase() + '/events', { cache: 'no-store' }); const j = await r.json(); if (j && typeof j.active === 'boolean') activeEvent = j; } catch {}
+  renderEventBtn();
+}
+function renderEventBtn() {
+  const b = $('btn-event'); if (!b) return;
+  if (!eventLive()) { b.style.display = 'none'; return; }
+  const t = T(), left = Math.max(0, (activeEvent.endsAt || 0) - Date.now()), hh = Math.floor(left / 3600e3), mm = Math.floor((left % 3600e3) / 60e3);
+  b.style.display = ''; b.textContent = `${t.eventNames[activeEvent.type] || activeEvent.type}${activeEvent.endsAt ? ' · ' + t.eventLeft(hh, mm) : ''}`;
+}
 
 // ---------------------------------------------------------------- sabitler
 const CELL = 4.5;
@@ -2091,6 +2130,9 @@ let enemyIdC = 0;
 // merhamet eğrisi (FTUE): solo 1-2. dalgada düşman ateş temposu %35 yavaş — yeni oyuncu ilk dakikada ölmesin
 const enemyMercy = () => (mode === 'solo' && (wave <= 2 || (runMercy && wave <= 3)) ? 1.35 : 1); // runMercy: dönen oyuncunun ilk koşusu dalga 3'e kadar yumuşak
 function waveComposition(w, extra = 0) {
+  if (weeklyRun && weeklyRun.mod === 'bossRush') { // etkinlik: her dalga boss + dalga sayısı kadar eskort
+    const list = ['boss']; for (let i = 0; i < w + extra; i++) list.push(Math.random() < 0.5 ? 'scout' : 'normal'); return list;
+  }
   if (w % 5 === 0) {
     const list = ['boss'];
     if (weeklyRun && weeklyRun.mod === 'doubleBoss') list.push('boss'); // haftalık mod: çift boss
@@ -2136,6 +2178,7 @@ function spawnEnemies(types) {
       e.teleRing = mkRing(0xff8c1a); e.vulnRing = mkRing(0x54ff7a);
     }
     if (weeklyRun && weeklyRun.mod === 'tough') { e.hp += 1; e.maxHp += 1; } // haftalık mod: zırhlı düşmanlar
+    if (type === 'boss' && weeklyRun && weeklyRun.mod === 'bossRush') e.coins = 150; // Boss Rush: boss başı 150🪙
     e.mesh.position.set(e.x, 0, e.z);
     scene.add(e.mesh); enemies.push(e);
   }
@@ -2543,6 +2586,9 @@ async function renderLeaderboard(period) {
   lbPeriod = period; const t = T();
   $('lbt-day').classList.toggle('on', period === 'day');
   $('lbt-week').classList.toggle('on', period === 'week');
+  $('lbt-speed').classList.toggle('on', period === 'speed');
+  $('lbt-speed').textContent = t.lbSpeed;
+  $('title').textContent = period === 'speed' ? t.lbSpeedTitle : (V1_SIMPLE ? t.lbWeekTitle : t.lbTitle);
   $('lblist').innerHTML = `<div class="lbempty">${t.lbLoad}</div>`;
   const rows = await fetchLeaderboard(period);
   if (lbPeriod !== period) return; // sekme değiştiyse iptal
@@ -2552,7 +2598,7 @@ async function renderLeaderboard(period) {
   $('lblist').innerHTML = rows.map((r, i) => {
     const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1) + '.';
     const me = r.name === myName ? ' me' : '';
-    return `<div class="lbrow${me}"><span class="lbrank">${medal}</span><span class="lbname">${esc(r.name)}</span><span class="lbscore">🌊 ${r.score}</span></div>`;
+    return `<div class="lbrow${me}"><span class="lbrank">${medal}</span><span class="lbname">${esc(r.name)}</span><span class="lbscore">${period === 'speed' ? '⏱ ' + fmtTime(r.score) : '🌊 ' + r.score}</span></div>`;
   }).join('');
 }
 function renderQuests() {
@@ -2741,7 +2787,7 @@ function updateHUD() {
     scoreEl.innerHTML = `<span style="color:${TEAM_COLOR_HEX[0]}">${t.teamRed} ${team.scores[0]}</span> — <span style="color:${TEAM_COLOR_HEX[1]}">${team.scores[1]} ${t.teamBlue}</span>`;
   } else {
     // solo sonlu koşu: hedefi görünür kıl (DALGA 3/10); sonsuz devamda ve koopta sade sayı
-    waveEl.textContent = `${t.wave} ${wave}${mode === 'solo' && !soloEndless ? '/' + RUN_WAVES : ''}`;
+    waveEl.textContent = `${t.wave} ${wave}${mode === 'solo' && !soloEndless ? '/' + runWaves : ''}`;
     scoreEl.textContent = `${t.score} ${score}`;
   }
 }
@@ -2775,6 +2821,7 @@ function openMenu() {
   updateNavDots();
   updateNextGoal();
   { const ws = weeklySpec(), t2 = T(); const wb = $('btn-weekly'); wb.style.display = ''; wb.textContent = `${t2.weeklyLbl}: ${MAPS[ws.map].name[lang]} · ${t2.modNames[ws.mod]}${mapUnlocked(ws.map) ? '' : ' 🔓'}`; } // 🔓 = kilitli harita haftalıkta bilerek açık (önizleme cazibesi)
+  renderEventBtn(); fetchEvent(false); // hafta sonu etkinliği butonu (5 dk'da bir sunucudan tazelenir)
   clearBallMode(); clearCoop(); clearTeam(); clearPowerups();
   hideFtueHint();
   $('buildchoice').classList.add('hidden'); buildChoosing = false;
@@ -3312,10 +3359,12 @@ function renderMaps() {
 let lastSoloMap = 0;
 // sonlu koşu formatı: solo = 10 dalgalık görev (boss finali) → ZAFER ekranı; oradan sonsuz moda devam seçilebilir
 const RUN_WAVES = 10;
+let runWaves = RUN_WAVES; // aktif koşunun uzunluğu (Boss Rush 5)
 let soloEndless = false;
 function startSolo(mapIdx, weekly) {
   matchSeq++;
   weeklyRun = weekly || null;
+  runWaves = (weekly && weekly.waves) || RUN_WAVES;
   soloEndless = false;
   soloStartBest = profile.bestWave || 1;
   soloRunStart = clock.elapsedTime;
@@ -3374,7 +3423,7 @@ function soloVictory() {
   state = 'over';
   clearPowerups();
   shieldBubble.visible = false;
-  questProgress('wave', RUN_WAVES);
+  questProgress('wave', runWaves);
   profile.wins++; questProgress('win', 1); // koşu zaferi = galibiyet (v1'de "maç kazan" görevinin ana yolu)
   submitScore(wave);
   const t = T();
@@ -3382,10 +3431,14 @@ function soloVictory() {
   let gemTxt = '';
   const today = new Date().toISOString().slice(0, 10);
   if (profile.lastVictoryDay !== today) { profile.lastVictoryDay = today; addGems(1); gemTxt = ' &nbsp;·&nbsp; +💎1'; }
-  if (weeklyRun) { const wb2 = 100; roundCoins += wb2; addCoins(wb2); gemTxt += ` &nbsp;·&nbsp; ${t.weeklyWin} +🪙${wb2}`; track('weekly_win', { mod: weeklyRun.mod }); }
+  if (weeklyRun) {
+    const wb2 = 100; roundCoins += wb2; addCoins(wb2); gemTxt += ` &nbsp;·&nbsp; ${t.weeklyWin} +🪙${wb2}`; track('weekly_win', { mod: weeklyRun.mod });
+    if (weeklyRun.mod === 'bossRush') { grantTokens(2, true); gemTxt += ' +🎰2'; track('event_complete', { type: 'bossRush' }); }
+  }
   // zafer süresi (speedrun rekabeti): en hızlı 10-dalga koşusu profile.bestRunTime'da tutulur
   const runDur = Math.max(1, Math.round(clock.elapsedTime - soloRunStart));
   const timeRec = !profile.bestRunTime || runDur < profile.bestRunTime;
+  if (!weeklyRun) submitTime(runDur); // hız tablosu: yalnız standart 10 dalga sayılır (modlu koşular adil değil)
   if (timeRec) profile.bestRunTime = runDur;
   const timeTxt = '<br>' + (timeRec ? t.timeNewRec(fmtTime(runDur)) : t.timeLine(fmtTime(runDur), fmtTime(profile.bestRunTime)));
   let bonusXp = 0;
@@ -3395,7 +3448,7 @@ function soloVictory() {
   track('run_victory', { map: lastSoloMap, dur: runDur });
   showHarvest({
     title: t.victoryTitle, won: true,
-    sub: t.victorySub(score, roundCoins) + gemTxt + timeTxt,
+    sub: t.victorySub(score, roundCoins, runWaves) + gemTxt + timeTxt,
     xpKind: 'wave', xpOpts: { wave, bonus: bonusXp }, coins: roundCoins,
     replay: () => startSolo(lastSoloMap),
     endless: () => resumeEndless(),
@@ -4334,7 +4387,7 @@ $('btn-quickplay').addEventListener('click', () => {
 // v1: koop/2v2/top gizli; lider tablosu SADELEŞTİRİLMİŞ halde açık (yalnız haftalık tek liste — rekabet çıpası)
 if (V1_SIMPLE) {
   for (const id of ['btn-ball', 'btn-coop', 'btn-team']) $(id).style.display = 'none';
-  $('lbt-day').style.display = 'none'; $('lbt-week').style.display = 'none'; // gün/hafta sekmeleri yok, tek liste
+  $('lbt-day').style.display = 'none'; // V1: gün sekmesi yok; hafta + hız (FAZ1 B-5) kalır
 }
 // bot düello girişi (HIZLI OYNA solo olunca tek girişi kopmuştu): düello panelinden, seçili haritayla anında başlar.
 // 3 zorluk kademesi — Çaylak yeni oyuncunun kazanma tadı alması için, Efsane ustalar için (ödül kademeyle artar)
@@ -4375,6 +4428,14 @@ $('btn-season').addEventListener('click', () => { $('title').textContent = ''; $
 $('btn-back-season').addEventListener('click', openMenu);
 $('lbt-day').addEventListener('click', () => renderLeaderboard('day'));
 $('lbt-week').addEventListener('click', () => renderLeaderboard('week'));
+$('lbt-speed').addEventListener('click', () => renderLeaderboard('speed'));
+$('btn-event').addEventListener('click', () => {
+  if (!eventLive()) return;
+  const ws = weeklySpec(), t = T();
+  track('event_join', { type: activeEvent.type });
+  if (activeEvent.type === 'bossRush') { showToast(t.eventBossTip, 3200); startSolo(ws.map, { map: ws.map, mod: 'bossRush', waves: 5 }); }
+  else { showToast(t.eventDoubleTip, 3200); $('btn-quickplay').click(); }
+});
 $('btn-back-lb').addEventListener('click', openMenu);
 $('btn-single').addEventListener('click', () => { $('title').textContent = T().chooseMap; $('submsg').textContent = T().bestWave(profile.bestWave); renderMaps(); showPanel('panel-maps'); });
 function renderMapPicker(containerId, rerender) {
@@ -4688,7 +4749,7 @@ const BUILD_OPTS = [
   { id: 'vamp', icon: '🩹', name: { tr: 'Tamir', en: 'Repair' }, desc: { tr: 'Her 6 yok etmede +1 can', en: '+1 HP every 6 kills' } },
 ];
 // kill ödülü tek yerden (mıknatıs çarpanı) + tamir sayacı — 3 kill noktası (solo/coop authority/damageEnemy) bunu çağırır
-function killCoins(e) { return Math.round(e.coins * (buildOn() && matchBuild.magnet ? 1.2 : 1)); }
+function killCoins(e) { return Math.round(e.coins * (buildOn() && matchBuild.magnet ? 1.2 : 1) * (isDoubleGold() ? 2 : 1)); } // Çifte Altın etkinliği ×2
 function onEnemyKilled(e) {
   const c = killCoins(e);
   score += e.score; roundCoins += c; profile.kills++; addCoins(c); updateHUD();
@@ -5003,7 +5064,7 @@ function tick() {
       if (enemies.length === 0 && player.alive) {
         wave++;
         if (wave > profile.bestWave) { profile.bestWave = wave; saveProfile(); }
-        if (!soloEndless && wave > RUN_WAVES) { soloVictory(); } // 10. dalga (boss finali) temizlendi → koşu tamam
+        if (!soloEndless && wave > runWaves) { soloVictory(); } // son dalga (boss finali) temizlendi → koşu tamam
         else {
           const bonus = wave * 8; roundCoins += bonus; addCoins(bonus);
           updateHUD();
