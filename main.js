@@ -27,7 +27,7 @@ const L = {
     lbWeekTitle: 'HAFTANIN EN İYİLERİ',
     timeNewRec: d => `⏱ Süre ${d} — YENİ REKOR!`, timeLine: (d, b) => `⏱ Süre ${d} · Rekorun ${b}`,
     reviveTitle: '💥 NEREDEYSE!', reviveSub: 'Yeni komutanlara özel: aynı dalgadan ücretsiz devam et!',
-    reviveYes: '⚡ DEVAM ET', reviveNo: 'Vazgeç',
+    reviveYes: '⚡ DEVAM ET', reviveNo: 'Vazgeç', reviveSubAd: 'Reklam izle, aynı dalgadan tam canla devam et', reviveYesAd: '📺 İZLE VE DEVAM ET', reviveSubGem: 'Aynı dalgadan tam canla devam et', reviveYesGem: '💎 15 · DEVAM ET', adFail: '📺 Reklam yüklenemedi', chestX2: '📺 Sandığı ikiye katla', chestX2Got: '📦 Sandık ×2: +🪙120 +🎰2', patrolX2: n => `📺 Devriyeyi ikiye katla (+🪙${n})`, freeSpin: '📺 Ücretsiz çekiliş', freeSpinDone: 'Bugünkü ücretsiz çekiliş alındı ✓',
     overNewRec: b => `🏆 YENİ REKOR — Dalga ${b}!`, overCheer: b => `Rekorun: Dalga ${b} — bir daha dene!`,
     connLostTitle: '📡 BAĞLANTI KOPTU', connLostSub: 'Sunucuyla bağlantı kesildi — kazanımların kaydedildi.',
     vulnTxt: 'SAVUNMASIZ!',
@@ -107,7 +107,7 @@ const L = {
     lbWeekTitle: "THIS WEEK'S BEST",
     timeNewRec: d => `⏱ Time ${d} — NEW RECORD!`, timeLine: (d, b) => `⏱ Time ${d} · Your best ${b}`,
     reviveTitle: '💥 SO CLOSE!', reviveSub: 'New commander bonus: continue from this wave for free!',
-    reviveYes: '⚡ CONTINUE', reviveNo: 'Give up',
+    reviveYes: '⚡ CONTINUE', reviveNo: 'Give up', reviveSubAd: 'Watch an ad, continue from this wave at full HP', reviveYesAd: '📺 WATCH & CONTINUE', reviveSubGem: 'Continue from this wave at full HP', reviveYesGem: '💎 15 · CONTINUE', adFail: '📺 Ad failed to load', chestX2: '📺 Double the chest', chestX2Got: '📦 Chest ×2: +🪙120 +🎰2', patrolX2: n => `📺 Double patrol (+🪙${n})`, freeSpin: '📺 Free spin', freeSpinDone: "Today's free spin claimed ✓",
     overNewRec: b => `🏆 NEW RECORD — Wave ${b}!`, overCheer: b => `Your best: Wave ${b} — try again!`,
     connLostTitle: '📡 CONNECTION LOST', connLostSub: 'Lost connection to the server — your rewards were saved.',
     vulnTxt: 'VULNERABLE!',
@@ -314,12 +314,22 @@ function rewardedLog() {
   return profile.rewardedLog;
 }
 function noteRewarded() { rewardedLog().push(Date.now()); saveProfile(); }
+const todayKey = () => new Date().toDateString();
+let sessionRewarded = 0; // oturum tavanı 8 (FAZ1 C-6)
 function canOfferRewarded() {
   if (!Platform.adsAvailable()) return false; // gerçek reklam yoksa x2 butonu hiç görünmesin
   if ((profile.games || 0) <= 3) return false;
   const log = rewardedLog(), now = Date.now();
-  if (log.length >= 15) return false;
+  if (log.length >= 15 || sessionRewarded >= 8) return false;
   return log.filter(t => now - t < 3600000).length < 4;
+}
+// yerleşim sarmalayıcı: teklif/izleme/hata olayları + günlük kayıt tek yerden
+async function watchRewarded(place) {
+  track('rewarded_offer', { place });
+  const ok = await Platform.rewarded(place);
+  if (ok) { sessionRewarded++; noteRewarded(); track('rewarded_done', { place }); }
+  else { track('rewarded_fail', { place }); showToast(T().adFail, 2200); }
+  return ok;
 }
 // maç aralarında interstitial (FTUE'den sonra, 3 maçta 1'den seyrek). Web'de no-op.
 let interstitialCount = 0;
@@ -370,7 +380,7 @@ const gi = id => `<svg class="gi"><use href="#gi-${id}"/></svg>`;
 let dailyPending = false; // FTUE: günlük ödülü ilk menü ziyaretine ertele (mesaj bombardımanını önle)
 // E3: offline devriye kazancı — oyuncu yokken tank "devriyede" coin biriktirir (saatte 40, 8 saat tavan).
 // Araştırma: idle kazanç ucuz + bildirime içerik verir; koşu gelirinin çok altında tutuldu (ekonomiyi bozmaz).
-let patrolPending = 0, patrolHours = 0;
+let patrolPending = 0, patrolHours = 0, patrolX2Amt = 0;
 (() => {
   try {
     const last = +profile.lastSeen || 0;
@@ -1109,8 +1119,18 @@ function buildEnvironment(mapIdx) {
   for (let i = 0; i + 1 < pads.length; i += 2) { pads[i].link = pads[i + 1]; pads[i + 1].link = pads[i]; }
   buildSilhouettes(theme, mapIdx); // arena dışına tema silüetleri (ufuk hissi)
 }
-// solo ölüm akışı: yeni komutana TEK SEFERLİK ücretsiz diriliş teklifi (ilk 3 maç; inceleme: iki test ölümü de dalga 1'deydi)
-function canOfferRevive() { return mode === 'solo' && !profile.reviveUsed && (profile.games || 0) <= 3; }
+// solo ölüm akışı — FAZ1 (plan C-5) 3 KADEME: (1) yeni komutana TEK SEFERLİK ücretsiz (ilk 3 maç), (2) ödüllü reklam (koşuda 1),
+// (3) 15💎 (koşuda 1). Dalga ≥3 şartı reklam/elmas kademeleri için (dalga 1-2 ölümü zaten ucuz). Dürüst sayaç 8 sn.
+let runRevive = { ad: 0, gem: 0 }; // koşu başına kullanım (startSolo sıfırlar)
+function reviveTier() {
+  if (mode !== 'solo') return 0;
+  if (!profile.reviveUsed && (profile.games || 0) <= 3) return 1;
+  if (wave < 3) return 0;
+  if (!runRevive.ad && canOfferRewarded()) return 2;
+  if (!runRevive.gem && (profile.gems || 0) >= 15) return 3;
+  return 0;
+}
+function canOfferRevive() { return reviveTier() > 0; }
 function soloPlayerDied() {
   player.alive = false; player.mesh.visible = false;
   explode(player.x, 1.2, player.z, true);
@@ -1118,29 +1138,53 @@ function soloPlayerDied() {
   if (canOfferRevive()) setTimeout(() => { if (_ms === matchSeq && state === 'play') showReviveOffer(_ms); }, 900);
   else setTimeout(() => { if (_ms === matchSeq) gameOver(); }, 1600);
 }
+let reviveOfferTier = 0;
 function showReviveOffer(ms) {
-  const t = T();
+  const t = T(), tier = reviveTier(); reviveOfferTier = tier;
+  if (!tier) return gameOver();
   $('rv-title').textContent = t.reviveTitle;
-  $('rv-sub').textContent = t.reviveSub;
-  $('rv-yes').textContent = t.reviveYes;
+  $('rv-sub').textContent = tier === 1 ? t.reviveSub : tier === 2 ? t.reviveSubAd : t.reviveSubGem;
+  $('rv-yes').textContent = tier === 1 ? t.reviveYes : tier === 2 ? t.reviveYesAd : t.reviveYesGem;
+  $('rv-yes').disabled = false;
   $('rv-no').textContent = '‹ ' + t.reviveNo;
   $('reviveoffer').classList.remove('hidden');
-  track('revive_offer');
-  setTimeout(() => { // cevapsız kalırsa normal sonuç ekranı
-    if (ms === matchSeq && !$('reviveoffer').classList.contains('hidden')) { $('reviveoffer').classList.add('hidden'); gameOver(); }
-  }, 10000);
+  track('revive_offer', { tier, wave });
+  setTimeout(() => { // cevapsız kalırsa normal sonuç ekranı (8 sn — dürüst sayaç)
+    if (ms === matchSeq && !$('reviveoffer').classList.contains('hidden')) { $('reviveoffer').classList.add('hidden'); track('revive_declined', { tier, wave }); gameOver(); }
+  }, 8000);
 }
-function doRevive() {
+// evet: kademeye göre ödeme → doRevive; reklam başarısızsa varsa elmas kademesine düşer, yoksa sonuç ekranı
+async function acceptRevive() {
   if ($('reviveoffer').classList.contains('hidden') || state !== 'play') return;
+  const tier = reviveOfferTier, ms = matchSeq;
+  if (tier === 1) { profile.reviveUsed = 1; return doRevive(1); }
+  if (tier === 2) {
+    $('rv-yes').disabled = true; $('rv-yes').textContent = T().adLoading;
+    const ok = await watchRewarded('revive');
+    if (ms !== matchSeq || state !== 'play') return;
+    if (ok) { runRevive.ad = 1; return doRevive(2); }
+    runRevive.ad = 1; // yüklenemeyen reklam tekrar teklif edilmez; elmas kademesi varsa ona geç
+    if (!runRevive.gem && (profile.gems || 0) >= 15) return showReviveOffer(ms);
+    $('reviveoffer').classList.add('hidden'); return gameOver();
+  }
+  if (tier === 3) {
+    if ((profile.gems || 0) < 15) return;
+    profile.gems -= 15; runRevive.gem = 1; updateGemBar(); track('gem_spend', { sink: 'revive', n: 15 });
+    return doRevive(3);
+  }
+}
+function doRevive(tier) {
+  if (state !== 'play') return;
   $('reviveoffer').classList.add('hidden');
-  profile.reviveUsed = 1; saveProfile();
+  saveProfile();
+  clearBullets(); // düşman mermileri temiz — doğar doğmaz vurulmasın
   const c = randOpenCell();
   player.x = c.x; player.z = c.z; player.vx = 0; player.vz = 0;
   player.health = player.maxHealth; player.alive = true; player.inv = 2.5;
   player.mesh.visible = true; player.mesh.position.set(player.x, 0, player.z);
   renderHealth(); sfxPower(); haptic('MEDIUM');
   banner(`${T().wave} ${wave} ⚡`);
-  track('revive_used');
+  track('revive_used', { tier: tier || 1, wave });
 }
 // varil hasarı / yıkımı
 function damageCover(cv) { cv.hp--; if (cv.hp <= 0) destroyCover(cv); }
@@ -2096,9 +2140,8 @@ function tokenOdds() {
   for (const s of pool) { sum[s.r] += RARITY[s.r].w; total += RARITY[s.r].w; }
   return { c: sum.c / total * 100, r: sum.r / total * 100, e: sum.e / total * 100 };
 }
-function spinToken() {
-  if ((profile.tokens || 0) < 1) return;
-  profile.tokens--;
+function spinToken(free) {
+  if (!free) { if ((profile.tokens || 0) < 1) return; profile.tokens--; }
   const pity = (profile.pity || 0) + 1; // P1: 30 çekilişte garanti Efsanevi (kötü-şans koruması)
   let pool = SKINS.filter(s => s.id !== 'default');
   if (pity >= 30) { const ep = pool.filter(s => s.r === 'e'); if (ep.length) pool = ep; }
@@ -2128,8 +2171,14 @@ function renderMachine() {
     <button id="tm-spin" class="mbtn"${(profile.tokens || 0) < 1 ? ' disabled' : ''}>${t.tmSpin}</button>
     <div class="tm-odds">${RARITY.c[lang]} %${o.c.toFixed(0)} · ${RARITY.r[lang]} %${o.r.toFixed(0)} · ${RARITY.e[lang]} %${o.e.toFixed(0)}</div>
     <div class="tm-odds" style="color:#ffd76a">${t.pityLine(Math.max(1, 30 - (profile.pity || 0)))}</div>
+    ${profile.freeSpinDay === todayKey() ? `<div class="tm-odds">${t.freeSpinDone}</div>` : (canOfferRewarded() ? `<button id="tm-free" class="mbtn small" style="margin-top:6px">${t.freeSpin}</button>` : '')}
   </div>`;
-  const sp = $('tm-spin'); if (sp) sp.onclick = spinToken;
+  const sp = $('tm-spin'); if (sp) sp.onclick = () => spinToken(false);
+  const fs = $('tm-free'); if (fs) fs.onclick = async () => { // FAZ1 C-6 #5: günde 1 ücretsiz çekiliş (reklam)
+    fs.disabled = true; fs.textContent = t.adLoading;
+    const ok = await watchRewarded('spin');
+    if (ok) { profile.freeSpinDay = todayKey(); saveProfile(); spinToken(true); } else renderMachine();
+  };
 }
 function updateStats() {
   const brt = profile.bestRunTime ? ` &nbsp;·&nbsp; ⏱ ${fmtTime(profile.bestRunTime)}` : ''; // en hızlı zafer (rekor vitrini)
@@ -2486,7 +2535,9 @@ function renderQuests() {
   const list = dailyQuests(), t = T();
   const chest = profile.quests.chest ? t.chestDone : t.chestReady;
   const header = `<div class="qhead"><span>${t.streakLabel(profile.streak || 1)}</span><span class="${profile.quests.chest ? 'qchest-done' : ''}">${chest}</span></div>`;
-  $('questlist').innerHTML = header + list.map(q => {
+  // FAZ1 C-6 #3: sandık alındıysa ve bugün ikiye katlanmadıysa ödüllü reklam butonu (günde 1)
+  const chestX2 = (profile.quests.chest && profile.chestX2Day !== todayKey() && canOfferRewarded()) ? `<button id="chest-x2" class="mbtn small" style="margin:6px auto 2px;display:block">${t.chestX2}</button>` : '';
+  $('questlist').innerHTML = header + chestX2 + list.map(q => {
     const def = questDef(q.id);
     const pct = Math.min(100, (q.prog / def.goal) * 100);
     const ready = !q.claimed && q.prog >= def.goal;
@@ -2497,6 +2548,12 @@ function renderQuests() {
     </div>`;
   }).join('');
   for (const b of $('questlist').querySelectorAll('.qclaim')) b.onclick = () => claimQuest(b.dataset.q);
+  const cx = $('chest-x2'); if (cx) cx.onclick = async () => {
+    cx.disabled = true; cx.textContent = t.adLoading;
+    const ok = await watchRewarded('chest');
+    if (ok) { profile.chestX2Day = todayKey(); addCoins(120); grantTokens(2, true); showToast(t.chestX2Got, 3600); sfxPower(); saveProfile(); }
+    renderQuests();
+  };
 }
 function checkAchievements() {
   for (const a of ACHIEVEMENTS) {
@@ -2683,7 +2740,12 @@ function openMenu() {
   abortTutorial();
   $('reviveoffer').classList.add('hidden');
   if (dailyPending) { dailyPending = false; checkDaily(); } // FTUE: günlük ödül toastı oyun başında değil, ilk menü ziyaretinde
-  if (patrolPending > 0) { addCoins(patrolPending); showToast(T().patrolMsg(patrolPending, patrolHours), 4200); track('patrol_claim', { c: patrolPending }); patrolPending = 0; }
+  if (patrolPending > 0) {
+    addCoins(patrolPending); showToast(T().patrolMsg(patrolPending, patrolHours), 4200); track('patrol_claim', { c: patrolPending });
+    if (canOfferRewarded()) { patrolX2Amt = patrolPending; } // FAZ1 C-6 #4: menüde "devriyeyi ikiye katla" butonu (bir sonraki koşuya kadar)
+    patrolPending = 0;
+  }
+  { const pb = $('btn-patrolx2'); if (pb) { if (patrolX2Amt > 0 && canOfferRewarded()) { pb.style.display = ''; pb.textContent = T().patrolX2(patrolX2Amt); } else pb.style.display = 'none'; } }
   weeklyRun = null;
   updateNavDots();
   updateNextGoal();
@@ -3232,6 +3294,7 @@ function startSolo(mapIdx, weekly) {
   soloEndless = false;
   soloStartBest = profile.bestWave || 1;
   soloRunStart = clock.elapsedTime;
+  runRevive = { ad: 0, gem: 0 };
   $('reviveoffer').classList.add('hidden');
   mode = 'solo'; state = 'play';
   lastSoloMap = mapIdx;
@@ -4252,19 +4315,25 @@ if (V1_SIMPLE) {
 for (const [bid, did] of [['btn-bot-rookie', 'rookie'], ['btn-bot-pro', 'pro'], ['btn-bot-elite', 'elite']])
   $(bid).addEventListener('click', () => { track('botduel_click', { diff: did }); startBotDuel(did); });
 $('nextgoal').addEventListener('click', () => { track('nextgoal_click'); openGarage(); });
+$('btn-patrolx2').addEventListener('click', async () => {
+  const pb = $('btn-patrolx2'); if (pb.disabled || patrolX2Amt <= 0) return;
+  pb.disabled = true; pb.textContent = T().adLoading;
+  const ok = await watchRewarded('patrol');
+  if (ok) { addCoins(patrolX2Amt); showToast(`🛡️ ×2 +🪙${patrolX2Amt}`, 3000); sfxPower(); }
+  patrolX2Amt = 0; pb.disabled = false; pb.style.display = 'none';
+});
 $('btn-weekly').addEventListener('click', () => { const ws = weeklySpec(); track('weekly_start', { mod: ws.mod, map: ws.map }); startSolo(ws.map, ws); });
 $('res-again').addEventListener('click', () => { const fn = harvestReplay; harvestReplay = null; maybeInterstitial(); if (fn) { track('retry_click', { mode: matchMode }); fn(); } else openMenu(); });
 $('res-menu').addEventListener('click', () => { harvestReplay = null; harvestEndless = null; openMenu(); });
 $('res-endless').addEventListener('click', () => { const fn = harvestEndless; harvestEndless = null; harvestReplay = null; if (fn) fn(); });
-$('rv-yes').addEventListener('click', doRevive);
-$('rv-no').addEventListener('click', () => { if ($('reviveoffer').classList.contains('hidden')) return; $('reviveoffer').classList.add('hidden'); track('revive_declined'); gameOver(); });
+$('rv-yes').addEventListener('click', acceptRevive);
+$('rv-no').addEventListener('click', () => { if ($('reviveoffer').classList.contains('hidden')) return; $('reviveoffer').classList.add('hidden'); track('revive_declined', { tier: reviveOfferTier, wave }); gameOver(); });
 $('res-rewarded').addEventListener('click', async () => {
   const rb = $('res-rewarded'); if (rb.disabled || !harvestReward) return;
   rb.disabled = true; rb.textContent = T().adLoading;
   track('ad_watch', { placement: 'harvest' });
-  const ok = await Platform.rewarded('harvest');
+  const ok = await watchRewarded('harvest');
   if (ok && harvestReward) {
-    noteRewarded();
     grantXp(harvestReward.xp); grantSeasonXp(harvestReward.xp);
     if (harvestReward.coins) addCoins(harvestReward.coins);
     $('res-rewards').innerHTML = `+${harvestReward.xp * 2} XP` + (harvestReward.coins ? ` &nbsp;·&nbsp; +🪙${harvestReward.coins * 2}` : '') + ` <b style="color:#7dff9b">x2</b>`;
