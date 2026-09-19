@@ -39,7 +39,7 @@ const L = {
     againBtn: '↻ TEKRAR OYNA', rewardedBtn: '📺 Reklam izle → x2 ödül', rewardedGot: '🎉 x2 ödül alındı!', adLoading: '📺 Yükleniyor...',
     questsTitle: 'GÜNLÜK GÖREVLER', questsSub: 'Her gece yenilenir',
     lbTitle: 'LİDER TABLOSU', lbDaily: 'BUGÜN', lbWeekly: 'BU HAFTA', lbEmpty: 'Henüz skor yok — ilk sen ol!', lbLoad: 'Yükleniyor...',
-    seasonWord: 'Sezon', seasonTier: 'Kademe', seasonTierUp: (n, r) => `🎟️ Sezon ${n}. kademe: ${r}`,
+    seasonWord: 'Sezon', seasonTier: 'Kademe', seasonTierUp: (n, r) => `🎟️ Sezon ${n}. kademe: ${r}`, seasonClosed: (id, t) => `🎟️ Sezon ${id} kapandı — ${t}. kademeye ulaştın. Yeni sezon başladı!`, firstWinXp: '🎉 İlk zafer bonusu +40 XP',
     chestMsg: '📦 Günlük sandık açıldı! +🪙120 +🎰2', streakLabel: n => `🔥 ${n} günlük seri`, chestReady: '📦 Tüm görevleri bitir → günlük sandık', chestDone: '📦 Günlük sandık alındı ✓',
     tmTitle: '🎰 Jeton Makinesi', tmCount: 'Jetonların', tmSpin: '🎲 ÇEVİR · 1 🎰', tmNeed: 'Jeton kazanmak için görev tamamla / seviye atla',
     buildTitle: 'YÜKSELTME SEÇ',
@@ -119,7 +119,7 @@ const L = {
     againBtn: '↻ PLAY AGAIN', rewardedBtn: '📺 Watch ad → 2x reward', rewardedGot: '🎉 2x reward claimed!', adLoading: '📺 Loading...',
     questsTitle: 'DAILY QUESTS', questsSub: 'Refreshes every night',
     lbTitle: 'LEADERBOARD', lbDaily: 'TODAY', lbWeekly: 'THIS WEEK', lbEmpty: 'No scores yet — be the first!', lbLoad: 'Loading...',
-    seasonWord: 'Season', seasonTier: 'Tier', seasonTierUp: (n, r) => `🎟️ Season tier ${n}: ${r}`,
+    seasonWord: 'Season', seasonTier: 'Tier', seasonTierUp: (n, r) => `🎟️ Season tier ${n}: ${r}`, seasonClosed: (id, t) => `🎟️ Season ${id} ended — you reached tier ${t}. New season is live!`, firstWinXp: '🎉 First victory bonus +40 XP',
     chestMsg: '📦 Daily chest opened! +🪙120 +🎰2', streakLabel: n => `🔥 ${n}-day streak`, chestReady: '📦 Finish all quests → daily chest', chestDone: '📦 Daily chest claimed ✓',
     tmTitle: '🎰 Token Machine', tmCount: 'Your tokens', tmSpin: '🎲 SPIN · 1 🎰', tmNeed: 'Complete quests / level up to earn tokens',
     buildTitle: 'CHOOSE UPGRADE',
@@ -170,7 +170,7 @@ const T = () => L[lang];
 
 // ---------------------------------------------------------------- kalıcı profil
 const DEFAULT_PROFILE = { coins: 0, owned: ['recruit'], selected: 'recruit', bestWave: 1, upgrades: {}, kills: 0, wins: 0, games: 0, skins: ['default'], skin: 'default', achieved: [], lastDaily: '', streak: 0, name: '', gift1: false, level: 1, xp: 0, tokens: 0, gems: 0, accessories: [], accessory: '' };
-const PROFILE_V = 2; // şema sürümü — ileride alan taşıma (migration) için
+const PROFILE_V = 3; // şema sürümü — migrateProfile() eski kayıtları yeni alanlarla tamamlar
 let profile;
 try {
   profile = Object.assign({}, DEFAULT_PROFILE, JSON.parse(localStorage.getItem('tankprofile') || '{}'));
@@ -193,8 +193,16 @@ try {
   if (typeof profile.selected !== 'string') profile.selected = 'recruit';
   if (typeof profile.skin !== 'string') profile.skin = 'default';
   profile.name = String(profile.name).slice(0, 14);
-  profile.v = PROFILE_V;
-} catch { profile = Object.assign({}, DEFAULT_PROFILE, { v: PROFILE_V }); }
+  migrateProfile(profile);
+} catch { profile = Object.assign({}, DEFAULT_PROFILE, { v: PROFILE_V }); migrateProfile(profile); }
+// FAZ0: şema taşıma — v3 alanları (kitler, ustalık, reklam günlüğü, bölümler, sezon geçmişi, arkadaş kodu) eksikse tamamlanır
+function migrateProfile(p) {
+  const obj = k => { if (!p[k] || typeof p[k] !== 'object' || Array.isArray(p[k])) p[k] = {}; };
+  obj('kits'); obj('mastery'); obj('chapters'); obj('seasonHistory');
+  if (!Array.isArray(p.rewardedLog)) p.rewardedLog = [];
+  if (typeof p.code !== 'string') p.code = '';
+  p.v = PROFILE_V;
+}
 function saveProfile() {
   try { localStorage.setItem('tankprofile', JSON.stringify(profile)); }
   catch (e) { /* kota/gizli mod: oyun çalışmaya devam etsin */ }
@@ -299,13 +307,19 @@ const Platform = {
   },
 };
 // ödüllü reklam sıklık sınırı (GDD: saatte ≤4, FTUE'nin ilk 3 maçında hiç)
-let rewardedTimes = [];
+// FAZ0: sayaç profile.rewardedLog'da KALICI (bellekteydi → relaunch'la saatlik sınır deliniyordu); günlük tavan 15
+function rewardedLog() {
+  const now = Date.now();
+  profile.rewardedLog = (Array.isArray(profile.rewardedLog) ? profile.rewardedLog : []).filter(t => Number.isFinite(t) && now - t < 86400000);
+  return profile.rewardedLog;
+}
+function noteRewarded() { rewardedLog().push(Date.now()); saveProfile(); }
 function canOfferRewarded() {
   if (!Platform.adsAvailable()) return false; // gerçek reklam yoksa x2 butonu hiç görünmesin
   if ((profile.games || 0) <= 3) return false;
-  const now = Date.now();
-  rewardedTimes = rewardedTimes.filter(t => now - t < 3600000);
-  return rewardedTimes.length < 4;
+  const log = rewardedLog(), now = Date.now();
+  if (log.length >= 15) return false;
+  return log.filter(t => now - t < 3600000).length < 4;
 }
 // maç aralarında interstitial (FTUE'den sonra, 3 maçta 1'den seyrek). Web'de no-op.
 let interstitialCount = 0;
@@ -524,7 +538,7 @@ const MAPS = [
     '#.#.......#.#','#..#..#..#..#','#.#.......#.#','#...##.##...#','#.#.......#.#',
     '#.#..###..#.#','#...........#','#############' ] },
   // kıvrımlı kanyon geçitleri (organik dağınık kayalar, dönel simetri)
-  { name: { tr: 'Kanyon', en: 'Canyon' }, req: 12, theme: 'canyon', grid: [
+  { name: { tr: 'Kanyon', en: 'Canyon' }, req: 10, theme: 'canyon', grid: [ // FAZ0: 12→10 (10 dalgalık koşuda 12'ye ulaşılamıyordu; artık final boss'a varan açar)
     '#############','#...........#','#..##....#..#','#.....##....#','#.##......#.#',
     '#....#.#....#','#..#.....#..#','#....#.#....#','#.#......##.#','#....##.....#',
     '#..#....##..#','#...........#','#############' ] },
@@ -1999,7 +2013,7 @@ const shieldBubble = makeShieldBubble();
 
 // düşman tipleri: normal / keşif (hızlı-zayıf) / ağır (yavaş-zırhlı) / nişancı (uzaktan) / boss
 const ENEMY_TYPES = {
-  // EKONOMİ v3 (2026-09-18): kill gelirleri ~%35 düşürüldü — koşu geliri ~1450→~850, "30 dakikada biten ekonomi" fix'i
+  // EKONOMİ v3 (2026-09-18): kill gelirleri ~%35 düşürüldü. GERÇEK zafer koşusu geliri ≈ 1.170🪙 (kill 492 + dalga merdiveni wave*8 = 432 + zafer 250) — 2026-09-19 denetimi
   normal: { hp: 1, speed: 4.6, turn: 1.9, cool: [2.2, 3.8], bspeed: 17, keep: 11, sight: 55, scale: 1.0, color: 0xa03428, coins: 6, score: 100 },
   scout:  { hp: 1, speed: 7.8, turn: 2.9, cool: [2.6, 4.2], bspeed: 16, keep: 6, sight: 50, scale: 0.82, color: 0xc9902f, coins: 5, score: 80 },
   heavy:  { hp: 3, speed: 3.0, turn: 1.3, cool: [2.4, 3.8], bspeed: 20, keep: 9, sight: 52, scale: 1.35, color: 0x5a6b55, coins: 14, score: 250 },
@@ -2247,9 +2261,10 @@ function onLevelUp(lvl) {
 function computeMatchXp(kind, opts) {
   opts = opts || {};
   let xp = 12; // katılım tabanı
-  if (kind === 'wave') xp += (opts.wave || 1) * 6;
+  if (kind === 'wave') xp = Math.max(20, xp + (opts.wave || 1) * 6); // FAZ0: erken ölümde de ≥20 XP (kapılar zorlanan oyuncuya da açılsın)
   else if (kind === 'pvp') xp += (opts.kills || 0) * 8 + (opts.won ? 30 : 8);
   else if (kind === 'ball') xp += (opts.won ? 30 : 10);
+  xp += opts.bonus || 0; // tek seferlik bonuslar (ilk zafer +40)
   return xp;
 }
 function grantMatchXp(kind, opts) {
@@ -2406,7 +2421,14 @@ function seasonId() {
 function seasonName(id) { const th = SEASON_THEMES[(id - 1) % SEASON_THEMES.length]; return `${T().seasonWord} ${id} · ${th[lang]}`; }
 function ensureSeason() {
   const id = seasonId();
-  if (!profile.season || profile.season.id !== id) { profile.season = { id, xp: 0, tier: 0 }; saveProfile(); }
+  if (!profile.season || profile.season.id !== id) {
+    if (profile.season && profile.season.id) { // FAZ0: kapanan sezonun kademesi geçmişe yazılır + kapanış anonsu (sessiz wipe yoktu → şimdi haber var)
+      profile.seasonHistory = profile.seasonHistory || {};
+      profile.seasonHistory[profile.season.id] = { tier: profile.season.tier || 0 };
+      showToast(T().seasonClosed(profile.season.id, profile.season.tier || 0), 4200);
+    }
+    profile.season = { id, xp: 0, tier: 0 }; saveProfile();
+  }
   return profile.season;
 }
 function rewardText(r) { return r.coins ? `🪙 ${r.coins}` : r.tokens ? `🎰 ${r.tokens}` : r.gems ? `💎 ${r.gems}` : r.skin ? `🎨 ${skinById(r.skin).name[lang]}` : ''; }
@@ -2495,6 +2517,7 @@ function checkDaily() {
   if (profile.lastDaily === yest) profile.streak = (profile.streak || 0) + 1;
   else if (profile.lastDaily === prev2 && profile.freezeMonth !== monthKey && (profile.streak || 0) >= 2) {
     profile.freezeMonth = monthKey; // P1: ayda 1 kez, tek günlük kaçırma seriyi öldürmez
+    profile.streak = (profile.streak || 0) + 1; // FAZ0: dondurulan gün "korunmuş" sayılır → 7 günlük merdiven ilerler (aynı ödül iki kez gelmesin)
     showToast(T().streakFrozen, 3800);
   } else profile.streak = 1;
   profile.lastDaily = today;
@@ -2664,7 +2687,7 @@ function openMenu() {
   weeklyRun = null;
   updateNavDots();
   updateNextGoal();
-  { const ws = weeklySpec(), t2 = T(); const wb = $('btn-weekly'); wb.style.display = ''; wb.textContent = `${t2.weeklyLbl}: ${MAPS[ws.map].name[lang]} · ${t2.modNames[ws.mod]}`; }
+  { const ws = weeklySpec(), t2 = T(); const wb = $('btn-weekly'); wb.style.display = ''; wb.textContent = `${t2.weeklyLbl}: ${MAPS[ws.map].name[lang]} · ${t2.modNames[ws.mod]}${mapUnlocked(ws.map) ? '' : ' 🔓'}`; } // 🔓 = kilitli harita haftalıkta bilerek açık (önizleme cazibesi)
   clearBallMode(); clearCoop(); clearTeam(); clearPowerups();
   hideFtueHint();
   $('buildchoice').classList.add('hidden'); buildChoosing = false;
@@ -3173,7 +3196,8 @@ function renderMaps() {
   const wrap = $('cardwrap-maps');
   wrap.style.cssText = 'display:flex;flex-wrap:wrap;justify-content:center;gap:12px;margin:12px 8px';
   wrap.innerHTML = '';
-  MAPS.forEach((mp, idx) => {
+  // FAZ0: kartlar kilit sırasına (req) göre listelenir; dizi indeksleri (QUICK_MAPS, weeklySpec, lastSoloMap) değişmez
+  MAPS.map((mp, idx) => ({ mp, idx })).sort((a, b) => a.mp.req - b.mp.req || a.idx - b.idx).forEach(({ mp, idx }) => {
     const unlocked = mapUnlocked(idx);
     const card = document.createElement('div');
     card.className = 'card' + (unlocked ? '' : ' locked');
@@ -3275,13 +3299,15 @@ function soloVictory() {
   const timeRec = !profile.bestRunTime || runDur < profile.bestRunTime;
   if (timeRec) profile.bestRunTime = runDur;
   const timeTxt = '<br>' + (timeRec ? t.timeNewRec(fmtTime(runDur)) : t.timeLine(fmtTime(runDur), fmtTime(profile.bestRunTime)));
+  let bonusXp = 0;
+  if (!profile.firstWin) { profile.firstWin = 1; bonusXp = 40; showToast(t.firstWinXp, 3200); } // FAZ0: ilk zafer +40 XP
   saveProfile();
   stingVictory();
   track('run_victory', { map: lastSoloMap, dur: runDur });
   showHarvest({
     title: t.victoryTitle, won: true,
     sub: t.victorySub(score, roundCoins) + gemTxt + timeTxt,
-    xpKind: 'wave', xpOpts: { wave }, coins: roundCoins,
+    xpKind: 'wave', xpOpts: { wave, bonus: bonusXp }, coins: roundCoins,
     replay: () => startSolo(lastSoloMap),
     endless: () => resumeEndless(),
   });
@@ -3495,8 +3521,10 @@ function duelReceiveHit() {
 const BOT_NAMES = ['Kaplan', 'Yıldırım', 'Panzer', 'Volkan', 'Şahin', 'Bora', 'Demir', 'Atlas', 'Zafer', 'Kobra', 'Tayfun', 'Ejder', 'Fırtına', 'Çelik', 'Reis', 'Alpay', 'Doruk', 'Yağız'];
 function botName() { return BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)]; }
 // SEVİYE KAPILARI (denetim 4.3: seviye hiçbir şeyi açmıyordu — anlamsız progres çubuğu).
-// FTUE pacing: yeni oyuncu önce çekirdek döngüyü öğrenir, özellikler seviyeyle "açılır" (hepsi 1-2 saatte açık).
-const LEVEL_GATES = { duel: 3, skins: 4, acc: 6 };
+// FTUE pacing: yeni oyuncu önce çekirdek döngüyü öğrenir, özellikler seviyeyle "açılır".
+// FAZ0 (büyüme planı B-7): eski {3,4,6} aksesuarı ~3,5 saate itiyordu (L6=2.324 XP ≈ 30 zafer). Yeni hedef:
+// düello L2 (100 XP ≈ 8-10 dk), kaplama L3 (355 XP ≈ 25 dk), aksesuar L4 (796 XP ≈ 45-50 dk).
+const LEVEL_GATES = { duel: 2, skins: 3, acc: 4 };
 const gateOk = k => (profile.level || 1) >= LEVEL_GATES[k];
 const gateSuffix = k => (gateOk(k) ? '' : ` 🔒${LEVEL_GATES[k]}`);
 // bot zorluk kademeleri — inceleme: tek ayarlı bot yeni oyuncuyu 5-1 eziyordu; Çaylak yenilebilir olmalı,
@@ -4236,7 +4264,7 @@ $('res-rewarded').addEventListener('click', async () => {
   track('ad_watch', { placement: 'harvest' });
   const ok = await Platform.rewarded('harvest');
   if (ok && harvestReward) {
-    rewardedTimes.push(Date.now());
+    noteRewarded();
     grantXp(harvestReward.xp); grantSeasonXp(harvestReward.xp);
     if (harvestReward.coins) addCoins(harvestReward.coins);
     $('res-rewards').innerHTML = `+${harvestReward.xp * 2} XP` + (harvestReward.coins ? ` &nbsp;·&nbsp; +🪙${harvestReward.coins * 2}` : '') + ` <b style="color:#7dff9b">x2</b>`;
@@ -4563,7 +4591,8 @@ const BUILD_OPTS = [
 function offerBuildChoice(onDone) {
   if (!matchBuild) resetBuild();
   buildOnDone = onDone;
-  const pool = BUILD_OPTS.filter(o => !(o.id === 'multi' && matchBuild.multi > 0) && !(o.id === 'fire' && matchBuild.fire >= 3)).slice(); // fire en çok 3 yığın (denge)
+  const BUILD_CAP = { fire: 3, armor: 4, speed: 3, dmg: 2, multi: 1 }; // yığın tavanları (FAZ0: kadans arttı → tavanlar şart)
+  const pool = BUILD_OPTS.filter(o => (matchBuild[o.id] || 0) < (BUILD_CAP[o.id] || 99)).slice();
   for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t = pool[i]; pool[i] = pool[j]; pool[j] = t; }
   const picks = pool.slice(0, 3), tt = T();
   $('build-title').textContent = tt.buildTitle;
@@ -4579,7 +4608,7 @@ function pickBuild(id) {
   sfxPower(); haptic('LIGHT');
   $('buildchoice').classList.add('hidden');
   buildChoosing = false;
-  track('build_pick', { id });
+  track('build_pick', { id, wave });
   const fn = buildOnDone; buildOnDone = null; if (fn) fn();
 }
 
@@ -4873,8 +4902,8 @@ function tick() {
           if (wave % 5 === 0) stingBoss(); else stingWave();
           player.health = Math.min(player.maxHealth, player.health + 1);
           renderHealth();
-          // maç-içi yükseltme seçimi (Diep tarzı): İLK teklif 2. dalga temizlenince (erken tat — FTUE deneyi), sonra her boss dalgası sonrası
-          if (wave === 3 || ((wave - 1) % 5 === 0 && wave >= 6)) offerBuildChoice(() => spawnEnemies(waveComposition(wave)));
+          // maç-içi yükseltme seçimi (Diep tarzı) — FAZ0 (plan A-1): her 2 dalgada (2/4/6/8/10, sonsuzda sürer); önce 10 dalgada yalnız 2 karar vardı
+          if (wave % 2 === 0) offerBuildChoice(() => spawnEnemies(waveComposition(wave)));
           else spawnEnemies(waveComposition(wave));
         }
       }
