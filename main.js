@@ -21,6 +21,7 @@ const L = {
     patrolMsg: (c, h) => `🛡️ Tankın devriyedeydi: +🪙${c} (${h} saat)`,
     nextGoal: 'Sıradaki', weeklyLbl: '📅 HAFTANIN MODU', weeklyWin: 'Haftalık mod zaferi',
     modNames: { doubleBoss: 'Çift Boss', fast: 'Hızlı Düşmanlar', tough: 'Zırhlı Düşmanlar', bossRush: 'Boss Rush' },
+    chapterWord: 'BÖLÜM', chVictories: 'zafer', chapterDone: (n, nm) => `📖 Bölüm ${n} tamamlandı: ${nm} — +🎰2 +💎1`,
     eventNames: { doubleGold: '🎉 ÇİFTE ALTIN', bossRush: '💀 BOSS RUSH' }, eventLeft: (h, m) => `${h}sa ${m}dk`, eventDoubleTip: '🎉 Çifte Altın: hafta sonu tüm koşularda yok etme parası ×2!', eventBossTip: '💀 Boss Rush: 5 dalga, her dalga boss — boss başı 150🪙, zaferde +🎰2', lbSpeed: '⏱ HIZ', lbSpeedTitle: '⏱ HAFTANIN EN HIZLI ZAFERLERİ',
     gemTip: 'Elmas al', namePh: 'İsmin', midW: 'KISIK', setNotifs: 'Bildirimler', streakFrozen: '🧊 Serin donduruldu — kaldığın yerden devam!', pityLine: n => `🛡️ Garanti: ${n} çekilişte Efsanevi`,
     setHaptic: 'Titreşim', privacyLbl: 'Gizlilik Politikası',
@@ -102,6 +103,7 @@ const L = {
     patrolMsg: (c, h) => `🛡️ Your tank was on patrol: +🪙${c} (${h}h)`,
     nextGoal: 'Next up', weeklyLbl: '📅 WEEKLY MODE', weeklyWin: 'Weekly mode victory',
     modNames: { doubleBoss: 'Double Boss', fast: 'Fast Enemies', tough: 'Armored Enemies', bossRush: 'Boss Rush' },
+    chapterWord: 'CHAPTER', chVictories: 'wins', chapterDone: (n, nm) => `📖 Chapter ${n} complete: ${nm} — +🎰2 +💎1`,
     eventNames: { doubleGold: '🎉 DOUBLE GOLD', bossRush: '💀 BOSS RUSH' }, eventLeft: (h, m) => `${h}h ${m}m`, eventDoubleTip: '🎉 Double Gold: kill coins ×2 in every run this weekend!', eventBossTip: '💀 Boss Rush: 5 waves, a boss every wave — 150🪙 per boss, +🎰2 on victory', lbSpeed: '⏱ SPEED', lbSpeedTitle: "⏱ THIS WEEK'S FASTEST VICTORIES",
     gemTip: 'Get gems', namePh: 'Your name', midW: 'LOW', setNotifs: 'Notifications', streakFrozen: '🧊 Streak frozen — pick up where you left off!', pityLine: n => `🛡️ Guaranteed Epic within ${n} spins`,
     setHaptic: 'Haptics', privacyLbl: 'Privacy Policy',
@@ -200,7 +202,7 @@ try {
 // FAZ0: şema taşıma — v3 alanları (kitler, ustalık, reklam günlüğü, bölümler, sezon geçmişi, arkadaş kodu) eksikse tamamlanır
 function migrateProfile(p) {
   const obj = k => { if (!p[k] || typeof p[k] !== 'object' || Array.isArray(p[k])) p[k] = {}; };
-  obj('kits'); obj('mastery'); obj('chapters'); obj('seasonHistory');
+  obj('kits'); obj('mastery'); obj('chapters'); obj('seasonHistory'); obj('mapWins');
   if (!Array.isArray(p.rewardedLog)) p.rewardedLog = [];
   if (typeof p.code !== 'string') p.code = '';
   p.v = PROFILE_V;
@@ -588,6 +590,15 @@ const MAPS = [
     '#..#....##..#','#...........#','#############' ] },
 ];
 const mapUnlocked = i => profile.bestWave >= MAPS[i].req;
+// FAZ1 (plan A-6): BÖLÜMLER — 4 × 3 harita (kilit sırası). Bölüm = 3 haritada da zafer → +🎰2 +💎1. Anlatı: bölümün ilk koşusunda kısa brifing.
+const CHAPTERS = [
+  { maps: [0, 1, 2], name: { tr: 'Cephe Hattı', en: 'Front Line' }, brief: { tr: 'General ilk hattı geçti — bu üç bölgeyi geri al.', en: 'The General crossed the first line — take back these three zones.' } },
+  { maps: [3, 4, 5], name: { tr: 'Buz ve Ateş', en: 'Ice and Fire' }, brief: { tr: 'Kar, gece ve lav: zemin de düşman.', en: 'Snow, night and lava: the ground is your enemy too.' } },
+  { maps: [6, 9, 7], name: { tr: 'Uzak Cephe', en: 'Far Front' }, brief: { tr: 'Uzaydan harabelere — düşman her yerde.', en: 'From orbit to the ruins — enemies everywhere.' } },
+  { maps: [10, 11, 8], name: { tr: 'Kıyı ve Kanyon', en: 'Coast and Canyon' }, brief: { tr: 'Son üç kale. Generali burada bitir.', en: 'The last three strongholds. Finish the General here.' } },
+];
+const chapterOf = i => CHAPTERS.findIndex(c => c.maps.includes(i));
+const chapterWins = c => CHAPTERS[c].maps.filter(i => (profile.mapWins && profile.mapWins[i]) > 0).length;
 // v1 içerik küratörlüğü: öne çıkan üçlü (Klasik / Şehir Harabesi / Kanyon) — HIZLI OYNA rotasyonu + harita listesinde ⭐
 const QUICK_MAPS = [0, 9, 11];
 // E4: "sıradaki hedef" kartı — en ucuz sahip olunmayan coin-tank (bitince aksesuar); goal-gradient etkisi
@@ -1265,7 +1276,7 @@ function damageEnemy(e, dmg) {
   e.hp -= dmg;
   if (e.hp <= 0) {
     e.alive = false; explode(e.x, 1.0, e.z, true); scene.remove(e.mesh); disposeTank(e.mesh);
-    popFloater(e.x, 2.2, e.z, '+' + e.score, e.type === 'boss' ? '#ff7a3a' : '#ffe86a');
+    popFloater(e.x, 2.2, e.z, '+' + e.score, isBoss(e.type) ? '#ff7a3a' : '#ffe86a');
     popFloater(e.x, 3.1, e.z, '+🪙' + killCoins(e), '#ffd76a');
     if (mode === 'coop') netSend({ t: 'ekill', id: e.id });
     onEnemyKilled(e);
@@ -2125,17 +2136,22 @@ const ENEMY_TYPES = {
   heavy:  { hp: 3, speed: 3.0, turn: 1.3, cool: [2.4, 3.8], bspeed: 20, keep: 9, sight: 52, scale: 1.35, color: 0x5a6b55, coins: 14, score: 250 },
   sniper: { hp: 1, speed: 3.6, turn: 1.6, cool: [2.0, 3.2], bspeed: 34, keep: 24, sight: 75, scale: 0.95, color: 0x8a3a8a, coins: 10, score: 180 },
   boss:   { hp: 14, speed: 2.8, turn: 1.1, cool: [1.3, 2.0], bspeed: 22, keep: 12, sight: 80, scale: 2.1, color: 0x8f1414, coins: 80, score: 2000, triple: true, glow: true },
+  // FAZ1 (plan A-3) 2. boss arketipi YILDIRIM: ateş etmez; 1.2sn kırmızı telegraf → 2sn düz dash (3× hız, temasta 1 hasar) → 1.5sn sersem (savunmasız ×2)
+  boss_blitz: { hp: 10, speed: 5.0, turn: 2.2, cool: [3, 4.5], bspeed: 0, keep: 9, sight: 80, scale: 1.8, color: 0xc9401a, coins: 100, score: 2400, glow: true, blitz: true },
 };
+const BOSS_TYPES = new Set(['boss', 'boss_blitz']);
+const isBoss = t => BOSS_TYPES.has(t);
 let enemyIdC = 0;
 // merhamet eğrisi (FTUE): solo 1-2. dalgada düşman ateş temposu %35 yavaş — yeni oyuncu ilk dakikada ölmesin
 const enemyMercy = () => (mode === 'solo' && (wave <= 2 || (runMercy && wave <= 3)) ? 1.35 : 1); // runMercy: dönen oyuncunun ilk koşusu dalga 3'e kadar yumuşak
 function waveComposition(w, extra = 0) {
-  if (weeklyRun && weeklyRun.mod === 'bossRush') { // etkinlik: her dalga boss + dalga sayısı kadar eskort
-    const list = ['boss']; for (let i = 0; i < w + extra; i++) list.push(Math.random() < 0.5 ? 'scout' : 'normal'); return list;
+  if (weeklyRun && weeklyRun.mod === 'bossRush') { // etkinlik: her dalga boss (arketipler dönüşümlü) + dalga sayısı kadar eskort
+    const list = [w % 2 === 0 ? 'boss_blitz' : 'boss']; for (let i = 0; i < w + extra; i++) list.push(Math.random() < 0.5 ? 'scout' : 'normal'); return list;
   }
   if (w % 5 === 0) {
-    const list = ['boss'];
-    if (weeklyRun && weeklyRun.mod === 'doubleBoss') list.push('boss'); // haftalık mod: çift boss
+    const main = (w / 5) % 2 === 0 ? 'boss_blitz' : 'boss'; // 5: GENERAL, 10: YILDIRIM (final), sonsuzda dönüşümlü
+    const list = [main];
+    if (weeklyRun && weeklyRun.mod === 'doubleBoss') list.push(main === 'boss' ? 'boss_blitz' : 'boss'); // haftalık mod: çift boss (iki arketip)
     const n = 1 + Math.floor(w / 10) + extra;
     for (let i = 0; i < n; i++) list.push(Math.random() < 0.5 ? 'scout' : 'normal');
     return list;
@@ -2154,7 +2170,7 @@ function waveComposition(w, extra = 0) {
 function spawnEnemies(types) {
   for (const type of types) {
     const d = ENEMY_TYPES[type] || ENEMY_TYPES.normal;
-    const cell = randOpenCell(player.x, player.z, type === 'boss' ? 22 : 18);
+    const cell = randOpenCell(player.x, player.z, isBoss(type) ? 22 : 18);
     const e = {
       id: ++enemyIdC, type, color: d.color, hp: d.hp, maxHp: d.hp, baseScale: d.scale, hitT: 0,
       speed: d.speed, turn: d.turn, bspeed: d.bspeed, keep: d.keep, sight: d.sight,
@@ -2164,10 +2180,10 @@ function spawnEnemies(types) {
       cool: (d.cool[0] + Math.random() * (d.cool[1] - d.cool[0])) * enemyMercy(),
       alive: true, turnDir: 1, thinkT: 0,
     };
-    if (type === 'boss') {
+    if (isBoss(type)) {
       // rapor: boss "okunabilir" olmalı — atış öncesi TELEGRAF halkası (turuncu), atış sonrası SAVUNMASIZ an halkası (yeşil, 2x hasar)
       e.windup = 0; e.vulnT = 0;
-      e.bossName = 'GENERAL ' + botName(); // boss bar'da isimli düşman (kişilik hissi)
+      e.bossName = (type === 'boss_blitz' ? 'YILDIRIM ' : 'GENERAL ') + botName(); // boss bar'da isimli düşman (kişilik hissi)
       const mkRing = col => {
         const r = new THREE.Mesh(new THREE.RingGeometry(1.12, 1.34, 40),
           new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.85, side: THREE.DoubleSide, toneMapped: false, depthWrite: false }));
@@ -2175,10 +2191,11 @@ function spawnEnemies(types) {
         r.userData.ownGeo = true; r.material.userData.owned = true; // örnek-başına kaynak: temizlikte dispose edilebilir
         e.mesh.add(r); return r;
       };
-      e.teleRing = mkRing(0xff8c1a); e.vulnRing = mkRing(0x54ff7a);
+      e.teleRing = mkRing(type === 'boss_blitz' ? 0xff3030 : 0xff8c1a); e.vulnRing = mkRing(0x54ff7a);
+      e.dashT = 0; e.stunT = 0;
     }
     if (weeklyRun && weeklyRun.mod === 'tough') { e.hp += 1; e.maxHp += 1; } // haftalık mod: zırhlı düşmanlar
-    if (type === 'boss' && weeklyRun && weeklyRun.mod === 'bossRush') e.coins = 150; // Boss Rush: boss başı 150🪙
+    if (isBoss(type) && weeklyRun && weeklyRun.mod === 'bossRush') e.coins = 150; // Boss Rush: boss başı 150🪙
     e.mesh.position.set(e.x, 0, e.z);
     scene.add(e.mesh); enemies.push(e);
   }
@@ -2738,7 +2755,7 @@ function drawMinimap() {
   const aliveE = enemies.reduce((n, e) => n + (e.alive ? 1 : 0), 0);
   const ePulse = aliveE > 0 && aliveE <= 2 ? 1 + Math.abs(Math.sin(clock.elapsedTime * 6)) * 1.0 : 1;
   c.fillStyle = ePulse > 1 ? '#ff6a3a' : '#ff4030';
-  if (enemies.length) { for (const e of enemies) if (e.alive) dot(e.x, e.z, (e.type === 'boss' ? 4.5 : 2.5) * ePulse); }
+  if (enemies.length) { for (const e of enemies) if (e.alive) dot(e.x, e.z, (isBoss(e.type) ? 4.5 : 2.5) * ePulse); }
   else for (const m of coopEnemies.values()) dot(m.position.x, m.position.z, 2.5);
   if (mode === 'ball' && ball) { c.fillStyle = '#ffffff'; dot(ball.x, ball.z, 3); }
   if (mode === 'duel' && duel && duel.remoteAlive) { c.fillStyle = '#ff7a5a'; dot(duel.x, duel.z, 3); }
@@ -3330,8 +3347,15 @@ function renderMaps() {
   const wrap = $('cardwrap-maps');
   wrap.style.cssText = 'display:flex;flex-wrap:wrap;justify-content:center;gap:12px;margin:12px 8px';
   wrap.innerHTML = '';
-  // FAZ0: kartlar kilit sırasına (req) göre listelenir; dizi indeksleri (QUICK_MAPS, weeklySpec, lastSoloMap) değişmez
-  MAPS.map((mp, idx) => ({ mp, idx })).sort((a, b) => a.mp.req - b.mp.req || a.idx - b.idx).forEach(({ mp, idx }) => {
+  // FAZ0/FAZ1: kartlar bölüm → kilit sırasına göre; dizi indeksleri (QUICK_MAPS, weeklySpec, lastSoloMap) değişmez
+  const ordered = [];
+  CHAPTERS.forEach((ch, ci) => {
+    const wins = chapterWins(ci), done = !!(profile.chapters && profile.chapters[ci]);
+    ordered.push({ header: `<div style="width:100%;text-align:center;color:${done ? '#7dff9b' : '#ffd76a'};font-weight:bold;letter-spacing:1px;margin:10px 0 0;font-size:13.5px">📖 ${t.chapterWord} ${ci + 1} · ${ch.name[lang]} — ${wins}/${ch.maps.length} ${t.chVictories}${done ? ' ✅' : ''}</div>` });
+    ch.maps.map(idx => ({ mp: MAPS[idx], idx })).sort((a, b) => a.mp.req - b.mp.req || a.idx - b.idx).forEach(x => ordered.push(x));
+  });
+  ordered.forEach(({ mp, idx, header }) => {
+    if (header) { const h = document.createElement('div'); h.innerHTML = header; h.style.cssText = 'width:100%'; wrap.appendChild(h); return; }
     const unlocked = mapUnlocked(idx);
     const card = document.createElement('div');
     card.className = 'card' + (unlocked ? '' : ' locked');
@@ -3395,6 +3419,7 @@ function startSolo(mapIdx, weekly) {
   spawnEnemies(waveComposition(1));
   renderHealth(); updateHUD();
   banner(`${T().wave} 1`);
+  { const ci = chapterOf(mapIdx); if (!weekly && ci >= 0 && !(profile.mapWins && profile.mapWins[mapIdx]) && (profile.games || 0) > 1) showToast('📖 ' + CHAPTERS[ci].brief[lang], 3400); } // bölüm brifingi (ilk zafere kadar)
   // yeni oyuncu: hedefli adım-adım eğitim; eğitim bitmişse yalnız kısa kontrol ipucu
   if (!profile.tutorialDone && (profile.games || 0) <= 3) startTutorial(); else abortTutorial();
   showFtueHint();
@@ -3443,6 +3468,15 @@ function soloVictory() {
   const timeTxt = '<br>' + (timeRec ? t.timeNewRec(fmtTime(runDur)) : t.timeLine(fmtTime(runDur), fmtTime(profile.bestRunTime)));
   let bonusXp = 0;
   if (!profile.firstWin) { profile.firstWin = 1; bonusXp = 40; showToast(t.firstWinXp, 3200); } // FAZ0: ilk zafer +40 XP
+  { // FAZ1 A-6: harita zaferi + bölüm tamamlama ödülü
+    profile.mapWins = profile.mapWins || {}; profile.mapWins[lastSoloMap] = (profile.mapWins[lastSoloMap] || 0) + 1;
+    const ci = chapterOf(lastSoloMap);
+    if (ci >= 0 && !(profile.chapters && profile.chapters[ci]) && chapterWins(ci) >= CHAPTERS[ci].maps.length) {
+      profile.chapters = profile.chapters || {}; profile.chapters[ci] = true;
+      grantTokens(2, true); addGems(1); gemTxt += ' &nbsp;·&nbsp; 📖 +🎰2 +💎1';
+      showToast(t.chapterDone(ci + 1, CHAPTERS[ci].name[lang]), 4200); track('chapter_complete', { c: ci });
+    }
+  }
   saveProfile();
   stingVictory();
   track('run_victory', { map: lastSoloMap, dur: runDur });
@@ -4637,7 +4671,51 @@ if (IS_TOUCH) {
 }
 
 // ---------------------------------------------------------------- düşman AI
+// YILDIRIM (boss_blitz) davranışı: gör → 1.2sn kırmızı telegraf (durur, hedefe döner) → 2sn düz dash 3× hız (dönmez; duvar/oyuncu teması bitirir,
+// oyuncuya 1 hasar) → 1.5sn sersem = savunmasız (×2 hasar, yeşil halka). Dash bekleme 6sn. Ateş etmez.
+function updateBlitz(e, dt, tgt) {
+  const tp = tgt || player, alive = tgt ? true : player.alive;
+  const distP = Math.hypot(tp.x - e.x, tp.z - e.z);
+  const seen = alive && distP < (e.sight || 80) && losClear(e.x, e.z, tp.x, tp.z);
+  e.cool -= dt; e.thinkT -= dt;
+  let move = 0, spd = e.speed * (weeklyRun && weeklyRun.mod === 'fast' ? 1.3 : 1);
+  const stun = () => { e.dashT = 0; e.stunT = 1.5; e.vulnT = 1.5; if (e.vulnRing) { e.vulnRing.visible = true; e.vulnRing.scale.setScalar(1); } popFloater(e.x, 3.6, e.z, T().vulnTxt, '#54ff7a'); };
+  if (e.stunT > 0) {
+    e.stunT -= dt; e.vulnT = e.stunT;
+    if (e.vulnRing) { e.vulnRing.material.opacity = 0.35 + Math.abs(Math.sin(clock.elapsedTime * 8)) * 0.5; if (e.stunT <= 0) e.vulnRing.visible = false; }
+  } else if (e.dashT > 0) {
+    e.dashT -= dt; move = 1; spd *= 3;
+    const px = e.x + fwdX(e.a) * 2.2, pz = e.z + fwdZ(e.a) * 2.2;
+    if (pointInWall(px, pz) || e.dashT <= 0) stun();
+    else if (!tgt && alive && distP < 2.6) { // oyuncuya çarptı
+      if (player.inv <= 0 && player.shieldT <= 0) { player.inv = 0.8; player.health--; renderHealth(); hitFlash(); shake = Math.max(shake, 1.2); if (player.health <= 0) soloPlayerDied(); }
+      stun();
+    }
+  } else if (e.windup > 0) {
+    e.windup -= dt;
+    const target = headingTo(e.x, e.z, tp.x, tp.z), diff = angNorm(target - e.a);
+    e.a += Math.max(-e.turn * dt, Math.min(e.turn * dt, diff));
+    if (e.teleRing) { const p = Math.max(0, e.windup) / 1.2; e.teleRing.scale.setScalar(0.6 + p * 1.4); e.teleRing.material.opacity = 0.4 + (1 - p) * 0.5; }
+    if (e.windup <= 0) { e.windup = 0; if (e.teleRing) e.teleRing.visible = false; e.dashT = 2.0; sfxBoom(false); }
+  } else if (seen) {
+    const target = headingTo(e.x, e.z, tp.x, tp.z), diff = angNorm(target - e.a);
+    e.a += Math.max(-e.turn * dt, Math.min(e.turn * dt, diff));
+    const keep = e.keep || 9;
+    if (Math.abs(diff) < 0.5) { if (distP > keep + 3) move = 1; else if (distP < keep - 3) move = -1; }
+    if (e.cool <= 0 && Math.abs(diff) < 0.3 && distP < 30) { e.windup = 1.2; e.cool = 6; if (e.teleRing) e.teleRing.visible = true; }
+  } else {
+    if (e.thinkT <= 0) { e.thinkT = 1.2 + Math.random() * 1.8; e.turnDir = Math.random() < 0.5 ? -1 : 1; }
+    const px = e.x + fwdX(e.a) * 3.0, pz = e.z + fwdZ(e.a) * 3.0;
+    if (pointInWall(px, pz)) e.a += e.turnDir * e.turn * dt;
+    else { move = 1; const target = headingTo(e.x, e.z, tp.x, tp.z), diff = angNorm(target - e.a); e.a += Math.max(-0.5 * e.turn * dt, Math.min(0.5 * e.turn * dt, diff)); }
+  }
+  if (move) { e.x += fwdX(e.a) * spd * move * dt; e.z += fwdZ(e.a) * spd * move * dt; }
+  const pos = { x: e.x, z: e.z }; circleVsWalls(pos, TANK_R); e.x = pos.x; e.z = pos.z;
+  if (e.hitT > 0) { e.hitT -= dt; e.mesh.scale.setScalar((e.baseScale || 1) * (1 + Math.max(0, e.hitT) * 1.8)); }
+  e.mesh.position.set(e.x, 0, e.z); e.mesh.rotation.y = e.a;
+}
 function updateEnemy(e, dt, tgt) {
+  if (e.type === 'boss_blitz') return updateBlitz(e, dt, tgt);
   e.cool -= dt; e.thinkT -= dt;
   const tp = tgt || player;
   const alive = tgt ? true : player.alive;
@@ -4964,14 +5042,14 @@ function tick() {
         if (b.playerShot) {
           if (isAuthority) {
             for (const e of enemies) {
-              const hr = 1.4 * (e.type === 'boss' ? 1.7 : 1);
+              const hr = 1.4 * (isBoss(e.type) ? 1.7 : 1);
               if (e.alive && Math.hypot(b.mesh.position.x - e.x, b.mesh.position.z - e.z) < hr) {
-                const vuln = e.type === 'boss' && e.vulnT > 0; // savunmasız pencere: 2x hasar (host otoritesi)
+                const vuln = isBoss(e.type) && e.vulnT > 0; // savunmasız pencere: 2x hasar (host otoritesi)
                 e.hp -= (1 + bDmg()) * (vuln ? 2 : 1);
                 if (vuln) popFloater(b.mesh.position.x, 2.6, b.mesh.position.z, 'x2!', '#54ff7a');
                 if (e.hp <= 0) {
                   e.alive = false; explode(e.x, 1.0, e.z, true); scene.remove(e.mesh); disposeTank(e.mesh);
-                  popFloater(e.x, 2.2, e.z, '+' + e.score, e.type === 'boss' ? '#ff7a3a' : '#ffe86a');
+                  popFloater(e.x, 2.2, e.z, '+' + e.score, isBoss(e.type) ? '#ff7a3a' : '#ffe86a');
                 popFloater(e.x, 3.1, e.z, '+🪙' + killCoins(e), '#ffd76a'); // denetim: en büyük musluk görünmezdi — kill parası artık ekranda
                   netSend({ t: 'ekill', id: e.id });
                   onEnemyKilled(e);
@@ -5021,14 +5099,14 @@ function tick() {
       if (!dead && mode !== 'coop' && mode !== 'team' && b.fromPlayer) {
         if (mode === 'solo') {
           for (const e of enemies) {
-            const hr = 1.4 * (e.type === 'boss' ? 1.7 : 1);
+            const hr = 1.4 * (isBoss(e.type) ? 1.7 : 1);
             if (e.alive && Math.hypot(b.mesh.position.x - e.x, b.mesh.position.z - e.z) < hr) {
-              const vuln = e.type === 'boss' && e.vulnT > 0; // savunmasız pencere: 2x hasar
+              const vuln = isBoss(e.type) && e.vulnT > 0; // savunmasız pencere: 2x hasar
               e.hp -= (1 + bDmg()) * (vuln ? 2 : 1);
               if (vuln) popFloater(b.mesh.position.x, 2.6, b.mesh.position.z, 'x2!', '#54ff7a');
               if (e.hp <= 0) {
                 e.alive = false; explode(e.x, 1.0, e.z, true); scene.remove(e.mesh); disposeTank(e.mesh);
-                popFloater(e.x, 2.2, e.z, '+' + e.score, e.type === 'boss' ? '#ff7a3a' : '#ffe86a');
+                popFloater(e.x, 2.2, e.z, '+' + e.score, isBoss(e.type) ? '#ff7a3a' : '#ffe86a');
                 popFloater(e.x, 3.1, e.z, '+🪙' + killCoins(e), '#ffd76a'); // denetim: en büyük musluk görünmezdi — kill parası artık ekranda
                 onEnemyKilled(e);
                 if ((b.b0 || 1) - b.bounces >= 2) megaBounce(e); // E1: çift sekmeyle kill
@@ -5092,7 +5170,7 @@ function tick() {
     if (anyInput || ftueHintT <= 0) hideFtueHint();
   }
 
-  const bossE = (state === 'play' && (mode === 'solo' || (mode === 'coop' && isAuthority))) ? enemies.find(e => e.type === 'boss' && e.alive) : null;
+  const bossE = (state === 'play' && (mode === 'solo' || (mode === 'coop' && isAuthority))) ? enemies.find(e => isBoss(e.type) && e.alive) : null;
   updateBossBar(bossE);
   updateEnemyArrow();
   updateRunCoins();
