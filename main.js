@@ -853,11 +853,12 @@ function tex(url, srgb = false, repeat = 1) {
 }
 
 // açılış varlıkları: başarısızlıkta siyah ekran yerine YENİDEN DENE ekranı (zayıf ağ / ilk yüklemede kesinti)
-let tankGltf, envTex;
+let tankGltf, envTex, skyTex;
 try {
-  [tankGltf, envTex] = await Promise.all([
+  [tankGltf, envTex, skyTex] = await Promise.all([
     new GLTFLoader().loadAsync('assets/tank.glb'),
-    new RGBELoader().loadAsync('assets/env.hdr'),
+    new RGBELoader().loadAsync('assets/env.hdr'),   // VARLIK FAZ1: 256×128 HDR yalnız IBL için (PMREM zaten bulanıklaştırır) — 1.4 MB → 97 KB
+    texLoader.loadAsync('assets/sky.jpg'),          // arka plan: aynı Poly Haven gökyüzü (kloofendal 48d puresky, CC0) ön-eşlenmiş JPG 1024×512
   ]);
 } catch (err) {
   track('asset_fail', { m: String(err && err.message).slice(0, 80) }); // açılış varlığı inmedi — artık görünür
@@ -872,8 +873,24 @@ try {
   throw err; // modül dursun; retry temiz reload yapar
 }
 envTex.mapping = THREE.EquirectangularReflectionMapping;
-scene.background = envTex;
+skyTex.mapping = THREE.EquirectangularReflectionMapping; skyTex.colorSpace = THREE.SRGBColorSpace;
+scene.background = skyTex;
 scene.environment = envTex;
+// VARLIK FAZ1: karanlık temalar (night/lava/space) için sıfır-baytlık "oda" IBL — metal/altın kaplamalar artık kararmıyor
+let roomEnvTex = null;
+function getRoomEnv() {
+  if (roomEnvTex) return roomEnvTex;
+  const sc = new THREE.Scene();
+  const room = new THREE.Mesh(new THREE.BoxGeometry(20, 12, 20), new THREE.MeshStandardMaterial({ color: 0x1a1d24, side: THREE.BackSide, roughness: 1 }));
+  room.position.y = 5; sc.add(room);
+  const panel = (w, h, d, x, y, z, c, ry) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshBasicMaterial({ color: c })); m.position.set(x, y, z); if (ry) m.rotation.y = ry; sc.add(m); };
+  panel(6, 0.2, 6, 0, 10.8, 0, 0x8a94a8);            // tavan ana ışık (soğuk gri)
+  panel(0.2, 3, 8, -9.8, 6, 0, 0x5a6a90);            // sol duvar mavi
+  panel(0.2, 3, 8, 9.8, 5, 0, 0xa06a40);             // sağ duvar sıcak
+  panel(8, 2, 0.2, 0, 4, -9.8, 0x606878);            // arka
+  const pm = new THREE.PMREMGenerator(renderer); roomEnvTex = pm.fromScene(sc, 0.04).texture; pm.dispose();
+  return roomEnvTex;
+}
 
 // ---------------------------------------------------------------- tank modelleri (tembel-yükleme)
 // farklı GLB gövde modelleri; ilk pakete girmez, seçilince/önizlenince yüklenir (performans bütçesi)
@@ -1149,8 +1166,8 @@ function applyTheme(name) {
   scene.fog.color.setHex(th.fog[0]); scene.fog.near = th.fog[1]; scene.fog.far = th.fog[2];
   sun.color.setHex(th.sun[0]); sun.intensity = th.sun[1];
   hemi.color.setHex(th.hemi[0]); hemi.groundColor.setHex(th.hemi[1]); hemi.intensity = th.hemi[2];
-  if (th.bg != null) { scene.background = new THREE.Color(th.bg); scene.environment = th.env === false ? null : envTex; }
-  else { scene.background = envTex; scene.environment = envTex; }
+  if (th.bg != null) { scene.background = new THREE.Color(th.bg); scene.environment = th.env === false ? getRoomEnv() : envTex; } // env:false → oda IBL (kararmayan metal)
+  else { scene.background = skyTex; scene.environment = envTex; }
   stars.visible = !!th.stars;
   playerBulletMat.color.setHex(th.bullet[0]); enemyBulletMat.color.setHex(th.bullet[1]); flashColor = th.bullet[2];
   playerTailMat.color.setHex(th.bullet[0]); enemyTailMat.color.setHex(th.bullet[1]);
@@ -1525,14 +1542,16 @@ const accThumbs = {}; // aksesuar kartı görselleri (aynı offscreen renderer)
 function ensureThumbGl() {
   if (thumbGl) return;
   thumbGl = new THREE.WebGLRenderer({ alpha: true, antialias: true });
-  thumbGl.setSize(240, 150); thumbGl.setPixelRatio(1);
+  thumbGl.setSize(320, 200); thumbGl.setPixelRatio(1); // VARLIK FAZ1: 240×150 → 320×200 (kart görseli daha keskin)
   thumbGl.toneMapping = THREE.ACESFilmicToneMapping;
+  thumbGl.shadowMap.enabled = true; thumbGl.shadowMap.type = THREE.PCFSoftShadowMap;
   thumbScene = new THREE.Scene();
-  thumbScene.environment = envTex;
+  thumbScene.environment = studioEnvTex || envTex;
   thumbScene.add(new THREE.HemisphereLight(0xcfe0ff, 0x3a2f22, 0.9));
-  const k = new THREE.DirectionalLight(0xffffff, 2.6); k.position.set(4, 7, 5); thumbScene.add(k);
+  const k = new THREE.DirectionalLight(0xffffff, 2.6); k.position.set(4, 7, 5); k.castShadow = true; k.shadow.mapSize.set(512, 512); const kc = k.shadow.camera; kc.left = -5; kc.right = 5; kc.top = 5; kc.bottom = -5; kc.near = 0.5; kc.far = 30; thumbScene.add(k);
   const r = new THREE.DirectionalLight(0x88bbff, 1.5); r.position.set(-5, 4, -6); thumbScene.add(r);
-  thumbCam = new THREE.PerspectiveCamera(30, 240 / 150, 0.1, 80);
+  const sh = new THREE.Mesh(new THREE.PlaneGeometry(14, 14), new THREE.ShadowMaterial({ opacity: 0.35 })); sh.rotation.x = -Math.PI / 2; sh.position.y = 0.005; sh.receiveShadow = true; thumbScene.add(sh); // yumuşak gölge düzlemi
+  thumbCam = new THREE.PerspectiveCamera(30, 320 / 200, 0.1, 80);
 }
 function renderAccThumb(a) {
   if (accThumbs[a.id]) return accThumbs[a.id];
@@ -3192,7 +3211,7 @@ function barHTML(frac) {
 }
 
 // ---------------------------------------------------------------- 3B garaj vitrini (döndürülebilir inceleme)
-let showroomScene = null, showroomCam = null, showroomTurn = null, showroomTankMesh = null;
+let showroomScene = null, showroomCam = null, showroomTurn = null, showroomTankMesh = null, studioEnvTex = null;
 let srKey = null, srRim = null, srAccent = null, srRingMat = null; // vitrin ışıkları — büyük/premium tanka göre uyarlanır
 const showroom = { active: false, mode: 'tank', tankId: null, accId: '', rot: 0, vel: 0, elev: 0.42, dragging: false, lastX: 0, lastY: 0, centerY: 0.9, radius: 8 };
 const SHOWROOM_PIVOT_Y = 0.5; // platform üstü — tank tabanı (y=0) buraya oturur
@@ -3200,7 +3219,8 @@ function ensureShowroom() {
   if (showroomScene) return;
   showroomScene = new THREE.Scene();
   showroomScene.background = new THREE.Color(0x0a0f16);
-  showroomScene.environment = envTex; // metal/parlak kaplamalarda yansıma
+  showroomScene.environment = envTex; // metal/parlak kaplamalarda yansıma (stüdyo HDR inince değişir)
+  new RGBELoader().loadAsync('assets/env_studio.hdr').then(t => { t.mapping = THREE.EquirectangularReflectionMapping; studioEnvTex = t; if (showroomScene) showroomScene.environment = t; }).catch(() => {}); // VARLIK FAZ1: Poly Haven studio_small_09 (CC0) 256×128 — ürün çekimi yansıması
   showroomCam = new THREE.PerspectiveCamera(42, innerWidth / innerHeight, 0.1, 120);
   // zemin (gölge alan koyu disk)
   const floor = new THREE.Mesh(new THREE.CircleGeometry(16, 48), new THREE.MeshStandardMaterial({ color: 0x0e131a, roughness: 0.9, metalness: 0.1 }));

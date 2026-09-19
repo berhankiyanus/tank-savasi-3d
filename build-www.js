@@ -5,7 +5,7 @@ const path = require('path');
 
 const root = __dirname;
 const out = path.join(root, 'www');
-const items = ['index.html', 'main.js', 'manifest.json', 'sw.js', 'libs', 'assets'];
+const items = ['index.html', 'main.js', 'manifest.json', 'sw.js', 'CREDITS.md', 'libs', 'assets'];
 
 const EXCLUDE = new Set(['icon-1024.png']); // 813KB kaynak ikon — pakete girmesin (resources/icon.png zaten kaynak)
 
