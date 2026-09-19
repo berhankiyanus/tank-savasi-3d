@@ -22,6 +22,7 @@ const L = {
     nextGoal: 'Sıradaki', weeklyLbl: '📅 HAFTANIN MODU', weeklyWin: 'Haftalık mod zaferi',
     modNames: { doubleBoss: 'Çift Boss', fast: 'Hızlı Düşmanlar', tough: 'Zırhlı Düşmanlar', bossRush: 'Boss Rush' },
     shareBtn: '📤 PAYLAŞ', shareText: (w, d) => `Tank Savaşı 3D'de ${w}. dalgaya ulaştım${d ? ' — ' + d : ''}! Sen kaçta bitirirsin?`, shareSaved: '📤 Kart indirildi — paylaşabilirsin', shareFail: '📤 Paylaşım yapılamadı',
+    slot2Buy: '🔓 2. aksesuar yuvası · 💎60', slot2Got: '🔓 2. yuva açıldı — kule + gövde aksesuarı birlikte takılır', slot2Same: 'İki aksesuar aynı yere takılamaz (kule/gövde)', setStick: 'Joystick', stickN: 'NORMAL', stickT: 'HASSAS', stickW: 'GENİŞ',
     masteryWord: 'Ustalık', rankWord: 'Rütbe', masteryBuy: (r, c) => `⭐ Rütbe ${r} · 🪙${c}`, masteryNeed: (k, n) => `${k}/${n} yok etme`, masteryUp: (nm, r) => `⭐ ${nm} — Rütbe ${r}! ${r === 5 ? 'USTA unvanı' : r === 4 ? 'kill parası +%5' : r === 3 ? 'altın toz izi' : ''}`, masteryMax: 'USTA', masteryHint: 'Bu tankla yok et → rütbe',
     kitsTitle: '🎒 SEFER KİTLERİ — bir sonraki koşuda kullanılır', kitReady: '✓ HAZIR', kitsArmed: k => `🎒 Kitler devrede: ${k}`, premBuy: '👑 Komutan Rayı · 💎120', premActive: '👑 Komutan Rayı aktif — her kademe ×2', premBought: n => `👑 Komutan Rayı alındı! Geriye dönük ${n} kademe ödülü verildi`, starterTitle: '🎁 BAŞLANGIÇ PAKETİ', starterDesc: '💎60 + Hover Tank + 🪙1000 + 🎰3', starterOnce: 'Tek seferlik · yeni komutan fırsatı', starterGot: '🎁 Başlangıç paketi alındı: Hover Tank garajda!',
     chapterWord: 'BÖLÜM', chVictories: 'zafer', chapterDone: (n, nm) => `📖 Bölüm ${n} tamamlandı: ${nm} — +🎰2 +💎1`,
@@ -107,6 +108,7 @@ const L = {
     nextGoal: 'Next up', weeklyLbl: '📅 WEEKLY MODE', weeklyWin: 'Weekly mode victory',
     modNames: { doubleBoss: 'Double Boss', fast: 'Fast Enemies', tough: 'Armored Enemies', bossRush: 'Boss Rush' },
     shareBtn: '📤 SHARE', shareText: (w, d) => `I reached wave ${w} in Tank Battle 3D${d ? ' — ' + d : ''}! Can you beat it?`, shareSaved: '📤 Card downloaded — ready to share', shareFail: '📤 Could not share',
+    slot2Buy: '🔓 2nd accessory slot · 💎60', slot2Got: '🔓 2nd slot unlocked — wear a turret + a hull accessory together', slot2Same: 'Two accessories cannot share a mount (turret/hull)', setStick: 'Joystick', stickN: 'NORMAL', stickT: 'TIGHT', stickW: 'WIDE',
     masteryWord: 'Mastery', rankWord: 'Rank', masteryBuy: (r, c) => `⭐ Rank ${r} · 🪙${c}`, masteryNeed: (k, n) => `${k}/${n} kills`, masteryUp: (nm, r) => `⭐ ${nm} — Rank ${r}! ${r === 5 ? 'MASTER title' : r === 4 ? '+5% kill coins' : r === 3 ? 'golden dust trail' : ''}`, masteryMax: 'MASTER', masteryHint: 'Kill with this tank → rank up',
     kitsTitle: '🎒 SORTIE KITS — used on your next run', kitReady: '✓ READY', kitsArmed: k => `🎒 Kits active: ${k}`, premBuy: '👑 Commander Track · 💎120', premActive: '👑 Commander Track active — every tier ×2', premBought: n => `👑 Commander Track unlocked! ${n} tier rewards granted retroactively`, starterTitle: '🎁 STARTER PACK', starterDesc: '💎60 + Hover Tank + 🪙1000 + 🎰3', starterOnce: 'One time · new commander offer', starterGot: '🎁 Starter pack claimed: Hover Tank is in your garage!',
     chapterWord: 'CHAPTER', chVictories: 'wins', chapterDone: (n, nm) => `📖 Chapter ${n} complete: ${nm} — +🎰2 +💎1`,
@@ -230,6 +232,8 @@ if (typeof settings.haptics !== 'boolean') settings.haptics = true; // titreşim
 if (typeof settings.notifs !== 'boolean') settings.notifs = true; // günlük hatırlatma bildirimi (yalnız native)
 if (typeof settings.volSfx !== 'number') settings.volSfx = 1;
 if (typeof settings.volMusic !== 'number') settings.volMusic = 1;
+if (!['normal', 'tight', 'wide'].includes(settings.stick)) settings.stick = 'normal'; // FAZ3: joystick ölü bölge (0.2 / 0.1 / 0.3)
+const stickDz = () => (settings.stick === 'tight' ? 0.1 : settings.stick === 'wide' ? 0.3 : 0.2);
 if (typeof settings.autoFire !== 'boolean') settings.autoFire = ('ontouchstart' in window || navigator.maxTouchPoints > 0); // (IS_TOUCH henüz tanımsız — TDZ)
 const GAME_VER = '0.9.0'; // ayarlar panelinde görünür; mağaza sürümleriyle birlikte artır
 function saveSettings() { try { localStorage.setItem('tanksettings', JSON.stringify(settings)); } catch (e) { /* engelli depolama: ayar kalıcı olmaz ama oyun çalışır */ } }
@@ -463,6 +467,8 @@ const TANKS = [
   { id: 'arty',     name: { tr: 'Obüs',        en: 'Howitzer'  }, price: 7000, color: 0x6a6248, scale: 0.95, health: 6,  speed: 5.4, turn: 1.7, cool: 0.60, bspeed: 46, model: 'arty', turretTop: 1.55, shot: 0xffc27a, mech: 'lob' },
   // coin merdiveninin tepesi — dozer bıçaklı süper-ağır; SIDEGRADE felsefesi: güç değil karakter (yavaş+tanky, ateş hızı ORTALAMA ALTINDA)
   { id: 'mamut',    name: { tr: 'Mamut',       en: 'Mammoth'   }, price: 9500, color: 0x525a3a, scale: 1.18, health: 12, speed: 5.0, turn: 1.6, cool: 0.48, bspeed: 28, model: 'mamut', metal: true, turretTop: 1.9, shot: 0xff9a3a, mech: 'ram' },
+  // SEZON 2 (FAZ3): BURÇ — heavy.glb yeniden kullanım + çelik mavisi; mech aegis (25 sn'de bir 4 sn otomatik kalkan)
+  { id: 'bastion',  name: { tr: 'Burç',        en: 'Bastion'   }, price: 11000, color: 0x3a5a6a, scale: 0.95, health: 10, speed: 6.0, turn: 1.9, cool: 0.46, bspeed: 30, model: 'heavy', metal: true, turretTop: 1.8, shot: 0x7ad0ff, mech: 'aegis' },
   { id: 'hover',    name: { tr: 'Hover Tank',  en: 'Hover Tank'}, gem: 75, color: 0x3a4450, scale: 1.00, health: 5, speed: 12.0, turn: 3.5, cool: 0.40, bspeed: 34, model: 'hover', metal: true, glow: true, turretTop: 1.5, shot: 0x35e0ff, mech: 'hover' },
   { id: 'titan',    name: { tr: 'Titan',       en: 'Titan'     }, gem: 150, color: 0x40444a, scale: 1.05, health: 13, speed: 5.2, turn: 1.6, cool: 0.44, bspeed: 32, model: 'titan', metal: true, glow: true, turretTop: 2.05, shot: 0xff4a3a, mech: 'knock' },
 ];
@@ -473,11 +479,12 @@ const MECH = {
   lob:     { tr: 'Havan: mermi duvarları aşar, 18 birimde alan patlaması', en: 'Mortar: shells fly over walls, splash at 18 units' },
   stealth: { tr: '2.5 sn ateş etmezsen gizlenirsin (görüş ×0.45)', en: 'Hold fire 2.5s to cloak (enemy sight ×0.45)' },
   ram:     { tr: 'Hızlı çarpma düşmana 1 hasar (sana 0)', en: 'Ramming at speed deals 1 dmg (you take 0)' },
-  hover:   { tr: 'Buzda kaymaz, mermi +1 sekme', en: 'No ice slip, +1 bullet bounce' },
+  hover:   { tr: 'Buz/çamurdan etkilenmez, mermi +1 sekme', en: 'Ignores ice and mud, +1 bullet bounce' },
   rich:    { tr: 'Yok etme parası +%10', en: '+10% kill coins' },
   pierce:  { tr: 'Mermi ilk düşmanı deler', en: 'Shells pierce the first enemy' },
   regen:   { tr: 'Her 40 sn +1 can', en: '+1 HP every 40s' },
   knock:   { tr: 'Vurduğun düşman 2 birim geri savrulur, 0.4 sn sersem', en: 'Hits knock enemies back 2 units, 0.4s stun' },
+  aegis:   { tr: 'Her 25 sn otomatik 4 sn kalkan', en: 'Auto 4s shield every 25s' },
 };
 const mechIs = m => mode === 'solo' && !!(player && player.stat && player.stat.mech === m);
 const mechLine = def => def.mech && MECH[def.mech] ? `<div class="cstat" style="color:#ffd76a;white-space:normal;line-height:1.25">✦ ${MECH[def.mech][lang]}</div>` : '';
@@ -528,6 +535,10 @@ const SKINS = [
   { id: 'ember', name: { tr: 'Kor', en: 'Ember' }, price: 700, color: 0xffb02a, glow: 0.6, r: 'e' },
   { id: 'venom', name: { tr: 'Panzehir', en: 'Venom' }, price: 700, color: 0x2affa0, glow: 0.55, r: 'e' },
   { id: 'royal', name: { tr: 'Kraliyet', en: 'Royal' }, price: 900, color: 0x3a4dff, glow: 0.5, metal: 0.6, r: 'e' },
+  // SEZON 2 (FAZ3) kaplamaları
+  { id: 'magma', name: { tr: 'Magma', en: 'Magma' }, price: 700, color: 0xff4a1a, glow: 0.5, metal: 0.4, r: 'e' },
+  { id: 'aurora', name: { tr: 'Kutup Işığı', en: 'Aurora' }, price: 700, color: 0x3affd0, glow: 0.6, r: 'e' },
+  { id: 'midnight', name: { tr: 'Gece Mavisi', en: 'Midnight' }, price: 400, color: 0x1c2a5a, metal: 0.9, rough: 0.2, r: 'r' },
   // etkinlik ödülü (Toplama): satılmaz, gacha havuzunda değil
   { id: 'relic', name: { tr: 'Kalıntı (Etkinlik)', en: 'Relic (Event)' }, price: 0, color: 0xff2a6a, glow: 0.6, metal: 0.5, r: 'e', event: true },
 ];
@@ -610,6 +621,11 @@ const MAPS = [
     '#############','#...........#','#..##....#..#','#.....##....#','#.##......#.#',
     '#....#.#....#','#..#.....#..#','#....#.#....#','#.#......##.#','#....##.....#',
     '#..#....##..#','#...........#','#############' ] },
+  // SEZON 2 (FAZ3): FABRİKA — bant koridorları + orta atölye (city teması yeniden kullanım)
+  { name: { tr: 'Fabrika', en: 'Factory' }, req: 12, theme: 'city', grid: [
+    '#############','#...#.....#.#','#.#.#.###.#.#','#.#...#...#.#','#.###.#.###.#',
+    '#.....#.....#','#.##.###.##.#','#.....#.....#','#.###.#.###.#','#.#...#...#.#',
+    '#.#.###.#.#.#','#.#.....#...#','#############' ] },
 ];
 const mapUnlocked = i => profile.bestWave >= MAPS[i].req;
 // FAZ1 (plan A-6): BÖLÜMLER — 4 × 3 harita (kilit sırası). Bölüm = 3 haritada da zafer → +🎰2 +💎1. Anlatı: bölümün ilk koşusunda kısa brifing.
@@ -618,6 +634,7 @@ const CHAPTERS = [
   { maps: [3, 4, 5], name: { tr: 'Buz ve Ateş', en: 'Ice and Fire' }, brief: { tr: 'Kar, gece ve lav: zemin de düşman.', en: 'Snow, night and lava: the ground is your enemy too.' } },
   { maps: [6, 9, 7], name: { tr: 'Uzak Cephe', en: 'Far Front' }, brief: { tr: 'Uzaydan harabelere — düşman her yerde.', en: 'From orbit to the ruins — enemies everywhere.' } },
   { maps: [10, 11, 8], name: { tr: 'Kıyı ve Kanyon', en: 'Coast and Canyon' }, brief: { tr: 'Son üç kale. Generali burada bitir.', en: 'The last three strongholds. Finish the General here.' } },
+  { maps: [12], name: { tr: 'Fabrika Bölgesi (Sezon 2)', en: 'Factory District (Season 2)' }, brief: { tr: 'Fabrika ele geçirildi — bantlar düşman üretiyor.', en: 'The factory has fallen — the lines are building enemies.' } },
 ];
 const chapterOf = i => CHAPTERS.findIndex(c => c.maps.includes(i));
 // FAZ1 (plan C-1): SEFER KİTLERİ — tekrarlı coin lavabosu. Satın al = bir sonraki solo koşuya "hazırla" (profile.kits[id]=1), koşu başında tüketilir.
@@ -1174,8 +1191,8 @@ const HAZARD_SPEC = {
   night: { barrel: 3 },
   lava: { lava: 4, barrel: 2 },
   space: { teleport: 4, barrel: 2 },
-  city: { barrel: 4 },
-  harbor: { barrel: 4 },
+  city: { barrel: 4, mud: 3 },   // FAZ3: çamur (hız ×0.6, Hover etkilenmez)
+  harbor: { barrel: 4, mud: 3 },
   canyon: { barrel: 3 },
 };
 
@@ -1193,6 +1210,12 @@ function addLavaPool(cell) {
   const m = new THREE.Mesh(hazDiscGeo, lavaHazMat()); m.rotation.x = -Math.PI / 2; m.position.set(cell.x, 0.06, cell.z); m.scale.setScalar(1.8);
   scene.add(m);
   const h = { type: 'lava', x: cell.x, z: cell.z, r: 1.9, mesh: m }; hazards.push(h); return h;
+}
+const mudHazMat = new THREE.MeshStandardMaterial({ color: 0x4a3620, roughness: 0.95, metalness: 0, transparent: true, opacity: 0.85 });
+function addMudPatch(cell) {
+  const m = new THREE.Mesh(hazDiscGeo, mudHazMat); m.rotation.x = -Math.PI / 2; m.position.set(cell.x, 0.045, cell.z); m.scale.setScalar(2.1);
+  scene.add(m);
+  const h = { type: 'mud', x: cell.x, z: cell.z, r: 2.1, mesh: m }; hazards.push(h); return h;
 }
 function addIcePatch(cell) {
   const m = new THREE.Mesh(hazDiscGeo, iceHazMat); m.rotation.x = -Math.PI / 2; m.position.set(cell.x, 0.05, cell.z); m.scale.setScalar(2.0);
@@ -1280,6 +1303,7 @@ function buildEnvironment(mapIdx) {
   for (let i = 0; i < barrels; i++) { const c = take(); if (c) addCover(c, i); }
   for (let i = 0; i < (spec.lava || 0); i++) { const c = take(); if (c) addLavaPool(c); }
   for (let i = 0; i < (spec.ice || 0); i++) { const c = take(); if (c) addIcePatch(c); }
+  for (let i = 0; i < (spec.mud || 0); i++) { const c = take(); if (c) addMudPatch(c); }
   const pads = [];
   for (let i = 0; i < (spec.teleport || 0); i++) { const c = take(); if (c) pads.push(addTeleport(c)); }
   for (let i = 0; i + 1 < pads.length; i += 2) { pads[i].link = pads[i + 1]; pads[i + 1].link = pads[i]; }
@@ -1640,10 +1664,20 @@ const ACCESSORIES = [
   { id: 'crown', name: { tr: 'Altın Taç', en: 'Golden Crown' }, icon: '👑', gem: 35, r: 'e', build: buildCrown, mount: { x: 0, y: 1.5, z: 0.12 } },
   { id: 'wings', name: { tr: 'Melek Kanatları', en: 'Angel Wings' }, icon: '🪽', gem: 60, r: 'e', build: buildWings, mount: { x: 0, y: 0.75, z: 0.35 } },
   { id: 'jetpack', name: { tr: 'Jetpack', en: 'Jetpack' }, icon: '🚀', gem: 50, r: 'e', build: buildJetpack, mount: { x: 0, y: 0.7, z: 1.15 } },
+  { id: 'radar', name: { tr: 'Radar Çanağı', en: 'Radar Dish' }, icon: '📡', price: 1400, r: 'r', build: buildRadar, mount: { x: 0, y: 1.5, z: 0.12 } }, // SEZON 2 (FAZ3)
 ];
+function buildRadar() {
+  const g = new THREE.Group();
+  g.add(aMesh(new THREE.CylinderGeometry(0.16, 0.2, 0.12, 12), accMat(0x3a4048, { metal: 0.6, rough: 0.4 }), 0, 0.06, 0)); // taban
+  g.add(aMesh(new THREE.CylinderGeometry(0.04, 0.04, 0.42, 8), accMat(0x8a949e, { metal: 0.8, rough: 0.3 }), 0, 0.3, 0)); // direk
+  const dish = aMesh(new THREE.SphereGeometry(0.34, 18, 12, 0, Math.PI * 2, 0, Math.PI * 0.42), accMat(0xdfe6ee, { metal: 0.7, rough: 0.25 }), 0, 0.52, 0, { rx: -Math.PI * 0.32 }); // çanak (yarım küre, geriye yatık)
+  dish.material.side = THREE.DoubleSide; g.add(dish);
+  g.add(aMesh(new THREE.SphereGeometry(0.05, 8, 8), accMat(0xff3030, { glow: 0.8 }), 0, 0.62, -0.18)); // verici ucu (kırmızı)
+  return g;
+}
 const accById = id => ACCESSORIES.find(a => a.id === id);
 // kule-üstü oturan aksesuarlar (tank kule yüksekliğine göre kaydırılır); diğerleri gövdeye sabit
-const ACC_TURRET_SLOT = new Set(['surf', 'cone', 'tophat', 'duck', 'crown', 'disco']);
+const ACC_TURRET_SLOT = new Set(['surf', 'cone', 'tophat', 'duck', 'crown', 'disco', 'radar']);
 function disposeSubtree(o) { o.traverse(n => { if (n.isMesh) { if (n.geometry) n.geometry.dispose(); if (n.material) (Array.isArray(n.material) ? n.material : [n.material]).forEach(m => m.dispose()); } }); }
 // tank klonu temizliği (GPU sızıntısı fix): yalnız örneğe ÖZEL kaynaklar bırakılır (userData.owned malzeme klonları,
 // ownGeo işaretli geometriler — boss halkaları). Paylaşılan glTF geometri/malzemesine dokunmak diğer klonları bozar.
@@ -1658,8 +1692,9 @@ function disposeTank(root) {
 }
 // isim etiketi temizliği: DİKKAT — canvas dokular nameTexCache'te paylaşılır, dispose EDİLMEZ; yalnız sprite malzemesi örneğe özeldir
 function disposeLabel(l) { if (l && l.material) l.material.dispose(); }
-function applyAccessory(root, accId, tankDef) {
-  if (root.userData.accMesh) { root.remove(root.userData.accMesh); disposeSubtree(root.userData.accMesh); root.userData.accMesh = null; }
+function applyAccessory(root, accId, tankDef, slot) {
+  const key = slot === 2 ? 'accMesh2' : 'accMesh';
+  if (root.userData[key]) { root.remove(root.userData[key]); disposeSubtree(root.userData[key]); root.userData[key] = null; }
   const a = accById(accId); if (!a) return;
   const g = a.build(), mt = a.mount;
   let y = mt.y || 0;
@@ -1668,8 +1703,19 @@ function applyAccessory(root, accId, tankDef) {
   g.position.set(mt.x || 0, y, mt.z || 0);
   if (mt.rx) g.rotation.x = mt.rx; if (mt.ry) g.rotation.y = mt.ry; if (mt.rz) g.rotation.z = mt.rz;
   if (mt.s) g.scale.setScalar(mt.s);
-  root.add(g); root.userData.accMesh = g;
+  root.add(g); root.userData[key] = g;
 }
+// FAZ3: 2. yuva — kule + gövde aksesuarı birlikte (60💎 kalıcı). Takma mantığı: boş/uyumlu yuvaya, yoksa aynı tipteki yuvanın yerine.
+const accSlotType = id => (ACC_TURRET_SLOT.has(id) ? 't' : 'h');
+function equipAccessory(id) {
+  if (!profile.accessory) profile.accessory = id;
+  else if (profile.accSlot2 && !profile.accessory2 && accSlotType(id) !== accSlotType(profile.accessory)) profile.accessory2 = id;
+  else if (accSlotType(id) === accSlotType(profile.accessory)) profile.accessory = id;
+  else if (profile.accSlot2) profile.accessory2 = id;
+  else profile.accessory = id;
+  saveProfile(); setPlayerTank();
+}
+function unequipAccessory(id) { if (profile.accessory === id) profile.accessory = ''; if (profile.accessory2 === id) profile.accessory2 = ''; saveProfile(); setPlayerTank(); }
 
 // ---------------------------------------------------------------- yardımcılar
 function circleVsWalls(pos, radius) {
@@ -2071,13 +2117,14 @@ function setPlayerTank(overrideDef) {
   player.mesh = buildTank(def);
   applySkin(player.mesh, profile.skin);
   applyAccessory(player.mesh, profile.accessory, def);
+  if (profile.accSlot2 && profile.accessory2 && accSlotType(profile.accessory2) !== accSlotType(profile.accessory)) applyAccessory(player.mesh, profile.accessory2, def, 2); // 2. yuva
   player.mesh.position.set(player.x, 0, player.z);
   scene.add(player.mesh);
   playerTurret = player.mesh.getObjectByName('TankTurret');
   if (!playerTurret) player.mesh.traverse(o => { if (!playerTurret && o.name && o.name.indexOf('TankTurret') === 0) playerTurret = o; });
   turretBaseZ = playerTurret ? playerTurret.position.z : 0;
   player.stat = def;
-  player.stealth = false; player.noFireT = 0; player.regenT = 0; // mekanik durumları
+  player.stealth = false; player.noFireT = 0; player.regenT = 0; player.aegisT = 0; // mekanik durumları
   player.maxHealth = def.health;
   // tank kimlik mermisi (görsel premium): def.shot varsa yerel atışlar o renkte
   playerShotCustom = !!def.shot;
@@ -3187,6 +3234,7 @@ function buildShowroomTank() {
   // seçili tankta oyuncunun kaplaması, diğerlerinde varsayılan görünüm
   applySkin(m, showroom.tankId === profile.selected ? profile.skin : 'default');
   applyAccessory(m, showroom.accId, def); // önizlenen/takılı aksesuar
+  if (showroom.mode === 'tank' && showroom.tankId === profile.selected && profile.accSlot2 && profile.accessory2) applyAccessory(m, profile.accessory2, def, 2); // 2. yuva vitrinde
   // glow malzemelerini KLONLA (paylaşılan glTF malzemesinde nabız oyun-içi tanklara sızmasın) → vitrinde nabız atsın
   m.userData.glowMats = [];
   m.traverse(o => {
@@ -3447,15 +3495,21 @@ function renderAccessories() {
   const wrap = $('cardwrap-garage');
   wrap.style.cssText = 'display:flex;flex-wrap:wrap;justify-content:center;gap:12px;margin:12px 8px';
   wrap.innerHTML = '';
+  // FAZ3: 2. yuva kilidi (60💎) — başlık butonu
+  if (!profile.accSlot2) {
+    const sb = document.createElement('button'); sb.className = 'mbtn small gold' + ((profile.gems || 0) < 60 ? ' cant' : ''); sb.style.cssText = 'width:100%;max-width:360px;margin:0 auto 6px'; sb.textContent = t.slot2Buy;
+    sb.onclick = () => { if ((profile.gems || 0) < 60) return showToast(t.noMoney); profile.gems -= 60; profile.accSlot2 = true; saveProfile(); updateGemBar(); sfxPower(); showToast(t.slot2Got, 3800); track('gem_spend', { sink: 'slot2', n: 60 }); renderAccessories(); };
+    wrap.appendChild(sb);
+  }
   // "aksesuar yok" (çıkar) kartı
-  const none = document.createElement('div'); none.className = 'card' + (!profile.accessory ? ' sel' : '');
+  const none = document.createElement('div'); none.className = 'card' + (!profile.accessory && !profile.accessory2 ? ' sel' : '');
   none.innerHTML = `<div class="cname">${t.accNone}</div><div class="cswatch" style="background:linear-gradient(135deg,#2a3038,#14181e);display:flex;align-items:center;justify-content:center;font-size:26px">🚫</div>`;
   const nb = document.createElement('button'); nb.className = 'mbtn small';
-  if (!profile.accessory) { nb.textContent = t.selected; nb.disabled = true; }
-  else { nb.textContent = t.accRemove; nb.onclick = () => { profile.accessory = ''; saveProfile(); setPlayerTank(); renderAccessories(); }; }
+  if (!profile.accessory && !profile.accessory2) { nb.textContent = t.selected; nb.disabled = true; }
+  else { nb.textContent = t.accRemove; nb.onclick = () => { profile.accessory = ''; profile.accessory2 = ''; saveProfile(); setPlayerTank(); renderAccessories(); }; }
   none.appendChild(nb); wrap.appendChild(none);
   for (const a of ACCESSORIES) {
-    const owned = (profile.accessories || []).includes(a.id), equipped = profile.accessory === a.id;
+    const owned = (profile.accessories || []).includes(a.id), equipped = profile.accessory === a.id || profile.accessory2 === a.id;
     const rar = RARITY[a.r];
     const card = document.createElement('div'); card.className = 'card' + (equipped ? ' sel' : '');
     const ath = renderAccThumb(a); // gerçek 3B aksesuar görseli (emoji yalnız fallback)
@@ -3465,16 +3519,16 @@ function renderAccessories() {
         : `<div class="cswatch cswatch-3d" style="background:radial-gradient(circle at 50% 42%,#2b3440,#12161c);display:flex;align-items:center;justify-content:center;font-size:30px"><span>${a.icon}</span><span class="cs-3d">🔍 3B</span></div>`);
     card.querySelector('.cswatch').onclick = () => openAccShowroom(a.id); // ikona dokun → 3B önizleme (tanka takılı hali)
     const btn = document.createElement('button'); btn.className = 'mbtn small' + (a.gem || a.r === 'e' ? ' gold' : '');
-    if (equipped) { btn.textContent = t.accRemove; btn.onclick = () => { profile.accessory = ''; saveProfile(); setPlayerTank(); renderAccessories(); }; }
-    else if (owned) { btn.textContent = t.accEquip; btn.onclick = () => { profile.accessory = a.id; saveProfile(); setPlayerTank(); renderAccessories(); }; }
+    if (equipped) { btn.textContent = t.accRemove; btn.onclick = () => { unequipAccessory(a.id); renderAccessories(); }; }
+    else if (owned) { btn.textContent = t.accEquip; btn.onclick = () => { equipAccessory(a.id); renderAccessories(); }; }
     else {
       btn.innerHTML = `${t.buy} · ${a.gem ? '💎' + a.gem : '🪙' + a.price}`;
       btn.classList.toggle('cant', a.gem ? (profile.gems || 0) < a.gem : profile.coins < a.price);
       btn.onclick = () => {
         if (a.gem) { if ((profile.gems || 0) < a.gem) return showToast(T().noMoney); profile.gems -= a.gem; } else { if (profile.coins < a.price) return showToast(T().noMoney); profile.coins -= a.price; }
-        profile.accessories = profile.accessories || []; profile.accessories.push(a.id); profile.accessory = a.id;
+        profile.accessories = profile.accessories || []; profile.accessories.push(a.id);
         track('soft_purchase', { t: 'acc', id: a.id, cur: a.gem ? 'g' : 'c', amt: a.gem || a.price });
-        saveProfile(); sfxCoin(); updateCoinBar(); setPlayerTank(); renderAccessories();
+        equipAccessory(a.id); sfxCoin(); updateCoinBar(); renderAccessories();
       };
     }
     card.appendChild(btn); wrap.appendChild(card);
@@ -4812,6 +4866,7 @@ function updateSettingsLabels() {
   $('set-quality').textContent = `${t.setQuality}: ${settings.quality === 'low' ? t.qLow : t.qHigh}`;
   $('set-haptic').textContent = `${t.setHaptic}: ${settings.haptics ? t.onW : t.offW}`;
   $('set-autofire').textContent = `${t.setAutoFire}: ${settings.autoFire ? t.onW : t.offW}`;
+  { const sb = $('set-stick'); sb.style.display = IS_TOUCH ? '' : 'none'; sb.textContent = `${t.setStick}: ${settings.stick === 'tight' ? t.stickT : settings.stick === 'wide' ? t.stickW : t.stickN}`; }
   const nb2 = $('set-notifs'); nb2.style.display = isNativeApp() ? '' : 'none';
   nb2.textContent = `${t.setNotifs}: ${settings.notifs ? t.onW : t.offW}`;
   $('set-privacy').textContent = t.privacyLbl;
@@ -4841,6 +4896,7 @@ $('set-sound').addEventListener('click', () => { // 3 kademe: AÇIK → KISIK �
 });
 $('set-haptic').addEventListener('click', () => { settings.haptics = !settings.haptics; saveSettings(); updateSettingsLabels(); haptic('MEDIUM'); });
 $('set-autofire').addEventListener('click', () => { settings.autoFire = !settings.autoFire; saveSettings(); updateSettingsLabels(); });
+$('set-stick').addEventListener('click', () => { settings.stick = settings.stick === 'normal' ? 'tight' : settings.stick === 'tight' ? 'wide' : 'normal'; saveSettings(); updateSettingsLabels(); });
 $('set-notifs').addEventListener('click', () => { settings.notifs = !settings.notifs; saveSettings(); updateSettingsLabels(); setupNotifs(); });
 $('set-music').addEventListener('click', () => { // 3 kademe: AÇIK → KISIK → KAPALI
   if (!settings.music) { settings.music = true; settings.volMusic = 1; startMusic(); }
@@ -4902,8 +4958,8 @@ if (IS_TOUCH) {
     if (d > max) { dx = dx / d * max; dy = dy / d * max; }
     setKnob(dx, dy);
     const nx = dx / max, ny = dy / max;
-    touchCtl.turn = Math.abs(nx) > 0.2 ? -nx : 0;
-    touchCtl.move = Math.abs(ny) > 0.2 ? -ny : 0;
+    touchCtl.turn = Math.abs(nx) > stickDz() ? -nx : 0;
+    touchCtl.move = Math.abs(ny) > stickDz() ? -ny : 0;
   };
   stick.addEventListener('touchstart', e => { e.preventDefault(); const t = e.changedTouches[0]; sid = t.identifier; applyStick(t); }, { passive: false });
   stick.addEventListener('touchmove', e => { for (const t of e.changedTouches) { if (t.identifier !== sid) continue; e.preventDefault(); applyStick(t); } }, { passive: false });
@@ -5028,7 +5084,7 @@ function updateEnemy(e, dt, tgt) {
       if (e.vulnRing) { e.vulnRing.material.opacity = 0.35 + Math.abs(Math.sin(clock.elapsedTime * 8)) * 0.5; if (e.vulnT <= 0) e.vulnRing.visible = false; }
     }
   }
-  if (wantMove !== 0) { e.x += fwdX(e.a) * es * wantMove * dt; e.z += fwdZ(e.a) * es * wantMove * dt; }
+  if (wantMove !== 0) { const mud = hazards.length && hazardAt(e.x, e.z, 'mud') ? 0.6 : 1; e.x += fwdX(e.a) * es * wantMove * dt * mud; e.z += fwdZ(e.a) * es * wantMove * dt * mud; }
   const pos = { x: e.x, z: e.z };
   circleVsWalls(pos, TANK_R);
   e.x = pos.x; e.z = pos.z;
@@ -5202,6 +5258,7 @@ function tick() {
         const st = player.noFireT > 2.5;
         if (st !== !!player.stealth) { player.stealth = st; setPlayerOpacity(st ? 0.45 : 1); }
       }
+      if (mechIs('aegis')) { player.aegisT = (player.aegisT || 0) + dt; if (player.aegisT >= 25 && player.shieldT <= 0) { player.aegisT = 0; player.shieldT = 4; popFloater(player.x, 2.6, player.z, '🛡️', '#6be7ff'); sfxPower(); } } // Burç: otomatik kalkan
       if (mechIs('regen')) { player.regenT = (player.regenT || 0) + dt; if (player.regenT >= 40) { player.regenT = 0; if (player.health < player.maxHealth) { player.health++; renderHealth(); popFloater(player.x, 2.6, player.z, '+1 ❤️', '#7dff9b'); } } }
       if (player.speedT > 0) player.speedT -= dt;
       if (player.tripleT > 0) player.tripleT -= dt;
@@ -5210,7 +5267,7 @@ function tick() {
       let move = (keys.KeyW || keys.ArrowUp ? 1 : 0) - (keys.KeyS || keys.ArrowDown ? 1 : 0) + touchCtl.move;
       turn = Math.max(-1, Math.min(1, turn)); move = Math.max(-1, Math.min(1, move));
       player.a += turn * player.stat.turn * dt;
-      player.speed = move * player.stat.speed * (player.speedT > 0 ? 1.6 : 1) * bSpeed();
+      player.speed = move * player.stat.speed * (player.speedT > 0 ? 1.6 : 1) * bSpeed() * ((hazards.length && !mechIs('hover') && hazardAt(player.x, player.z, 'mud')) ? 0.6 : 1); // çamur
       const dvx = fwdX(player.a) * player.speed, dvz = fwdZ(player.a) * player.speed;
       const onIce = hazards.length && !mechIs('hover') && hazardAt(player.x, player.z, 'ice'); // Hover: buzda kaymaz
       if (onIce) {
