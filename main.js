@@ -452,19 +452,33 @@ const TANKS = [
   // veriyordu. Pahalı tanklar artık YAN-BASAMAK (karakter) + `shot` kimlik rengi (mermi/iz — görsel premium).
   { id: 'recruit',  name: { tr: 'Acemi',      en: 'Recruit'  }, price: 0,    color: 0x4a5d26, scale: 1.00, health: 5, speed: 8.0,  turn: 2.6, cool: 0.45, bspeed: 24 },
   { id: 'scout',    name: { tr: 'Kaşif',      en: 'Scout'    }, price: 150,  color: 0x2f7db0, scale: 0.90, health: 4, speed: 10.6, turn: 3.3, cool: 0.42, bspeed: 28 },
-  { id: 'guardian', name: { tr: 'Muhafız',    en: 'Guardian' }, price: 300,  color: 0x707070, scale: 1.15, health: 8, speed: 6.4,  turn: 2.0, cool: 0.50, bspeed: 22 },
-  { id: 'sniper',   name: { tr: 'Nişancı',    en: 'Sniper'   }, price: 500,  color: 0x7a3aa0, scale: 1.00, health: 5, speed: 8.6,  turn: 2.8, cool: 0.40, bspeed: 42, shot: 0xb46aff },
-  { id: 'phantom',  name: { tr: 'Hayalet',    en: 'Phantom'  }, price: 1000,  color: 0x1aa37a, scale: 1.00, health: 6, speed: 9.6,  turn: 3.0, cool: 0.40, bspeed: 32, glow: true, shot: 0x3affc8 },
-  { id: 'goldking', name: { tr: 'Altın Kral', en: 'Gold King'}, price: 2200, color: 0xffcc33, scale: 1.08, health: 8, speed: 9.2,  turn: 2.9, cool: 0.38, bspeed: 36, glow: true, metal: true, shot: 0xffd24a },
+  { id: 'guardian', name: { tr: 'Muhafız',    en: 'Guardian' }, price: 300,  color: 0x707070, scale: 1.15, health: 8, speed: 6.4,  turn: 2.0, cool: 0.50, bspeed: 22, mech: 'regen' },
+  { id: 'sniper',   name: { tr: 'Nişancı',    en: 'Sniper'   }, price: 500,  color: 0x7a3aa0, scale: 1.00, health: 5, speed: 8.6,  turn: 2.8, cool: 0.40, bspeed: 42, shot: 0xb46aff, mech: 'pierce' },
+  { id: 'phantom',  name: { tr: 'Hayalet',    en: 'Phantom'  }, price: 1000,  color: 0x1aa37a, scale: 1.00, health: 6, speed: 9.6,  turn: 3.0, cool: 0.40, bspeed: 32, glow: true, shot: 0x3affc8, mech: 'stealth' },
+  { id: 'goldking', name: { tr: 'Altın Kral', en: 'Gold King'}, price: 2200, color: 0xffcc33, scale: 1.08, health: 8, speed: 9.2,  turn: 2.9, cool: 0.38, bspeed: 36, glow: true, metal: true, shot: 0xffd24a, mech: 'rich' },
   { id: 'heavy',    name: { tr: 'Ağır Tank',   en: 'Heavy Tank'}, price: 4200, color: 0x6b6f4a, scale: 0.95, health: 11, speed: 5.6, turn: 1.8, cool: 0.50, bspeed: 30, model: 'heavy', metal: true, turretTop: 1.8, shot: 0xffb45a },
-  { id: 'twin',     name: { tr: 'İkiz Namlu',  en: 'Twin Cannon'}, price: 5500, color: 0x556047, scale: 0.95, health: 7,  speed: 8.4, turn: 2.8, cool: 0.38, bspeed: 30, model: 'twin', turretTop: 1.62, shot: 0xbfe84a },
-  { id: 'arty',     name: { tr: 'Obüs',        en: 'Howitzer'  }, price: 7000, color: 0x6a6248, scale: 0.95, health: 6,  speed: 5.4, turn: 1.7, cool: 0.60, bspeed: 46, model: 'arty', turretTop: 1.55, shot: 0xffc27a },
+  { id: 'twin',     name: { tr: 'İkiz Namlu',  en: 'Twin Cannon'}, price: 5500, color: 0x556047, scale: 0.95, health: 7,  speed: 8.4, turn: 2.8, cool: 0.52, bspeed: 30, model: 'twin', turretTop: 1.62, shot: 0xbfe84a, mech: 'twin' },
+  { id: 'arty',     name: { tr: 'Obüs',        en: 'Howitzer'  }, price: 7000, color: 0x6a6248, scale: 0.95, health: 6,  speed: 5.4, turn: 1.7, cool: 0.60, bspeed: 46, model: 'arty', turretTop: 1.55, shot: 0xffc27a, mech: 'lob' },
   // coin merdiveninin tepesi — dozer bıçaklı süper-ağır; SIDEGRADE felsefesi: güç değil karakter (yavaş+tanky, ateş hızı ORTALAMA ALTINDA)
-  { id: 'mamut',    name: { tr: 'Mamut',       en: 'Mammoth'   }, price: 9500, color: 0x525a3a, scale: 1.18, health: 12, speed: 5.0, turn: 1.6, cool: 0.48, bspeed: 28, model: 'mamut', metal: true, turretTop: 1.9, shot: 0xff9a3a },
-  { id: 'hover',    name: { tr: 'Hover Tank',  en: 'Hover Tank'}, gem: 75, color: 0x3a4450, scale: 1.00, health: 5, speed: 12.0, turn: 3.5, cool: 0.40, bspeed: 34, model: 'hover', metal: true, glow: true, turretTop: 1.5, shot: 0x35e0ff },
-  { id: 'titan',    name: { tr: 'Titan',       en: 'Titan'     }, gem: 150, color: 0x40444a, scale: 1.05, health: 13, speed: 5.2, turn: 1.6, cool: 0.44, bspeed: 32, model: 'titan', metal: true, glow: true, turretTop: 2.05, shot: 0xff4a3a },
+  { id: 'mamut',    name: { tr: 'Mamut',       en: 'Mammoth'   }, price: 9500, color: 0x525a3a, scale: 1.18, health: 12, speed: 5.0, turn: 1.6, cool: 0.48, bspeed: 28, model: 'mamut', metal: true, turretTop: 1.9, shot: 0xff9a3a, mech: 'ram' },
+  { id: 'hover',    name: { tr: 'Hover Tank',  en: 'Hover Tank'}, gem: 75, color: 0x3a4450, scale: 1.00, health: 5, speed: 12.0, turn: 3.5, cool: 0.40, bspeed: 34, model: 'hover', metal: true, glow: true, turretTop: 1.5, shot: 0x35e0ff, mech: 'hover' },
+  { id: 'titan',    name: { tr: 'Titan',       en: 'Titan'     }, gem: 150, color: 0x40444a, scale: 1.05, health: 13, speed: 5.2, turn: 1.6, cool: 0.44, bspeed: 32, model: 'titan', metal: true, glow: true, turretTop: 2.05, shot: 0xff4a3a, mech: 'knock' },
 ];
 const tankById = id => TANKS.find(t => t.id === id) || TANKS[0];
+// FAZ2 (plan A-4): TANK MEKANİK KİMLİĞİ — yan-basamak (güç değil karakter); yalnız solo'da (PvP eşit tank, coop authority-dışı)
+const MECH = {
+  twin:    { tr: 'Çift namlu: her atışta 2 mermi (tempo düşük)', en: 'Twin barrel: 2 shells per shot (slower rate)' },
+  lob:     { tr: 'Havan: mermi duvarları aşar, 18 birimde alan patlaması', en: 'Mortar: shells fly over walls, splash at 18 units' },
+  stealth: { tr: '2.5 sn ateş etmezsen gizlenirsin (görüş ×0.45)', en: 'Hold fire 2.5s to cloak (enemy sight ×0.45)' },
+  ram:     { tr: 'Hızlı çarpma düşmana 1 hasar (sana 0)', en: 'Ramming at speed deals 1 dmg (you take 0)' },
+  hover:   { tr: 'Buzda kaymaz, mermi +1 sekme', en: 'No ice slip, +1 bullet bounce' },
+  rich:    { tr: 'Yok etme parası +%10', en: '+10% kill coins' },
+  pierce:  { tr: 'Mermi ilk düşmanı deler', en: 'Shells pierce the first enemy' },
+  regen:   { tr: 'Her 40 sn +1 can', en: '+1 HP every 40s' },
+  knock:   { tr: 'Vurduğun düşman 2 birim geri savrulur, 0.4 sn sersem', en: 'Hits knock enemies back 2 units, 0.4s stun' },
+};
+const mechIs = m => mode === 'solo' && !!(player && player.stat && player.stat.mech === m);
+const mechLine = def => def.mech && MECH[def.mech] ? `<div class="cstat" style="color:#ffd76a;white-space:normal;line-height:1.25">✦ ${MECH[def.mech][lang]}</div>` : '';
 const STAT_MAX = { health: 16, speed: 14.2, fire: 3.4 }; // sıkıştırılmış bantlara göre çubuk tavanları
 // tank yükseltmeleri
 const UPGRADES = [
@@ -2021,6 +2035,7 @@ function setPlayerTank(overrideDef) {
   if (!playerTurret) player.mesh.traverse(o => { if (!playerTurret && o.name && o.name.indexOf('TankTurret') === 0) playerTurret = o; });
   turretBaseZ = playerTurret ? playerTurret.position.z : 0;
   player.stat = def;
+  player.stealth = false; player.noFireT = 0; player.regenT = 0; // mekanik durumları
   player.maxHealth = def.health;
   // tank kimlik mermisi (görsel premium): def.shot varsa yerel atışlar o renkte
   playerShotCustom = !!def.shot;
@@ -2077,8 +2092,17 @@ function fire(owner, angOff = 0, playerShot = null) {
   const bTeam = (mode === 'team' && team) ? (isPlayer ? team.mine : owner.team) : null;
   const bOwner = (mode === 'team' && team) ? (isPlayer ? team.you : owner.pid) : null;
   // E1: oyuncu mermisi PvE'de 2 sekme yapar (MEGA SEKME klip anının hammaddesi); düşman/PvP 1 sekme (denge)
-  const nB = ((isPlayer && (mode === 'solo' || mode === 'coop')) ? 2 : 1) + ((isPlayer && buildOn() && matchBuild.bounce) ? 1 : 0); // build: Ekstra Sekme
-  bullets.push({ mesh, fromPlayer: isPlayer, playerShot: playerShot == null ? isPlayer : playerShot, vx: fwdX(a) * sp, vz: fwdZ(a) * sp, life: 2.6, bounces: nB, b0: nB, team: bTeam, owner: bOwner });
+  const nB = ((isPlayer && (mode === 'solo' || mode === 'coop')) ? 2 : 1) + ((isPlayer && buildOn() && matchBuild.bounce) ? 1 : 0) + ((isPlayer && mechIs('hover')) ? 1 : 0); // build: Ekstra Sekme; Hover: +1
+  const b = { mesh, fromPlayer: isPlayer, playerShot: playerShot == null ? isPlayer : playerShot, vx: fwdX(a) * sp, vz: fwdZ(a) * sp, life: 2.6, bounces: nB, b0: nB, team: bTeam, owner: bOwner };
+  if (isPlayer) {
+    player.noFireT = 0; // Hayalet: ateş gizlenmeyi bozar
+    if (mechIs('pierce')) b.pierce = 1;
+    if (mechIs('lob')) { // Obüs: havan mermisi — sabit 18 birim menzil, 1.1 sn uçuş, duvar aşar, alan hasarı
+      const travel = 18 - 2.6, dur = 1.1; b.lob = true; b.lobT = 0; b.lobDur = dur; b.vx = fwdX(a) * travel / dur; b.vz = fwdZ(a) * travel / dur; b.bounces = 0; b.b0 = 0; b.life = dur + 0.2; // namludan 18 birime iner
+      mesh.scale.setScalar(1.9); tail.visible = false;
+    }
+  }
+  bullets.push(b);
   muzzleFlash(bx, 1.3, bz);
   sfxFire();
   if (isPlayer && playerTurret) recoil = 0.14;
@@ -3128,7 +3152,7 @@ function renderShowroomUI() {
   $('sr-stats').innerHTML =
     `<div class="cstat">${t.sHealth}${barHTML(def.health / STAT_MAX.health)}</div>` +
     `<div class="cstat">${t.sSpeed}${barHTML(def.speed / STAT_MAX.speed)}</div>` +
-    `<div class="cstat">${t.sFire}${barHTML(fireRate / STAT_MAX.fire)}</div>`;
+    `<div class="cstat">${t.sFire}${barHTML(fireRate / STAT_MAX.fire)}</div>` + mechLine(def);
   act.className = 'mbtn sr-btn' + (base.glow ? ' gold' : '');
   if (sel) { act.textContent = t.selected; act.disabled = true; act.onclick = null; }
   else if (owned) {
@@ -3227,7 +3251,7 @@ function renderGarage() {
       swatchHTML +
       `<div class="cstat">${t.sHealth}${barHTML(def.health / STAT_MAX.health)}</div>` +
       `<div class="cstat">${t.sSpeed}${barHTML(def.speed / STAT_MAX.speed)}</div>` +
-      `<div class="cstat">${t.sFire}${barHTML(fireRate / STAT_MAX.fire)}</div>`;
+      `<div class="cstat">${t.sFire}${barHTML(fireRate / STAT_MAX.fire)}</div>` + mechLine(def);
     card.querySelector('.cswatch').onclick = () => openShowroom(base.id); // görsele dokun → 3B inceleme
     if (!thumb && base.model) ensureModel(base.model).then(() => { // tembel model indi → kart görselini yerinde tazele
       const u = renderTankThumb(base);
@@ -4796,7 +4820,7 @@ if (IS_TOUCH) {
 function updateBlitz(e, dt, tgt) {
   const tp = tgt || player, alive = tgt ? true : player.alive;
   const distP = Math.hypot(tp.x - e.x, tp.z - e.z);
-  const seen = alive && distP < (e.sight || 80) && losClear(e.x, e.z, tp.x, tp.z);
+  const seen = alive && distP < (e.sight || 80) * (!tgt && player.stealth ? 0.45 : 1) && losClear(e.x, e.z, tp.x, tp.z);
   e.cool -= dt; e.thinkT -= dt;
   let move = 0, spd = e.speed * (weeklyRun && weeklyRun.mod === 'fast' ? 1.3 : 1);
   const stun = () => { e.dashT = 0; e.stunT = 1.5; e.vulnT = 1.5; if (e.vulnRing) { e.vulnRing.visible = true; e.vulnRing.scale.setScalar(1); } popFloater(e.x, 3.6, e.z, T().vulnTxt, '#54ff7a'); };
@@ -4841,7 +4865,9 @@ function updateEnemy(e, dt, tgt) {
   const alive = tgt ? true : player.alive;
   const et = e.turn || ENEMY_TURN, es = (e.speed || ENEMY_SPEED) * (weeklyRun && weeklyRun.mod === 'fast' ? 1.3 : 1), keep = e.keep || 11;
   const distP = Math.hypot(tp.x - e.x, tp.z - e.z);
-  const seen = alive && distP < (e.sight || 55) && losClear(e.x, e.z, tp.x, tp.z);
+  if (e.knockT > 0) { e.knockT -= dt; e.mesh.position.set(e.x, 0, e.z); return; } // Titan: sersem
+  if (e.ramCool > 0) e.ramCool -= dt;
+  const seen = alive && distP < (e.sight || 55) * (!tgt && player.stealth ? 0.45 : 1) && losClear(e.x, e.z, tp.x, tp.z); // Hayalet gizliyken görüş kısalır
   let wantMove = 0;
   if (seen) {
     const target = headingTo(e.x, e.z, tp.x, tp.z);
@@ -4946,8 +4972,33 @@ const BUILD_OPTS = [
   { id: 'magnet', icon: '🧲', name: { tr: 'Mıknatıs', en: 'Magnet' }, desc: { tr: 'Yok etme parası +%20', en: '+20% kill coins' } },
   { id: 'vamp', icon: '🩹', name: { tr: 'Tamir', en: 'Repair' }, desc: { tr: 'Her 6 yok etmede +1 can', en: '+1 HP every 6 kills' } },
 ];
+// solo hasar akışı tek yerden (mermi, havan alanı, çarpma): savunmasız ×2, kill'de floater/coin/mega; true = öldü
+function soloDamage(e, dmg, b) {
+  const vuln = isBoss(e.type) && e.vulnT > 0;
+  e.hp -= dmg * (vuln ? 2 : 1);
+  if (vuln && b) popFloater(b.mesh.position.x, 2.6, b.mesh.position.z, 'x2!', '#54ff7a');
+  if (e.hp <= 0) {
+    e.alive = false; explode(e.x, 1.0, e.z, true); scene.remove(e.mesh); disposeTank(e.mesh);
+    popFloater(e.x, 2.2, e.z, '+' + e.score, isBoss(e.type) ? '#ff7a3a' : '#ffe86a');
+    popFloater(e.x, 3.1, e.z, '+🪙' + killCoins(e), '#ffd76a');
+    onEnemyKilled(e);
+    if (b && (b.b0 || 1) - b.bounces >= 2) megaBounce(e); // E1: çift sekmeyle kill
+    return true;
+  }
+  e.hitT = 0.14; if (b) explode(b.mesh.position.x, 1.0, b.mesh.position.z, false);
+  return false;
+}
+function knockEnemy(e, b) {
+  const len = Math.hypot(b.vx, b.vz) || 1;
+  const pos = { x: e.x + b.vx / len * 2, z: e.z + b.vz / len * 2 }; circleVsWalls(pos, TANK_R); e.x = pos.x; e.z = pos.z;
+  e.knockT = 0.4;
+}
+function setPlayerOpacity(op) {
+  if (!player.mesh) return;
+  player.mesh.traverse(o => { if (o.isMesh && o.material && o.material.userData && o.material.userData.owned) { o.material.transparent = op < 1; o.material.opacity = op; o.material.needsUpdate = true; } });
+}
 // kill ödülü tek yerden (mıknatıs çarpanı) + tamir sayacı — 3 kill noktası (solo/coop authority/damageEnemy) bunu çağırır
-function killCoins(e) { return Math.round(e.coins * (buildOn() && matchBuild.magnet ? 1.2 : 1) * (isDoubleGold() ? 2 : 1) * (mode === 'solo' && runKits.magnet ? 1.15 : 1)); } // Çifte Altın ×2, Mıknatıs kiti ×1.15
+function killCoins(e) { return Math.round(e.coins * (buildOn() && matchBuild.magnet ? 1.2 : 1) * (isDoubleGold() ? 2 : 1) * (mode === 'solo' && runKits.magnet ? 1.15 : 1) * (mechIs('rich') ? 1.1 : 1)); } // Altın Kral +%10 // Çifte Altın ×2, Mıknatıs kiti ×1.15
 function onEnemyKilled(e) {
   const c = killCoins(e);
   score += e.score; roundCoins += c; profile.kills++; addCoins(c); updateHUD();
@@ -5025,6 +5076,12 @@ function tick() {
   if (state === 'play' && !paused && !buildChoosing) {
     if (player.alive) {
       player.cool -= dt; player.inv -= dt;
+      if (mechIs('stealth')) { // Hayalet: 2.5 sn ateşsiz → gizlenir (boya opaklığı 0.45, düşman görüşü ×0.45)
+        player.noFireT = (player.noFireT || 0) + dt;
+        const st = player.noFireT > 2.5;
+        if (st !== !!player.stealth) { player.stealth = st; setPlayerOpacity(st ? 0.45 : 1); }
+      }
+      if (mechIs('regen')) { player.regenT = (player.regenT || 0) + dt; if (player.regenT >= 40) { player.regenT = 0; if (player.health < player.maxHealth) { player.health++; renderHealth(); popFloater(player.x, 2.6, player.z, '+1 ❤️', '#7dff9b'); } } }
       if (player.speedT > 0) player.speedT -= dt;
       if (player.tripleT > 0) player.tripleT -= dt;
       if (player.shieldT > 0) player.shieldT -= dt;
@@ -5034,7 +5091,7 @@ function tick() {
       player.a += turn * player.stat.turn * dt;
       player.speed = move * player.stat.speed * (player.speedT > 0 ? 1.6 : 1) * bSpeed();
       const dvx = fwdX(player.a) * player.speed, dvz = fwdZ(player.a) * player.speed;
-      const onIce = hazards.length && hazardAt(player.x, player.z, 'ice');
+      const onIce = hazards.length && !mechIs('hover') && hazardAt(player.x, player.z, 'ice'); // Hover: buzda kaymaz
       if (onIce) {
         const k = 1 - Math.exp(-2.2 * dt); // buzda momentum → kayma
         player.vx += (dvx - player.vx) * k;
@@ -5057,6 +5114,7 @@ function tick() {
           const push = (TANK_R * 2 - d) / (e.solid === false ? 1 : 2);
           player.x += (dx / d) * push; player.z += (dz / d) * push;
           if (e.solid !== false) { e.x -= (dx / d) * push; e.z -= (dz / d) * push; }
+          if (mechIs('ram') && e.alive && Math.abs(player.speed) > 3.5 && !(e.ramCool > 0)) { e.ramCool = 1.2; soloDamage(e, 1, null); explode(e.x, 1.0, e.z, false); shake = Math.max(shake, 0.5); } // Mamut: çarpma hasarı
         }
       }
       // E2: oto-ateş — menzildeki görünür en yakın düşmana namlu yaklaşık bakıyorsa kendiliğinden ateşle (yalnız PvE)
@@ -5068,6 +5126,7 @@ function tick() {
       }
       if ((keys.Space || touchCtl.fire || autoF) && player.cool <= 0) {
         if (player.tripleT > 0 || bMulti()) { fire(player, -0.17); fire(player, 0); fire(player, 0.17); }
+        else if (mechIs('twin')) { fire(player, -0.055); fire(player, 0.055); } // İkiz Namlu
         else fire(player);
         player.cool = player.stat.cool * bFire();
         tutEvent('fire');
@@ -5116,6 +5175,19 @@ function tick() {
       const b = bullets[i];
       b.life -= dt;
       let dead = b.life <= 0;
+      if (b.lob) { // Obüs havan mermisi: parabol, duvar/varil yok sayılır, inişte alan hasarı
+        b.lobT += dt; const p = Math.min(1, b.lobT / b.lobDur);
+        b.mesh.position.x += b.vx * dt; b.mesh.position.z += b.vz * dt; b.mesh.position.y = 1.13 + 24 * p * (1 - p);
+        if (p >= 1 || dead) {
+          const x = b.mesh.position.x, z = b.mesh.position.z;
+          explode(x, 1.0, z, true); sfxBoom(false); shake = Math.max(shake, 0.4);
+          if (mode === 'solo') for (const e of enemies) if (e.alive && Math.hypot(e.x - x, e.z - z) < 3.6) soloDamage(e, 1 + bDmg(), null);
+          if (mode === 'solo' || (mode === 'coop' && isAuthority)) for (const cv of covers.slice()) if (Math.hypot(cv.x - x, cv.z - z) < 3.6) damageCover(cv);
+          dead = true;
+        }
+        if (dead) { scene.remove(b.mesh); bullets.splice(i, 1); }
+        continue;
+      }
       // anti-tünelleme: kare adımı ≤0.8 birimlik dilimlere bölünür — düşük FPS'te hızlı mermi (bspeed 42 × dt 0.05 ≈ 2.1 birim)
       // tek adımda duvar hücresini atlayabiliyordu; dilim başına duvar testi bunu kapatır (sabit-adım simülasyonun hafif hali)
       if (!dead) {
@@ -5220,17 +5292,10 @@ function tick() {
         if (mode === 'solo') {
           for (const e of enemies) {
             const hr = 1.4 * (isBoss(e.type) ? 1.7 : 1);
-            if (e.alive && Math.hypot(b.mesh.position.x - e.x, b.mesh.position.z - e.z) < hr) {
-              const vuln = isBoss(e.type) && e.vulnT > 0; // savunmasız pencere: 2x hasar
-              e.hp -= (1 + bDmg()) * (vuln ? 2 : 1);
-              if (vuln) popFloater(b.mesh.position.x, 2.6, b.mesh.position.z, 'x2!', '#54ff7a');
-              if (e.hp <= 0) {
-                e.alive = false; explode(e.x, 1.0, e.z, true); scene.remove(e.mesh); disposeTank(e.mesh);
-                popFloater(e.x, 2.2, e.z, '+' + e.score, isBoss(e.type) ? '#ff7a3a' : '#ffe86a');
-                popFloater(e.x, 3.1, e.z, '+🪙' + killCoins(e), '#ffd76a'); // denetim: en büyük musluk görünmezdi — kill parası artık ekranda
-                onEnemyKilled(e);
-                if ((b.b0 || 1) - b.bounces >= 2) megaBounce(e); // E1: çift sekmeyle kill
-              } else { e.hitT = 0.14; explode(b.mesh.position.x, 1.0, b.mesh.position.z, false); }
+            if (e.alive && !(b.hitIds && b.hitIds.has(e.id)) && Math.hypot(b.mesh.position.x - e.x, b.mesh.position.z - e.z) < hr) {
+              const killed = soloDamage(e, 1 + bDmg(), b);
+              if (!killed && mechIs('knock') && !isBoss(e.type)) knockEnemy(e, b); // Titan: geri savurma + 0.4 sn sersem
+              if (b.pierce > 0) { b.pierce--; (b.hitIds || (b.hitIds = new Set())).add(e.id); continue; } // Nişancı/Delici: ilk düşmanı deler
               dead = true; break;
             }
           }
