@@ -3,7 +3,12 @@
 Bu oyunda kullanılan üçüncü taraf varlıklar ve lisansları. Third-party assets used in this game and their licenses.
 
 ## 3D Modeller / Models
-- `assets/tank_guardian.glb` (Muhafız): "Tank" — Quaternius, CC0 (Poly Pizza). https://poly.pizza/m/jWS1CLA0RO  (armature kaldırıldı, kule ayrıldı, decimate/dissolve, düz malzemeler, GLB export)
+- `assets/tank_guardian.glb` (Muhafız): "Tank" — Quaternius, CC0 (Poly Pizza, Animated Tank Pack). https://poly.pizza/m/jWS1CLA0RO
+- `assets/tank_sniper.glb` (Nişancı): "Tank" — Quaternius, CC0 (Poly Pizza, Animated Tank Pack). https://poly.pizza/m/FA5daiyZQq
+- `assets/tank_recruit.glb` (Acemi): "Tank" — Quaternius, CC0 (Poly Pizza, Animated Tank Pack). https://poly.pizza/m/cW3zvvkMOM
+- `assets/tank_goldking.glb` (Altın Kral): "Tank" — Quaternius, CC0 (Poly Pizza, Animated Tank Pack). https://poly.pizza/m/uYHpj7lz1J
+- `assets/tank_scout.glb` (Kaşif): "Tank" — Quaternius, CC0 (Poly Pizza, Toon Shooter Game Kit). https://poly.pizza/m/Dc4k4CooN3
+  (Quaternius modellerinde yapılan değişiklikler: armature/animasyon kaldırıldı, kule `TankTurret` olarak ayrıldı, yeniden yönlendirme/ölçek, remove doubles + limited dissolve + decimate, düz Principled malzemeler `TankPaint/TankLight/TankDark/GunMetal/TankWheel`, normalsiz GLB export. Modified.)
 - Tanklar (tank.glb, tank_heavy/twin/arty/mamut/hover/titan.glb) ve dekor setleri (decor_city/harbor/canyon.glb): Blender'da bu proje için özgün üretildi. Original, made in Blender for this project.
 
 ## HDRI / Aydınlatma

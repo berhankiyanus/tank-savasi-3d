@@ -458,12 +458,12 @@ const fmtTime = s => Math.floor(s / 60) + ':' + String(Math.floor(s) % 60).padSt
 const TANKS = [
   // DENGE (2026-09-18): atış aralığı bandı 0.38-0.60'a sıkıştırıldı — "iyi tank = 3-7× atış" hile hissi
   // veriyordu. Pahalı tanklar artık YAN-BASAMAK (karakter) + `shot` kimlik rengi (mermi/iz — görsel premium).
-  { id: 'recruit',  name: { tr: 'Acemi',      en: 'Recruit'  }, price: 0,    color: 0x4a5d26, scale: 1.00, health: 5, speed: 8.0,  turn: 2.6, cool: 0.45, bspeed: 24 },
-  { id: 'scout',    name: { tr: 'Kaşif',      en: 'Scout'    }, price: 150,  color: 0x2f7db0, scale: 0.90, health: 4, speed: 10.6, turn: 3.3, cool: 0.42, bspeed: 28 },
-  { id: 'guardian', name: { tr: 'Muhafız',    en: 'Guardian' }, price: 300,  color: 0x707070, scale: 1.00, health: 8, speed: 6.4,  turn: 2.0, cool: 0.50, bspeed: 22, mech: 'regen', model: 'guardian', turretTop: 2.05 }, // Quaternius tank (CC0) — kendi GLB'si, ölçek 1.0 (model zaten geniş: ±1.38)
-  { id: 'sniper',   name: { tr: 'Nişancı',    en: 'Sniper'   }, price: 500,  color: 0x7a3aa0, scale: 1.00, health: 5, speed: 8.6,  turn: 2.8, cool: 0.40, bspeed: 42, shot: 0xb46aff, mech: 'pierce' },
+  { id: 'recruit',  name: { tr: 'Acemi',      en: 'Recruit'  }, price: 0,    color: 0x4a5d26, scale: 1.00, health: 5, speed: 8.0,  turn: 2.6, cool: 0.45, bspeed: 24, model: 'recruit', turretTop: 1.78 },
+  { id: 'scout',    name: { tr: 'Kaşif',      en: 'Scout'    }, price: 150,  color: 0x2f7db0, scale: 0.90, health: 4, speed: 10.6, turn: 3.3, cool: 0.42, bspeed: 28, model: 'scout', turretTop: 2.17 },
+  { id: 'guardian', name: { tr: 'Muhafız',    en: 'Guardian' }, price: 300,  color: 0x707070, scale: 1.00, health: 8, speed: 6.4,  turn: 2.0, cool: 0.50, bspeed: 22, mech: 'regen', model: 'guardian', turretTop: 2.16 }, // Quaternius tank (CC0) — kendi GLB'si, ölçek 1.0 (model zaten geniş: ±1.38)
+  { id: 'sniper',   name: { tr: 'Nişancı',    en: 'Sniper'   }, price: 500,  color: 0x7a3aa0, scale: 1.00, health: 5, speed: 8.6,  turn: 2.8, cool: 0.40, bspeed: 42, shot: 0xb46aff, mech: 'pierce', model: 'sniper', turretTop: 1.33 },
   { id: 'phantom',  name: { tr: 'Hayalet',    en: 'Phantom'  }, price: 1000,  color: 0x1aa37a, scale: 1.00, health: 6, speed: 9.6,  turn: 3.0, cool: 0.40, bspeed: 32, glow: true, shot: 0x3affc8, mech: 'stealth' },
-  { id: 'goldking', name: { tr: 'Altın Kral', en: 'Gold King'}, price: 2200, color: 0xffcc33, scale: 1.08, health: 8, speed: 9.2,  turn: 2.9, cool: 0.38, bspeed: 36, glow: true, metal: true, shot: 0xffd24a, mech: 'rich' },
+  { id: 'goldking', name: { tr: 'Altın Kral', en: 'Gold King'}, price: 2200, color: 0xffcc33, scale: 1.08, health: 8, speed: 9.2,  turn: 2.9, cool: 0.38, bspeed: 36, glow: true, metal: true, shot: 0xffd24a, mech: 'rich', model: 'goldking', turretTop: 2.21 },
   { id: 'heavy',    name: { tr: 'Ağır Tank',   en: 'Heavy Tank'}, price: 4200, color: 0x6b6f4a, scale: 0.95, health: 11, speed: 5.6, turn: 1.8, cool: 0.50, bspeed: 30, model: 'heavy', metal: true, turretTop: 1.8, shot: 0xffb45a },
   { id: 'twin',     name: { tr: 'İkiz Namlu',  en: 'Twin Cannon'}, price: 5500, color: 0x556047, scale: 0.95, health: 7,  speed: 8.4, turn: 2.8, cool: 0.52, bspeed: 30, model: 'twin', turretTop: 1.62, shot: 0xbfe84a, mech: 'twin' },
   { id: 'arty',     name: { tr: 'Obüs',        en: 'Howitzer'  }, price: 7000, color: 0x6a6248, scale: 0.95, health: 6,  speed: 5.4, turn: 1.7, cool: 0.60, bspeed: 46, model: 'arty', turretTop: 1.55, shot: 0xffc27a, mech: 'lob' },
@@ -894,7 +894,7 @@ function getRoomEnv() {
 
 // ---------------------------------------------------------------- tank modelleri (tembel-yükleme)
 // farklı GLB gövde modelleri; ilk pakete girmez, seçilince/önizlenince yüklenir (performans bütçesi)
-const MODEL_PATHS = { guardian: 'assets/tank_guardian.glb', heavy: 'assets/tank_heavy.glb', hover: 'assets/tank_hover.glb', twin: 'assets/tank_twin.glb', arty: 'assets/tank_arty.glb', titan: 'assets/tank_titan.glb', mamut: 'assets/tank_mamut.glb' };
+const MODEL_PATHS = { recruit: 'assets/tank_recruit.glb', scout: 'assets/tank_scout.glb', sniper: 'assets/tank_sniper.glb', goldking: 'assets/tank_goldking.glb', guardian: 'assets/tank_guardian.glb', heavy: 'assets/tank_heavy.glb', hover: 'assets/tank_hover.glb', twin: 'assets/tank_twin.glb', arty: 'assets/tank_arty.glb', titan: 'assets/tank_titan.glb', mamut: 'assets/tank_mamut.glb' };
 const loadedModels = {}; // modelId -> gltf.scene
 const _modelLoader = new GLTFLoader();
 async function ensureModel(modelId) {
