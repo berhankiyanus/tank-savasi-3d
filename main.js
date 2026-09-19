@@ -21,6 +21,7 @@ const L = {
     patrolMsg: (c, h) => `🛡️ Tankın devriyedeydi: +🪙${c} (${h} saat)`,
     nextGoal: 'Sıradaki', weeklyLbl: '📅 HAFTANIN MODU', weeklyWin: 'Haftalık mod zaferi',
     modNames: { doubleBoss: 'Çift Boss', fast: 'Hızlı Düşmanlar', tough: 'Zırhlı Düşmanlar', bossRush: 'Boss Rush' },
+    kitsTitle: '🎒 SEFER KİTLERİ — bir sonraki koşuda kullanılır', kitReady: '✓ HAZIR', kitsArmed: k => `🎒 Kitler devrede: ${k}`, premBuy: '👑 Komutan Rayı · 💎120', premActive: '👑 Komutan Rayı aktif — her kademe ×2', premBought: n => `👑 Komutan Rayı alındı! Geriye dönük ${n} kademe ödülü verildi`, starterTitle: '🎁 BAŞLANGIÇ PAKETİ', starterDesc: '💎60 + Hover Tank + 🪙1000 + 🎰3', starterOnce: 'Tek seferlik · yeni komutan fırsatı', starterGot: '🎁 Başlangıç paketi alındı: Hover Tank garajda!',
     chapterWord: 'BÖLÜM', chVictories: 'zafer', chapterDone: (n, nm) => `📖 Bölüm ${n} tamamlandı: ${nm} — +🎰2 +💎1`,
     eventNames: { doubleGold: '🎉 ÇİFTE ALTIN', bossRush: '💀 BOSS RUSH' }, eventLeft: (h, m) => `${h}sa ${m}dk`, eventDoubleTip: '🎉 Çifte Altın: hafta sonu tüm koşularda yok etme parası ×2!', eventBossTip: '💀 Boss Rush: 5 dalga, her dalga boss — boss başı 150🪙, zaferde +🎰2', lbSpeed: '⏱ HIZ', lbSpeedTitle: '⏱ HAFTANIN EN HIZLI ZAFERLERİ',
     gemTip: 'Elmas al', namePh: 'İsmin', midW: 'KISIK', setNotifs: 'Bildirimler', streakFrozen: '🧊 Serin donduruldu — kaldığın yerden devam!', pityLine: n => `🛡️ Garanti: ${n} çekilişte Efsanevi`,
@@ -103,6 +104,7 @@ const L = {
     patrolMsg: (c, h) => `🛡️ Your tank was on patrol: +🪙${c} (${h}h)`,
     nextGoal: 'Next up', weeklyLbl: '📅 WEEKLY MODE', weeklyWin: 'Weekly mode victory',
     modNames: { doubleBoss: 'Double Boss', fast: 'Fast Enemies', tough: 'Armored Enemies', bossRush: 'Boss Rush' },
+    kitsTitle: '🎒 SORTIE KITS — used on your next run', kitReady: '✓ READY', kitsArmed: k => `🎒 Kits active: ${k}`, premBuy: '👑 Commander Track · 💎120', premActive: '👑 Commander Track active — every tier ×2', premBought: n => `👑 Commander Track unlocked! ${n} tier rewards granted retroactively`, starterTitle: '🎁 STARTER PACK', starterDesc: '💎60 + Hover Tank + 🪙1000 + 🎰3', starterOnce: 'One time · new commander offer', starterGot: '🎁 Starter pack claimed: Hover Tank is in your garage!',
     chapterWord: 'CHAPTER', chVictories: 'wins', chapterDone: (n, nm) => `📖 Chapter ${n} complete: ${nm} — +🎰2 +💎1`,
     eventNames: { doubleGold: '🎉 DOUBLE GOLD', bossRush: '💀 BOSS RUSH' }, eventLeft: (h, m) => `${h}h ${m}m`, eventDoubleTip: '🎉 Double Gold: kill coins ×2 in every run this weekend!', eventBossTip: '💀 Boss Rush: 5 waves, a boss every wave — 150🪙 per boss, +🎰2 on victory', lbSpeed: '⏱ SPEED', lbSpeedTitle: "⏱ THIS WEEK'S FASTEST VICTORIES",
     gemTip: 'Get gems', namePh: 'Your name', midW: 'LOW', setNotifs: 'Notifications', streakFrozen: '🧊 Streak frozen — pick up where you left off!', pityLine: n => `🛡️ Guaranteed Epic within ${n} spins`,
@@ -598,6 +600,39 @@ const CHAPTERS = [
   { maps: [10, 11, 8], name: { tr: 'Kıyı ve Kanyon', en: 'Coast and Canyon' }, brief: { tr: 'Son üç kale. Generali burada bitir.', en: 'The last three strongholds. Finish the General here.' } },
 ];
 const chapterOf = i => CHAPTERS.findIndex(c => c.maps.includes(i));
+// FAZ1 (plan C-1): SEFER KİTLERİ — tekrarlı coin lavabosu. Satın al = bir sonraki solo koşuya "hazırla" (profile.kits[id]=1), koşu başında tüketilir.
+const KITS = [
+  { id: 'shield', icon: '🛡️', name: { tr: 'Kalkan', en: 'Shield' }, desc: { tr: '12 sn kalkanla başla', en: 'Start with a 12s shield' }, price: 150 },
+  { id: 'magnet', icon: '🧲', name: { tr: 'Mıknatıs', en: 'Magnet' }, desc: { tr: 'Koşu parası +%15', en: 'Run coins +15%' }, price: 200 },
+  { id: 'card', icon: '🃏', name: { tr: 'Ekstra Kart', en: 'Extra Card' }, desc: { tr: "Dalga 1'de de kart seçimi", en: 'Card pick at wave 1 too' }, price: 250 },
+  { id: 'repair', icon: '🔧', name: { tr: 'Tamir', en: 'Repair' }, desc: { tr: "Dalga 5 ve 10'da +2 can", en: '+2 HP at waves 5 and 10' }, price: 120 },
+];
+let runKits = {}; // aktif koşuda tüketilen kitler
+function renderKits() {
+  const el = $('kitsrow'); if (!el) return;
+  const t = T();
+  el.innerHTML = `<div style="width:100%;text-align:center;color:#bfffcf;font-size:12.5px;font-weight:bold;letter-spacing:.5px;margin:4px 0 2px">${t.kitsTitle}</div>` +
+    KITS.map(k => { const armed = !!(profile.kits && profile.kits[k.id]); const cant = !armed && profile.coins < k.price;
+      return `<button class="mbtn small${armed ? ' gold' : ''}${cant ? ' cant' : ''}" data-kit="${k.id}" title="${k.desc[lang]}" style="margin:3px">${k.icon} ${k.name[lang]} · ${armed ? t.kitReady : '🪙' + k.price}</button>`; }).join('');
+  for (const b of el.querySelectorAll('[data-kit]')) b.onclick = () => buyKit(b.dataset.kit);
+}
+function buyKit(id) {
+  const k = KITS.find(x => x.id === id); if (!k) return;
+  profile.kits = profile.kits || {};
+  if (profile.kits[id]) { showToast(`${k.icon} ${k.desc[lang]}`, 2200); return; } // zaten hazır: açıklama
+  if (profile.coins < k.price) return showToast(T().noMoney);
+  profile.coins -= k.price; profile.kits[id] = 1; saveProfile(); updateCoinBar(); sfxCoin();
+  track('consumable_buy', { id }); track('coin_spend', { sink: 'kit', n: k.price });
+  showToast(`${k.icon} ${k.name[lang]} — ${k.desc[lang]}`, 2600);
+  renderKits();
+}
+function consumeKits() {
+  runKits = {}; profile.kits = profile.kits || {};
+  const used = [];
+  for (const k of KITS) if (profile.kits[k.id]) { runKits[k.id] = 1; profile.kits[k.id] = 0; used.push(k.icon); }
+  if (used.length) { saveProfile(); showToast(T().kitsArmed(used.join(' ')), 2800); }
+  if (runKits.shield) player.shieldT = 12;
+}
 const chapterWins = c => CHAPTERS[c].maps.filter(i => (profile.mapWins && profile.mapWins[i]) > 0).length;
 // v1 içerik küratörlüğü: öne çıkan üçlü (Klasik / Şehir Harabesi / Kanyon) — HIZLI OYNA rotasyonu + harita listesinde ⭐
 const QUICK_MAPS = [0, 9, 11];
@@ -2565,8 +2600,28 @@ function ensureSeason() {
   return profile.season;
 }
 function rewardText(r) { return r.coins ? `🪙 ${r.coins}` : r.tokens ? `🎰 ${r.tokens}` : r.gems ? `💎 ${r.gems}` : r.skin ? `🎨 ${skinById(r.skin).name[lang]}` : ''; }
+// FAZ1 (plan C-4): KOMUTAN RAYI — 120💎 ile sezon boyu her kademe ×2 (kaplama kademeleri +5💎); satın alınca geriye dönük. Elmas lavabosu.
+const PREMIUM_PRICE = 120;
+function premiumReward(tier) { const r = SEASON_REWARDS[tier - 1]; if (!r) return null; return r.skin ? { gems: 5 } : r; }
+function grantPremiumReward(tier, silent) {
+  const r = premiumReward(tier); if (!r) return;
+  if (r.coins) addCoins(r.coins);
+  if (r.gems) addGems(r.gems);
+  if (r.tokens) { profile.tokens = (profile.tokens || 0) + r.tokens; updateTokenBar(); }
+  if (!silent) showToast(`👑 ${rewardText(r)}`, 2600);
+}
+function buyPremium() {
+  const s = ensureSeason(); if (s.premium) return;
+  if ((profile.gems || 0) < PREMIUM_PRICE) return showToast(T().noMoney);
+  profile.gems -= PREMIUM_PRICE; s.premium = true; updateGemBar();
+  for (let tier = 1; tier <= s.tier; tier++) grantPremiumReward(tier, true);
+  saveProfile(); sfxPower(); haptic('HEAVY');
+  showToast(T().premBought(s.tier), 3800); track('gem_spend', { sink: 'season', n: PREMIUM_PRICE }); track('season_premium', { tier: s.tier });
+  renderSeason();
+}
 function grantSeasonReward(tier) {
   const r = SEASON_REWARDS[tier - 1]; if (!r) return;
+  if (profile.season && profile.season.premium) grantPremiumReward(tier, true);
   if (r.coins) addCoins(r.coins);
   if (r.gems) addGems(r.gems);
   if (r.tokens) { profile.tokens = (profile.tokens || 0) + r.tokens; updateTokenBar(); }
@@ -2592,10 +2647,12 @@ function renderSeason() {
   const daysLeft = Math.max(0, Math.ceil((endMs - Date.now()) / 86400000));
   $('season-head').innerHTML = `<div class="sh-name">${seasonName(s.id)}</div>` +
     `<div class="sh-sub">${t.seasonTier} ${s.tier}/${SEASON_LEN} &nbsp;·&nbsp; ⏳ ${t.daysLeft(daysLeft)}</div>` +
-    `<div class="sh-bar"><div class="sh-fill" style="width:${pct}%"></div></div>`;
+    `<div class="sh-bar"><div class="sh-fill" style="width:${pct}%"></div></div>` +
+    (s.premium ? `<div style="margin-top:8px;color:#ffd76a;font-weight:bold">${t.premActive}</div>` : `<button id="season-prem" class="mbtn small gold${(profile.gems || 0) < PREMIUM_PRICE ? ' cant' : ''}" style="margin-top:8px">${t.premBuy}</button>`);
+  const pb = $('season-prem'); if (pb) pb.onclick = buyPremium;
   $('season-track').innerHTML = SEASON_REWARDS.map((r, i) => {
-    const tier = i + 1, got = tier <= s.tier, cur = tier === s.tier + 1;
-    return `<div class="strow${got ? ' got' : cur ? ' cur' : ''}"><span class="st-t">${tier}</span><span class="st-r">${rewardText(r)}</span><span class="st-s">${got ? '✅' : cur ? '▶' : '🔒'}</span></div>`;
+    const tier = i + 1, got = tier <= s.tier, cur = tier === s.tier + 1, pr = premiumReward(tier);
+    return `<div class="strow${got ? ' got' : cur ? ' cur' : ''}"><span class="st-t">${tier}</span><span class="st-r">${rewardText(r)}</span><span class="st-r" style="opacity:${s.premium ? 1 : .55};color:#ffd76a">👑 ${rewardText(pr)}</span><span class="st-s">${got ? '✅' : cur ? '▶' : '🔒'}</span></div>`;
   }).join('');
 }
 let lbPeriod = 'day';
@@ -3282,11 +3339,31 @@ function openShop() {
   renderShop();
   showPanel('panel-shop');
 }
+// FAZ1 (plan C-4): BAŞLANGIÇ PAKETİ — ₺29,99 sabit SKU (ilk ödeme kırıcı): 60💎 + Hover + 1000🪙 + 3🎰; games≥6 sonrası tek seferlik görünür.
+const STARTER = { sku: 'starter_pack', price: '₺29,99', gems: 60, coins: 1000, tokens: 3, tank: 'hover' };
+function starterVisible() { return (profile.games || 0) >= 6 && !profile.starterBought; }
+async function buyStarter(btn) {
+  btn.disabled = true; const old = btn.textContent; btn.textContent = '...';
+  const ok = await Platform.purchase(STARTER.sku);
+  if (ok) {
+    addGems(STARTER.gems); addCoins(STARTER.coins); grantTokens(STARTER.tokens, true);
+    if (!profile.owned.includes(STARTER.tank)) profile.owned.push(STARTER.tank);
+    profile.starterBought = 1; saveProfile(); sfxPower(); haptic('HEAVY');
+    showToast(T().starterGot, 3800); track('iap', { sku: STARTER.sku, gems: STARTER.gems });
+    renderShop();
+  } else { btn.disabled = false; btn.textContent = old; showToast(T().shopSoon, 2800); }
+}
 function renderShop() {
   $('submsg').textContent = `💎 ${profile.gems || 0}`;
   const wrap = $('shoplist');
   wrap.style.cssText = 'display:flex;flex-wrap:wrap;justify-content:center;gap:12px;margin:12px 8px';
   wrap.innerHTML = '';
+  if (starterVisible()) { // başlangıç paketi kartı (raf başı, altın çerçeve)
+    const t = T(), card = document.createElement('div'); card.className = 'card sel'; card.style.width = '100%'; card.style.maxWidth = '440px';
+    card.innerHTML = `<div class="cname" style="color:#ffd76a">${t.starterTitle}</div><div class="cstat" style="text-align:center;font-size:15px;color:#fff">${t.starterDesc}</div><div class="cstat" style="text-align:center;color:#7dff9b">${t.starterOnce}</div>`;
+    const btn = document.createElement('button'); btn.className = 'mbtn small gold breath'; btn.textContent = STARTER.price; btn.onclick = () => buyStarter(btn);
+    card.appendChild(btn); wrap.appendChild(card);
+  }
   GEM_PACKS.forEach((p, pi) => {
     const total = p.gems + p.bonus;
     const card = document.createElement('div'); card.className = 'card';
@@ -3417,6 +3494,7 @@ function startSolo(mapIdx, weekly) {
   player.mesh.position.set(player.x, 0, player.z);
   player.mesh.visible = true;
   spawnEnemies(waveComposition(1));
+  consumeKits(); if (runKits.card) offerBuildChoice(() => {}); // FAZ1 C-1: hazırlanan kitler bu koşuda
   renderHealth(); updateHUD();
   banner(`${T().wave} 1`);
   { const ci = chapterOf(mapIdx); if (!weekly && ci >= 0 && !(profile.mapWins && profile.mapWins[mapIdx]) && (profile.games || 0) > 1) showToast('📖 ' + CHAPTERS[ci].brief[lang], 3400); } // bölüm brifingi (ilk zafere kadar)
@@ -4471,7 +4549,7 @@ $('btn-event').addEventListener('click', () => {
   else { showToast(t.eventDoubleTip, 3200); $('btn-quickplay').click(); }
 });
 $('btn-back-lb').addEventListener('click', openMenu);
-$('btn-single').addEventListener('click', () => { $('title').textContent = T().chooseMap; $('submsg').textContent = T().bestWave(profile.bestWave); renderMaps(); showPanel('panel-maps'); });
+$('btn-single').addEventListener('click', () => { $('title').textContent = T().chooseMap; $('submsg').textContent = T().bestWave(profile.bestWave); renderKits(); renderMaps(); showPanel('panel-maps'); });
 function renderMapPicker(containerId, rerender) {
   const wrap = $(containerId);
   wrap.style.cssText = 'display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin:4px 8px 12px;max-width:640px';
@@ -4827,7 +4905,7 @@ const BUILD_OPTS = [
   { id: 'vamp', icon: '🩹', name: { tr: 'Tamir', en: 'Repair' }, desc: { tr: 'Her 6 yok etmede +1 can', en: '+1 HP every 6 kills' } },
 ];
 // kill ödülü tek yerden (mıknatıs çarpanı) + tamir sayacı — 3 kill noktası (solo/coop authority/damageEnemy) bunu çağırır
-function killCoins(e) { return Math.round(e.coins * (buildOn() && matchBuild.magnet ? 1.2 : 1) * (isDoubleGold() ? 2 : 1)); } // Çifte Altın etkinliği ×2
+function killCoins(e) { return Math.round(e.coins * (buildOn() && matchBuild.magnet ? 1.2 : 1) * (isDoubleGold() ? 2 : 1) * (mode === 'solo' && runKits.magnet ? 1.15 : 1)); } // Çifte Altın ×2, Mıknatıs kiti ×1.15
 function onEnemyKilled(e) {
   const c = killCoins(e);
   score += e.score; roundCoins += c; profile.kills++; addCoins(c); updateHUD();
@@ -5148,7 +5226,7 @@ function tick() {
           updateHUD();
           banner(wave % 5 === 0 ? T().bossW : `${T().wave} ${wave}  +🪙${bonus}`);
           if (wave % 5 === 0) stingBoss(); else stingWave();
-          player.health = Math.min(player.maxHealth, player.health + 1);
+          player.health = Math.min(player.maxHealth, player.health + 1 + (runKits.repair && (wave === 5 || wave === 10) ? 2 : 0)); // Tamir kiti: dalga 5/10'da +2
           renderHealth();
           // maç-içi yükseltme seçimi (Diep tarzı) — FAZ0 (plan A-1): her 2 dalgada (2/4/6/8/10, sonsuzda sürer); önce 10 dalgada yalnız 2 karar vardı
           if (wave % 2 === 0) offerBuildChoice(() => spawnEnemies(waveComposition(wave)));
