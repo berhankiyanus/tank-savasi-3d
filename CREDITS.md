@@ -10,6 +10,10 @@ Bu oyunda kullanılan üçüncü taraf varlıklar ve lisansları. Third-party as
 - `assets/tank_scout.glb` (Kaşif): "Tank" — Quaternius, CC0 (Poly Pizza, Toon Shooter Game Kit). https://poly.pizza/m/Dc4k4CooN3
   (Quaternius modellerinde yapılan değişiklikler: armature/animasyon kaldırıldı, kule `TankTurret` olarak ayrıldı, yeniden yönlendirme/ölçek, remove doubles + limited dissolve + decimate, düz Principled malzemeler `TankPaint/TankLight/TankDark/GunMetal/TankWheel`, normalsiz GLB export. Modified.)
 - Tanklar (tank.glb, tank_heavy/twin/arty/mamut/hover/titan.glb) ve dekor setleri (decor_city/harbor/canyon.glb): Blender'da bu proje için özgün üretildi. Original, made in Blender for this project.
+- `assets/decor_stadium.glb` (ağaçlar), `decor_desert.glb` (kaktüs, kaya, palmiye), `decor_lava.glb` (kaya): Kenney "Nature Kit" — CC0. https://kenney.nl/assets/nature-kit
+- `assets/decor_space.glb` (anten, kubbe, roket kulesi, kristal kaya, meteor): Kenney "Space Kit" — CC0. https://kenney.nl/assets/space-kit
+- `assets/decor_snow.glb` (karlı çamlar, kayalar, kardan adam): Kenney "Holiday Kit" — CC0. https://kenney.nl/assets/holiday-kit
+  (Kenney modellerinde: ölçek/birleştirme, palet dokusu düz malzemelere çevrildi, normalsiz GLB export. Tribün/projektör/pano, harabe, kulübe, bazalt sütun/kalıntı parçaları bu proje için Blender'da özgün üretildi.)
 
 ## HDRI / Aydınlatma
 - `assets/env.hdr`, `assets/sky.jpg`: "Kloofendal 48d Partly Cloudy (Pure Sky)" — Poly Haven, CC0. https://polyhaven.com/a/kloofendal_48d_partly_cloudy_puresky (256×128 HDR ışıklandırma + 1024×512 ön-eşlenmiş JPG gökyüzü olarak küçültüldü)

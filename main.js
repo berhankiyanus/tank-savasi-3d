@@ -903,7 +903,7 @@ async function ensureModel(modelId) {
   catch (e) { console.warn('tank modeli yüklenemedi:', modelId, e); }
 }
 // tema dekor GLB'leri (Blender'da modellendi; harita seçilince tembel yüklenir)
-const DECOR_PATHS = { city: 'assets/decor_city.glb', harbor: 'assets/decor_harbor.glb', canyon: 'assets/decor_canyon.glb' };
+const DECOR_PATHS = { city: 'assets/decor_city.glb', harbor: 'assets/decor_harbor.glb', canyon: 'assets/decor_canyon.glb', stadium: 'assets/decor_stadium.glb', night: 'assets/decor_stadium.glb', desert: 'assets/decor_desert.glb', snow: 'assets/decor_snow.glb', space: 'assets/decor_space.glb', lava: 'assets/decor_lava.glb' }; // VARLIK FAZ 3: Kenney Doğa/Uzay/Tatil kitleri (CC0) + prosedürel parçalar, düğüm adıyla yerleşim
 const loadedDecor = {};
 async function ensureDecor(type) {
   if (!type || loadedDecor[type] || !DECOR_PATHS[type]) return;
@@ -1094,7 +1094,8 @@ function buildDecor(type) {
       decorGroup.add(m);
     }
   };
-  if (type === 'stadium') ring(18, makeTree);
+  if (DECOR_PATHS[type]) buildGlbDecor(type, decorGroup); // GLB dekor setleri (VARLIK FAZ 3: tüm temalar)
+  else if (type === 'stadium') ring(18, makeTree);
   else if (type === 'desert') ring(15, () => Math.random() < 0.5 ? makeCactus() : makeRock());
   else if (type === 'snow') ring(20, () => Math.random() < 0.6 ? makePine() : makeRock());
   else if (type === 'night') ring(14, makeTree);
@@ -1108,7 +1109,6 @@ function buildDecor(type) {
       decorGroup.add(m);
     }
   }
-  else if (DECOR_PATHS[type]) buildGlbDecor(type, decorGroup);
   scene.add(decorGroup);
 }
 // GLB tabanlı tema dekorları (şehir/liman/kanyon) — arena çevresine yerleştirilir
@@ -1143,6 +1143,36 @@ function buildGlbDecor(type, grp) {
       for (let i = 0; i < 7; i++) put(i % 2 ? 'Mesa2' : 'Mesa1', (i / 7) * 6.283 + J(), 42 + Math.random() * 14, 1.4 + Math.random() * 1.3);
       put('Kemer', 1.9, 50, 1.8); put('Kemer', 4.6, 55, 2.2);
       for (let i = 0; i < 6; i++) put('KuruAgac', (i / 6) * 6.283 + 0.4 + J(), 33 + Math.random() * 6, 0.9 + Math.random() * 0.5);
+    }
+    else if (type === 'stadium') { // tribünler arenaya dönük, projektörler + reklam panoları, ağaç halkası
+      for (let i = 0; i < 4; i++) put('Tribun', (i / 4) * 6.283 + 0.785, 44, 1.15, 'center');
+      for (let i = 0; i < 4; i++) put('Direk', (i / 4) * 6.283, 40, 1.0, 'center');
+      for (let i = 0; i < 4; i++) put('Reklam', (i / 4) * 6.283 + 0.4, 34.5, 1.0, 'center');
+      for (let i = 0; i < 4; i++) put('Reklam', (i / 4) * 6.283 + 1.15, 34.5, 1.0, 'center');
+      for (let i = 0; i < 14; i++) put(i % 2 ? 'Agac2' : 'Agac1', (i / 14) * 6.283 + 0.2 + J(), 50 + Math.random() * 8, 0.9 + Math.random() * 0.6);
+    } else if (type === 'night') { // stadyum setinin gece kullanımı: ağaçlar + yanan projektörler
+      for (let i = 0; i < 16; i++) put(i % 3 ? 'Agac1' : 'Agac2', (i / 16) * 6.283 + J(), 34 + Math.random() * 18, 0.9 + Math.random() * 0.7);
+      for (let i = 0; i < 3; i++) put('Direk', (i / 3) * 6.283 + 0.5, 42, 0.9, 'center');
+    } else if (type === 'desert') {
+      for (let i = 0; i < 9; i++) put('Kaktus', (i / 9) * 6.283 + J(), 33 + Math.random() * 10, 0.8 + Math.random() * 0.6);
+      for (let i = 0; i < 8; i++) put('Kaya', (i / 8) * 6.283 + 0.35 + J(), 34 + Math.random() * 12, 1.0 + Math.random() * 1.2);
+      for (let i = 0; i < 5; i++) put('Palmiye', (i / 5) * 6.283 + 0.9 + J(), 40 + Math.random() * 10, 0.9 + Math.random() * 0.5);
+      put('Harabe', 1.3, 46, 1.4, 'center'); put('Harabe', 4.2, 50, 1.7, 'center');
+    } else if (type === 'snow') {
+      for (let i = 0; i < 16; i++) put(i % 2 ? 'Cam2' : 'Cam1', (i / 16) * 6.283 + J(), 34 + Math.random() * 18, 0.9 + Math.random() * 0.7);
+      for (let i = 0; i < 6; i++) put('Kaya', (i / 6) * 6.283 + 0.4 + J(), 33 + Math.random() * 8, 0.9 + Math.random() * 0.8);
+      put('Kulube', 0.9, 42, 1.3, 'center'); put('Kulube', 3.9, 47, 1.5, 'center');
+      for (let i = 0; i < 3; i++) put('Kardan', (i / 3) * 6.283 + 1.6, 34, 1.0, 'center');
+    } else if (type === 'space') { // kristal kayalar + anten/kubbe/roket kulesi; meteorlar havada süzülür
+      for (let i = 0; i < 8; i++) put('Kaya', (i / 8) * 6.283 + J(), 34 + Math.random() * 12, 0.9 + Math.random() * 1.0);
+      for (let i = 0; i < 3; i++) put('Anten', (i / 3) * 6.283 + 0.7, 44, 1.1, 'center');
+      for (let i = 0; i < 2; i++) put('Kubbe', (i / 2) * 6.283 + 2.0, 48, 1.2, 'center');
+      put('Kule', 4.9, 54, 1.2); put('Kule', 1.4, 58, 1.0);
+      for (let i = 0; i < 7; i++) { const m = put('Meteor', (i / 7) * 6.283 + 0.3 + J(), 36 + Math.random() * 20, 0.8 + Math.random() * 1.4); if (m) m.position.y = 4 + Math.random() * 12; }
+    } else if (type === 'lava') {
+      for (let i = 0; i < 10; i++) put('Kaya', (i / 10) * 6.283 + J(), 33 + Math.random() * 14, 0.9 + Math.random() * 1.1);
+      for (let i = 0; i < 6; i++) put('Sutun', (i / 6) * 6.283 + 0.5 + J(), 38 + Math.random() * 14, 1.0 + Math.random() * 0.9);
+      for (let i = 0; i < 4; i++) put('Kalinti', (i / 4) * 6.283 + 0.2 + J(), 33 + Math.random() * 6, 1.1 + Math.random() * 0.5);
     }
   };
   if (loadedDecor[type]) place(); else ensureDecor(type).then(place); // yüklü değilse yüklenince belirir
