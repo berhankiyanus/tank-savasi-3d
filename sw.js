@@ -6,6 +6,7 @@ const CACHE = 'tank3d-v3-__BUILDSTAMP__';
 const CORE = [
   './',
   'index.html',
+  'assets/hero.jpg',
   'main.js',
   'libs/three.module.js',
   'manifest.json',

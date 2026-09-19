@@ -422,6 +422,15 @@ let matchSeq = 0; // gecikmiş timer'ların eski maça ait sonuç üretmesini ö
 let matchEndReason = ''; // analitik: maç neden bitti (death/victory/win/lose/disconnect/quit) — D1/D7 huni analizi için
 // game-icons stencil yardımcıları (index.html'deki #gisprite sembollerine referans; renk currentColor'dan)
 const gi = id => `<svg class="gi"><use href="#gi-${id}"/></svg>`;
+// VARLIK FAZ 4: innerHTML'e giden metinlerde para/elmas/jeton emojisi → stencil ikon (textContent/bildirim/toast'ta emoji kalır)
+const iconize = s => String(s).replace(/🪙/g, gi('coins')).replace(/💎/g, gi('gem')).replace(/🎰/g, gi('token'));
+// VARLIK FAZ 2: yeni tank modellerinde geniş gövde yüzeyleri 'TankLight' — boyanın açık tonuyla boyanır ki tank kimlik rengi okunsun
+const _tintW = new THREE.Color(0xffffff);
+function tintLight(o, hex, metal) {
+  o.material = o.material.clone(); o.material.userData.owned = true;
+  o.material.color.set(hex).lerp(_tintW, 0.42);
+  if (metal != null) o.material.metalness = metal;
+}
 let dailyPending = false; // FTUE: günlük ödülü ilk menü ziyaretine ertele (mesaj bombardımanını önle)
 // E3: offline devriye kazancı — oyuncu yokken tank "devriyede" coin biriktirir (saatte 40, 8 saat tavan).
 // Araştırma: idle kazanç ucuz + bildirime içerik verir; koşu gelirinin çok altında tutuldu (ekonomiyi bozmaz).
@@ -721,8 +730,8 @@ function updateNextGoal() {
   if (!target) { el.style.display = 'none'; return; }
   const pct = Math.min(100, Math.round(profile.coins / price * 100));
   el.style.display = '';
-  el.innerHTML = `${icon} ${t.nextGoal}: ${target} — ${Math.min(profile.coins, price)}/${price}🪙` +
-    `<span style="display:inline-block;width:64px;height:7px;background:#20261c;border-radius:4px;vertical-align:1px;margin-left:7px;overflow:hidden"><i style="display:block;height:100%;width:${pct}%;background:#ffd24a"></i></span>`;
+  el.innerHTML = iconize(`${icon} ${t.nextGoal}: ${target} — ${Math.min(profile.coins, price)}/${price}🪙` +
+    `<span style="display:inline-block;width:64px;height:7px;background:#20261c;border-radius:4px;vertical-align:1px;margin-left:7px;overflow:hidden"><i style="display:block;height:100%;width:${pct}%;background:#ffd24a"></i></span>`);
 }
 // E5: haftanın modu — mevcut içerikten sunucusuz haftalık rotasyon (hafta no deterministik)
 const WEEK_MODS = ['doubleBoss', 'fast', 'tough'];
@@ -1551,6 +1560,7 @@ function buildTank(def) {
         o.material.color.set(def.color);
         if (def.metal) o.material.metalness = 0.7;
         if (def.glow) { o.material.emissive.set(def.color); o.material.emissiveIntensity = 0.35; }
+      } else if (o.material && o.material.name === 'TankLight') { tintLight(o, def.color, def.metal ? 0.6 : undefined);
       } else if (o.material && (o.material.name === 'EnergyGlow' || o.material.name === 'CoreGlow')) {
         // enerji/çekirdek parçaları: oyunda parlamayı zorla (glTF emissive'e güvenme)
         const col = o.material.name === 'EnergyGlow' ? 0x1ae0ff : 0xff2a1a;
@@ -2166,7 +2176,7 @@ function applySkin(mesh, skinId) {
       o.material.roughness = s.rough != null ? s.rough : 0.55;
       if (s.glow) { o.material.emissive.setHex(col); o.material.emissiveIntensity = s.glow; }
       else o.material.emissiveIntensity = 0;
-    }
+    } else if (o.isMesh && o.material && o.material.name === 'TankLight') { tintLight(o, col, s.metal != null ? Math.min(0.6, s.metal) : undefined); }
   });
 }
 // 1v1'de (düello + top maçı) herkes bu standart tankı kullanır → adil + tutarlı vuruş algılama.
@@ -2716,7 +2726,7 @@ function showHarvest(opts) {
   $('res-title').textContent = opts.title;
   $('res-title').style.color = opts.won === false ? '#ff8a6a' : '#7dff9b';
   $('res-sub').innerHTML = opts.sub || '';
-  $('res-rewards').innerHTML = `+${gained} XP` + (opts.coins ? ` &nbsp;·&nbsp; +🪙${opts.coins}` : '');
+  $('res-rewards').innerHTML = iconize(`+${gained} XP` + (opts.coins ? ` &nbsp;·&nbsp; +🪙${opts.coins}` : ''));
   $('res-lvl').textContent = (lang === 'tr' ? 'Sv ' : 'Lv ') + preLvl;
   if (opts.replay) { $('res-again').style.display = ''; $('res-again').textContent = t.againBtn; harvestReplay = opts.replay; }
   else { $('res-again').style.display = 'none'; harvestReplay = null; } // ağ modları: tekrar-oyna yok (koordinasyon gerekir), menü
@@ -2911,10 +2921,10 @@ function renderSeason() {
     `<div class="sh-bar"><div class="sh-fill" style="width:${pct}%"></div></div>` +
     (s.premium ? `<div style="margin-top:8px;color:#ffd76a;font-weight:bold">${t.premActive}</div>` : `<button id="season-prem" class="mbtn small gold${(profile.gems || 0) < PREMIUM_PRICE ? ' cant' : ''}" style="margin-top:8px">${t.premBuy}</button>`);
   const pb = $('season-prem'); if (pb) pb.onclick = buyPremium;
-  $('season-track').innerHTML = SEASON_REWARDS.map((r, i) => {
+  $('season-track').innerHTML = iconize(SEASON_REWARDS.map((r, i) => {
     const tier = i + 1, got = tier <= s.tier, cur = tier === s.tier + 1, pr = premiumReward(tier);
     return `<div class="strow${got ? ' got' : cur ? ' cur' : ''}"><span class="st-t">${tier}</span><span class="st-r">${rewardText(r)}</span><span class="st-r" style="opacity:${s.premium ? 1 : .55};color:#ffd76a">👑 ${rewardText(pr)}</span><span class="st-s">${got ? '✅' : cur ? '▶' : '🔒'}</span></div>`;
-  }).join('');
+  }).join(''));
 }
 let lbPeriod = 'day';
 async function renderLeaderboard(period) {
@@ -3339,7 +3349,7 @@ function updateShowroom(dt) {
 }
 function renderShowroomUI() {
   const t = T();
-  $('sr-wallet').innerHTML = `🪙 ${profile.coins}&nbsp; 💎 ${profile.gems || 0}`;
+  $('sr-wallet').innerHTML = iconize(`🪙 ${profile.coins}&nbsp; 💎 ${profile.gems || 0}`);
   $('sr-hint').textContent = lang === 'tr' ? '↔ çevirmek için sürükle' : '↔ drag to rotate';
   const act = $('sr-action');
   if (showroom.mode === 'acc') return renderShowroomAcc(t, act);
@@ -3358,7 +3368,7 @@ function renderShowroomUI() {
     act.onclick = () => { profile.selected = base.id; saveProfile(); setPlayerTank(); showroom.accId = profile.accessory; buildShowroomTank(); renderShowroomUI(); };
   } else {
     const isGem = !!base.gem;
-    act.innerHTML = `${t.buy} · ${isGem ? '💎' + base.gem : '🪙' + base.price}`;
+    act.innerHTML = iconize(`${t.buy} · ${isGem ? '💎' + base.gem : '🪙' + base.price}`);
     act.classList.toggle('cant', isGem ? (profile.gems || 0) < base.gem : profile.coins < base.price);
     act.className = 'mbtn sr-btn gold' + (isGem ? ' breath' : ''); // premium: nefes animasyonu (istek yaratma)
     act.onclick = () => {
@@ -3384,7 +3394,7 @@ function renderShowroomAcc(t, act) {
     act.textContent = t.accEquip; act.disabled = false;
     act.onclick = () => { profile.accessory = a.id; saveProfile(); setPlayerTank(); renderShowroomUI(); };
   } else {
-    act.innerHTML = `${t.buy} · ${a.gem ? '💎' + a.gem : '🪙' + a.price}`;
+    act.innerHTML = iconize(`${t.buy} · ${a.gem ? '💎' + a.gem : '🪙' + a.price}`);
     act.classList.toggle('cant', a.gem ? (profile.gems || 0) < a.gem : profile.coins < a.price);
     if (a.gem) act.className += ' breath';
     act.onclick = () => {
@@ -3466,7 +3476,7 @@ function renderGarage() {
     else if (owned) { btn.textContent = t.owned; btn.onclick = async () => { await ensureModel(base.model); profile.selected = base.id; saveProfile(); setPlayerTank(); renderGarage(); }; }
     else {
       const isGem = !!base.gem;
-      btn.innerHTML = `${t.buy} · ${isGem ? '💎' + base.gem : '🪙' + base.price}`;
+      btn.innerHTML = iconize(`${t.buy} · ${isGem ? '💎' + base.gem : '🪙' + base.price}`);
       btn.classList.toggle('cant', isGem ? (profile.gems || 0) < base.gem : profile.coins < base.price);
       btn.onclick = async () => {
         if (isGem ? (profile.gems || 0) < base.gem : profile.coins < base.price) return showToast(T().noMoney);
@@ -3491,7 +3501,7 @@ function renderGarage() {
         if (lvl >= UP_MAX) { row.textContent = `${u.name[lang]} ${dots} ${t.maxLevel}`; row.disabled = true; }
         else {
           const cost = upCost(lvl);
-          row.innerHTML = `${u.name[lang]} ${dots} · 🪙${cost}`;
+          row.innerHTML = iconize(`${u.name[lang]} ${dots} · 🪙${cost}`);
           row.disabled = profile.coins < cost;
           row.onclick = () => {
             if (profile.coins < cost) return;
@@ -3560,7 +3570,7 @@ function renderSkins() {
     if (equipped) { btn.textContent = t.selected; btn.disabled = true; }
     else if (owned) { btn.textContent = t.owned; btn.onclick = () => { profile.skin = s.id; saveProfile(); setPlayerTank(); renderSkins(); }; }
     else {
-      btn.innerHTML = `${t.buy} · 🪙${s.price}`;
+      btn.innerHTML = iconize(`${t.buy} · 🪙${s.price}`);
       btn.classList.toggle('cant', profile.coins < s.price);
       btn.onclick = () => { if (profile.coins < s.price) return showToast(T().noMoney); profile.coins -= s.price; profile.skins.push(s.id); profile.skin = s.id; track('soft_purchase', { t: 'skin', id: s.id, cur: 'c', amt: s.price }); saveProfile(); sfxCoin(); setPlayerTank(); updateCoinBar(); renderSkins(); };
     }
@@ -3601,7 +3611,7 @@ function renderAccessories() {
     if (equipped) { btn.textContent = t.accRemove; btn.onclick = () => { unequipAccessory(a.id); renderAccessories(); }; }
     else if (owned) { btn.textContent = t.accEquip; btn.onclick = () => { equipAccessory(a.id); renderAccessories(); }; }
     else {
-      btn.innerHTML = `${t.buy} · ${a.gem ? '💎' + a.gem : '🪙' + a.price}`;
+      btn.innerHTML = iconize(`${t.buy} · ${a.gem ? '💎' + a.gem : '🪙' + a.price}`);
       btn.classList.toggle('cant', a.gem ? (profile.gems || 0) < a.gem : profile.coins < a.price);
       btn.onclick = () => {
         if (a.gem) { if ((profile.gems || 0) < a.gem) return showToast(T().noMoney); profile.gems -= a.gem; } else { if (profile.coins < a.price) return showToast(T().noMoney); profile.coins -= a.price; }
@@ -3691,9 +3701,9 @@ function renderAchievements() {
     const done = profile.achieved.includes(a.id);
     const cur = Math.min(profile[a.stat] || 0, a.goal);
     const row = document.createElement('div'); row.className = 'achrow' + (done ? ' done' : '');
-    row.innerHTML = `<div class="achtop">${done ? '✅ ' : ''}${a.name[lang]} <span class="achr">🪙${a.reward}</span></div>` +
+    row.innerHTML = iconize(`<div class="achtop">${done ? '✅ ' : ''}${a.name[lang]} <span class="achr">🪙${a.reward}</span></div>` +
       `<div class="achdesc">${a.desc[lang]} — ${cur}/${a.goal}</div>` +
-      `<div class="abar"><i style="width:${Math.round(cur / a.goal * 100)}%"></i></div>`;
+      `<div class="abar"><i style="width:${Math.round(cur / a.goal * 100)}%"></i></div>`);
     wrap.appendChild(row);
   }
 }
@@ -4620,7 +4630,7 @@ function paintTank(mesh, color) {
       o.material.userData.owned = true;
       o.material.color.setHex(color);
       o.material.emissiveIntensity = 0;
-    }
+    } else if (o.isMesh && o.material && o.material.name === 'TankLight') { tintLight(o, color); }
   });
 }
 function clearTeam() {
@@ -4817,7 +4827,7 @@ $('res-rewarded').addEventListener('click', async () => {
   if (ok && harvestReward) {
     grantXp(harvestReward.xp); grantSeasonXp(harvestReward.xp);
     if (harvestReward.coins) addCoins(harvestReward.coins);
-    $('res-rewards').innerHTML = `+${harvestReward.xp * 2} XP` + (harvestReward.coins ? ` &nbsp;·&nbsp; +🪙${harvestReward.coins * 2}` : '') + ` <b style="color:#7dff9b">x2</b>`;
+    $('res-rewards').innerHTML = iconize(`+${harvestReward.xp * 2} XP` + (harvestReward.coins ? ` &nbsp;·&nbsp; +🪙${harvestReward.coins * 2}` : '') + ` <b style="color:#7dff9b">x2</b>`);
     updateCoinBar(); updateLevelBar();
     sfxPower(); haptic('HEAVY');
     rb.textContent = T().rewardedGot;
