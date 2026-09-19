@@ -22,6 +22,7 @@ const L = {
     nextGoal: 'Sıradaki', weeklyLbl: '📅 HAFTANIN MODU', weeklyWin: 'Haftalık mod zaferi',
     modNames: { doubleBoss: 'Çift Boss', fast: 'Hızlı Düşmanlar', tough: 'Zırhlı Düşmanlar', bossRush: 'Boss Rush' },
     shareBtn: '📤 PAYLAŞ', shareText: (w, d) => `Tank Savaşı 3D'de ${w}. dalgaya ulaştım${d ? ' — ' + d : ''}! Sen kaçta bitirirsin?`, shareSaved: '📤 Kart indirildi — paylaşabilirsin', shareFail: '📤 Paylaşım yapılamadı',
+    masteryWord: 'Ustalık', rankWord: 'Rütbe', masteryBuy: (r, c) => `⭐ Rütbe ${r} · 🪙${c}`, masteryNeed: (k, n) => `${k}/${n} yok etme`, masteryUp: (nm, r) => `⭐ ${nm} — Rütbe ${r}! ${r === 5 ? 'USTA unvanı' : r === 4 ? 'kill parası +%5' : r === 3 ? 'altın toz izi' : ''}`, masteryMax: 'USTA', masteryHint: 'Bu tankla yok et → rütbe',
     kitsTitle: '🎒 SEFER KİTLERİ — bir sonraki koşuda kullanılır', kitReady: '✓ HAZIR', kitsArmed: k => `🎒 Kitler devrede: ${k}`, premBuy: '👑 Komutan Rayı · 💎120', premActive: '👑 Komutan Rayı aktif — her kademe ×2', premBought: n => `👑 Komutan Rayı alındı! Geriye dönük ${n} kademe ödülü verildi`, starterTitle: '🎁 BAŞLANGIÇ PAKETİ', starterDesc: '💎60 + Hover Tank + 🪙1000 + 🎰3', starterOnce: 'Tek seferlik · yeni komutan fırsatı', starterGot: '🎁 Başlangıç paketi alındı: Hover Tank garajda!',
     chapterWord: 'BÖLÜM', chVictories: 'zafer', chapterDone: (n, nm) => `📖 Bölüm ${n} tamamlandı: ${nm} — +🎰2 +💎1`,
     eventNames: { doubleGold: '🎉 ÇİFTE ALTIN', bossRush: '💀 BOSS RUSH' }, eventLeft: (h, m) => `${h}sa ${m}dk`, eventDoubleTip: '🎉 Çifte Altın: hafta sonu tüm koşularda yok etme parası ×2!', eventBossTip: '💀 Boss Rush: 5 dalga, her dalga boss — boss başı 150🪙, zaferde +🎰2', lbSpeed: '⏱ HIZ', lbSpeedTitle: '⏱ HAFTANIN EN HIZLI ZAFERLERİ',
@@ -106,6 +107,7 @@ const L = {
     nextGoal: 'Next up', weeklyLbl: '📅 WEEKLY MODE', weeklyWin: 'Weekly mode victory',
     modNames: { doubleBoss: 'Double Boss', fast: 'Fast Enemies', tough: 'Armored Enemies', bossRush: 'Boss Rush' },
     shareBtn: '📤 SHARE', shareText: (w, d) => `I reached wave ${w} in Tank Battle 3D${d ? ' — ' + d : ''}! Can you beat it?`, shareSaved: '📤 Card downloaded — ready to share', shareFail: '📤 Could not share',
+    masteryWord: 'Mastery', rankWord: 'Rank', masteryBuy: (r, c) => `⭐ Rank ${r} · 🪙${c}`, masteryNeed: (k, n) => `${k}/${n} kills`, masteryUp: (nm, r) => `⭐ ${nm} — Rank ${r}! ${r === 5 ? 'MASTER title' : r === 4 ? '+5% kill coins' : r === 3 ? 'golden dust trail' : ''}`, masteryMax: 'MASTER', masteryHint: 'Kill with this tank → rank up',
     kitsTitle: '🎒 SORTIE KITS — used on your next run', kitReady: '✓ READY', kitsArmed: k => `🎒 Kits active: ${k}`, premBuy: '👑 Commander Track · 💎120', premActive: '👑 Commander Track active — every tier ×2', premBought: n => `👑 Commander Track unlocked! ${n} tier rewards granted retroactively`, starterTitle: '🎁 STARTER PACK', starterDesc: '💎60 + Hover Tank + 🪙1000 + 🎰3', starterOnce: 'One time · new commander offer', starterGot: '🎁 Starter pack claimed: Hover Tank is in your garage!',
     chapterWord: 'CHAPTER', chVictories: 'wins', chapterDone: (n, nm) => `📖 Chapter ${n} complete: ${nm} — +🎰2 +💎1`,
     eventNames: { doubleGold: '🎉 DOUBLE GOLD', bossRush: '💀 BOSS RUSH' }, eventLeft: (h, m) => `${h}h ${m}m`, eventDoubleTip: '🎉 Double Gold: kill coins ×2 in every run this weekend!', eventBossTip: '💀 Boss Rush: 5 waves, a boss every wave — 150🪙 per boss, +🎰2 on victory', lbSpeed: '⏱ SPEED', lbSpeedTitle: "⏱ THIS WEEK'S FASTEST VICTORIES",
@@ -624,6 +626,31 @@ const KITS = [
   { id: 'repair', icon: '🔧', name: { tr: 'Tamir', en: 'Repair' }, desc: { tr: "Dalga 5 ve 10'da +2 can", en: '+2 HP at waves 5 and 10' }, price: 120 },
 ];
 let runKits = {}; // aktif koşuda tüketilen kitler
+// FAZ2 (plan C-2): TANK USTALIĞI — tank başına 5 rütbe: kill eşiği + coin (büyük ama sonlu lavabo: 7.600🪙/tank).
+// Ödüller kimlik: ★ rozet → ★★ → ★★★ altın toz izi → ★★★★ o tankla kill parası +%5 → ★★★★★ USTA unvanı.
+const MASTERY_KILLS = [40, 100, 200, 350, 550], MASTERY_COST = [500, 900, 1400, 2000, 2800];
+function masteryOf(id) { profile.mastery = profile.mastery || {}; return profile.mastery[id] || (profile.mastery[id] = { rank: 0, kills: 0 }); }
+function masteryRank(id) { return (profile.mastery && profile.mastery[id] && profile.mastery[id].rank) || 0; }
+function masteryStars(id) { const r = masteryRank(id); return r ? '★'.repeat(r) + '☆'.repeat(5 - r) : ''; }
+function masteryLine(base) {
+  if (!profile.owned.includes(base.id)) return '';
+  const m = masteryOf(base.id), t = T();
+  if (m.rank >= 5) return `<div class="cstat" style="color:#ffd76a;text-align:center">★★★★★ ${t.masteryMax}</div>`;
+  const need = MASTERY_KILLS[m.rank], cost = MASTERY_COST[m.rank], ready = m.kills >= need;
+  return `<div class="cstat" style="color:#ffd76a;text-align:center">${masteryStars(base.id) || '☆☆☆☆☆'} · ${t.masteryNeed(Math.min(m.kills, need), need)}</div>` +
+    (ready ? `<button class="mbtn small${profile.coins < cost ? ' cant' : ''}" data-mastery="${base.id}" style="margin:2px auto 4px;display:block">${t.masteryBuy(m.rank + 1, cost)}</button>` : '');
+}
+function buyMastery(id) {
+  const m = masteryOf(id), base = tankById(id);
+  if (m.rank >= 5) return;
+  const need = MASTERY_KILLS[m.rank], cost = MASTERY_COST[m.rank];
+  if (m.kills < need) return showToast(T().masteryHint, 2200);
+  if (profile.coins < cost) return showToast(T().noMoney);
+  profile.coins -= cost; m.rank++; saveProfile(); updateCoinBar(); sfxPower(); haptic('HEAVY');
+  showToast(T().masteryUp(base.name[lang], m.rank), 3600);
+  track('mastery_up', { tank: id, rank: m.rank }); track('coin_spend', { sink: 'mastery', n: cost });
+  renderGarage(); updateNextGoal();
+}
 function renderKits() {
   const el = $('kitsrow'); if (!el) return;
   const t = T();
@@ -658,6 +685,9 @@ function updateNextGoal() {
   let target = null, price = Infinity, icon = '🎯';
   for (const b of TANKS) if (!b.gem && b.price > 0 && !profile.owned.includes(b.id) && b.price < price) { target = b.name[lang]; price = b.price; }
   if (!target) { icon = '🎁'; for (const a of ACCESSORIES) if (!a.gem && !(profile.accessories || []).includes(a.id) && a.price < price) { target = a.name[lang]; price = a.price; } }
+  if (!target) { // FAZ2 C-2: seçili tankın sıradaki ustalık rütbesi (kill eşiği tamamsa)
+    const m = masteryOf(profile.selected); if (m.rank < 5 && m.kills >= MASTERY_KILLS[m.rank]) { icon = '⭐'; target = `${tankById(profile.selected).name[lang]} ${t.rankWord} ${m.rank + 1}`; price = MASTERY_COST[m.rank]; }
+  }
   if (!target) { el.style.display = 'none'; return; }
   const pct = Math.min(100, Math.round(profile.coins / price * 100));
   el.style.display = '';
@@ -1959,7 +1989,7 @@ function spawnPuff(x, y, z, color, op, vy, life) {
   p.userData = { dust: true, vy, life, op0: op };
   scene.add(p); particles.push(p);
 }
-function spawnDust(x, z) { spawnPuff(x, 0.3, z, 0xcab89a, 0.4, 0.6 + Math.random() * 0.4, 0.6); }
+function spawnDust(x, z) { spawnPuff(x, 0.3, z, (mode === 'solo' && masteryRank(profile.selected) >= 3) ? 0xffd24a : 0xcab89a, 0.4, 0.6 + Math.random() * 0.4, 0.6); } // ustalık 3+: altın toz
 function spawnSmoke(x, z) { spawnPuff(x, 1.1, z, 0x2a2a2a, 0.55, 1.3 + Math.random() * 0.6, 0.9); }
 let dustT = 0, smokeT = 0;
 // tank üstü isim etiketleri
@@ -3289,8 +3319,9 @@ function renderGarage() {
       swatchHTML +
       `<div class="cstat">${t.sHealth}${barHTML(def.health / STAT_MAX.health)}</div>` +
       `<div class="cstat">${t.sSpeed}${barHTML(def.speed / STAT_MAX.speed)}</div>` +
-      `<div class="cstat">${t.sFire}${barHTML(fireRate / STAT_MAX.fire)}</div>` + mechLine(def);
+      `<div class="cstat">${t.sFire}${barHTML(fireRate / STAT_MAX.fire)}</div>` + mechLine(def) + masteryLine(base);
     card.querySelector('.cswatch').onclick = () => openShowroom(base.id); // görsele dokun → 3B inceleme
+    { const mb = card.querySelector('[data-mastery]'); if (mb) mb.onclick = () => buyMastery(base.id); }
     if (!thumb && base.model) ensureModel(base.model).then(() => { // tembel model indi → kart görselini yerinde tazele
       const u = renderTankThumb(base);
       const sw = card.querySelector('.cswatch');
@@ -5042,8 +5073,9 @@ function setPlayerOpacity(op) {
   player.mesh.traverse(o => { if (o.isMesh && o.material && o.material.userData && o.material.userData.owned) { o.material.transparent = op < 1; o.material.opacity = op; o.material.needsUpdate = true; } });
 }
 // kill ödülü tek yerden (mıknatıs çarpanı) + tamir sayacı — 3 kill noktası (solo/coop authority/damageEnemy) bunu çağırır
-function killCoins(e) { return Math.round(e.coins * (buildOn() && matchBuild.magnet ? 1.2 : 1) * (isDoubleGold() ? 2 : 1) * (mode === 'solo' && runKits.magnet ? 1.15 : 1) * (mechIs('rich') ? 1.1 : 1)); } // Altın Kral +%10 // Çifte Altın ×2, Mıknatıs kiti ×1.15
+function killCoins(e) { return Math.round(e.coins * (buildOn() && matchBuild.magnet ? 1.2 : 1) * (isDoubleGold() ? 2 : 1) * (mode === 'solo' && runKits.magnet ? 1.15 : 1) * (mechIs('rich') ? 1.1 : 1) * (mode === 'solo' && masteryRank(profile.selected) >= 4 ? 1.05 : 1)); } // Altın Kral +%10; Ustalık 4+ +%5 // Çifte Altın ×2, Mıknatıs kiti ×1.15
 function onEnemyKilled(e) {
+  if (mode === 'solo') masteryOf(profile.selected).kills++; // ustalık: bu tankla yok etme sayısı
   const c = killCoins(e);
   score += e.score; roundCoins += c; profile.kills++; addCoins(c); updateHUD();
   if (buildOn() && matchBuild.vamp && player.alive && ++matchBuild.killsSince >= 6) {
