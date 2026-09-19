@@ -184,7 +184,7 @@ Oyunun topladığı HER ŞEY şu üçü (hesap yok, e-posta yok, konum yok, rekl
 3. Garaj kart listesi (11 tank görselli), 4. Zafer ekranı (🏆 ZAFER! + süre rekoru),
 5. Düello bot seçimi (Çaylak/Usta/Efsane), 6. Harita seçimi (12 harita).
 iPhone: 6.7" (1290×2796) + 6.5" (1284×2778) setleri; Android: min 2 adet 16:9 veya 9:16.
-Cihazda çekmek en temizi; istersen tarayıcıdan yüksek çözünürlük kareler de üretebilirim.
+✅ 2026-09-19: 6 kare × 3 boyut × TR/EN üretildi → Masaüstü `tank-magaza-ss/` (iphone-6.7 / iphone-6.5 / android klasörleri, `genel-bakis.png`). Yeniden üretim: `tools/reklam/shots.js` (README'de adımlar).
 
 ---
 **Özet akış:** web değiştir → `git push` (web/sunucu canlı) → `npm run sync` → Xcode/Android

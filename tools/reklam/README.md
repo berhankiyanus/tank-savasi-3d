@@ -37,3 +37,12 @@ Kod tarafında KALICI değişiklik yok; her şey geçici kanca + enjekte edilen 
 - Kart "pop" animasyonu kendi merkezinden ölçeklenmeli (`S.card(..., py)`), yoksa alt metinler zıplar.
 - DOM overlay'ler captureStream'e girmez: HUD/kart/sayaç/boss barı kompozitör canvas'ında çizilir.
 - Gerçek isabet: düşmanlar namlu önüne konur (`S.putEnemy`), oto-ateş vurur; nöbetçi düşman (`S.sentinel`) dalganın bitmesini engeller.
+
+## Mağaza ekran görüntüleri (`shots.js`)
+Headless Chromium (playwright-core + ~/Library/Caches/ms-playwright/chromium-1208) ile STORE.md §9'daki 6 kare, 3 boyut × TR/EN:
+iPhone 6.7" 1290×2796 (430×932@3), iPhone 6.5" 1284×2778 (428×926@3), Android 1080×1920 (405×720@2.667).
+1. `main.js` sonuna yukarıdaki GEÇİCİ `window.__R` köprüsünü ekle; sunucu 8734'te çalışsın.
+2. `cd <scratch> && npm i playwright-core && node tools/reklam/shots.js <çıktı-klasörü> iphone67,iphone65,android tr,en`
+3. Köprüyü sil. Çıktı Masaüstü'nde `tank-magaza-ss/` (2026-09-19 seti).
+Notlar: günlük ödül toast'ı `profile.lastDaily=bugün` + `#toast display:none` ile bastırılır; `toastQ` const'tur (length=0 ile boşalt);
+1. karede düşmanlar 5.5/8.2/10.8 birim öne konur ve ilk düşman `damageEnemy(e,99)` ile patlatılır (gerçek patlama/floater); zafer ekranı `soloRunStart=now-402` → "⏱ Süre 6:42 — YENİ REKOR!".
