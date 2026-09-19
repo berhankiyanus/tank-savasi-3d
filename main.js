@@ -22,6 +22,7 @@ const L = {
     nextGoal: 'Sıradaki', weeklyLbl: '📅 HAFTANIN MODU', weeklyWin: 'Haftalık mod zaferi',
     modNames: { doubleBoss: 'Çift Boss', fast: 'Hızlı Düşmanlar', tough: 'Zırhlı Düşmanlar', bossRush: 'Boss Rush' },
     shareBtn: '📤 PAYLAŞ', shareText: (w, d) => `Tank Savaşı 3D'de ${w}. dalgaya ulaştım${d ? ' — ' + d : ''}! Sen kaçta bitirirsin?`, shareSaved: '📤 Kart indirildi — paylaşabilirsin', shareFail: '📤 Paylaşım yapılamadı',
+    dyeWord: 'Boya', dyeGot: n => `🎨 ${n} boyası alındı ve uygulandı`,
     slot2Buy: '🔓 2. aksesuar yuvası · 💎60', slot2Got: '🔓 2. yuva açıldı — kule + gövde aksesuarı birlikte takılır', slot2Same: 'İki aksesuar aynı yere takılamaz (kule/gövde)', setStick: 'Joystick', stickN: 'NORMAL', stickT: 'HASSAS', stickW: 'GENİŞ',
     masteryWord: 'Ustalık', rankWord: 'Rütbe', masteryBuy: (r, c) => `⭐ Rütbe ${r} · 🪙${c}`, masteryNeed: (k, n) => `${k}/${n} yok etme`, masteryUp: (nm, r) => `⭐ ${nm} — Rütbe ${r}! ${r === 5 ? 'USTA unvanı' : r === 4 ? 'kill parası +%5' : r === 3 ? 'altın toz izi' : ''}`, masteryMax: 'USTA', masteryHint: 'Bu tankla yok et → rütbe',
     kitsTitle: '🎒 SEFER KİTLERİ — bir sonraki koşuda kullanılır', kitReady: '✓ HAZIR', kitsArmed: k => `🎒 Kitler devrede: ${k}`, premBuy: '👑 Komutan Rayı · 💎120', premActive: '👑 Komutan Rayı aktif — her kademe ×2', premBought: n => `👑 Komutan Rayı alındı! Geriye dönük ${n} kademe ödülü verildi`, starterTitle: '🎁 BAŞLANGIÇ PAKETİ', starterDesc: '💎60 + Hover Tank + 🪙1000 + 🎰3', starterOnce: 'Tek seferlik · yeni komutan fırsatı', starterGot: '🎁 Başlangıç paketi alındı: Hover Tank garajda!',
@@ -108,6 +109,7 @@ const L = {
     nextGoal: 'Next up', weeklyLbl: '📅 WEEKLY MODE', weeklyWin: 'Weekly mode victory',
     modNames: { doubleBoss: 'Double Boss', fast: 'Fast Enemies', tough: 'Armored Enemies', bossRush: 'Boss Rush' },
     shareBtn: '📤 SHARE', shareText: (w, d) => `I reached wave ${w} in Tank Battle 3D${d ? ' — ' + d : ''}! Can you beat it?`, shareSaved: '📤 Card downloaded — ready to share', shareFail: '📤 Could not share',
+    dyeWord: 'Dye', dyeGot: n => `🎨 ${n} dye bought and applied`,
     slot2Buy: '🔓 2nd accessory slot · 💎60', slot2Got: '🔓 2nd slot unlocked — wear a turret + a hull accessory together', slot2Same: 'Two accessories cannot share a mount (turret/hull)', setStick: 'Joystick', stickN: 'NORMAL', stickT: 'TIGHT', stickW: 'WIDE',
     masteryWord: 'Mastery', rankWord: 'Rank', masteryBuy: (r, c) => `⭐ Rank ${r} · 🪙${c}`, masteryNeed: (k, n) => `${k}/${n} kills`, masteryUp: (nm, r) => `⭐ ${nm} — Rank ${r}! ${r === 5 ? 'MASTER title' : r === 4 ? '+5% kill coins' : r === 3 ? 'golden dust trail' : ''}`, masteryMax: 'MASTER', masteryHint: 'Kill with this tank → rank up',
     kitsTitle: '🎒 SORTIE KITS — used on your next run', kitReady: '✓ READY', kitsArmed: k => `🎒 Kits active: ${k}`, premBuy: '👑 Commander Track · 💎120', premActive: '👑 Commander Track active — every tier ×2', premBought: n => `👑 Commander Track unlocked! ${n} tier rewards granted retroactively`, starterTitle: '🎁 STARTER PACK', starterDesc: '💎60 + Hover Tank + 🪙1000 + 🎰3', starterOnce: 'One time · new commander offer', starterGot: '🎁 Starter pack claimed: Hover Tank is in your garage!',
@@ -210,7 +212,7 @@ try {
 // FAZ0: şema taşıma — v3 alanları (kitler, ustalık, reklam günlüğü, bölümler, sezon geçmişi, arkadaş kodu) eksikse tamamlanır
 function migrateProfile(p) {
   const obj = k => { if (!p[k] || typeof p[k] !== 'object' || Array.isArray(p[k])) p[k] = {}; };
-  obj('kits'); obj('mastery'); obj('chapters'); obj('seasonHistory'); obj('mapWins');
+  obj('kits'); obj('mastery'); obj('chapters'); obj('seasonHistory'); obj('mapWins'); obj('dyes'); obj('dye');
   if (!Array.isArray(p.rewardedLog)) p.rewardedLog = [];
   if (typeof p.code !== 'string') p.code = '';
   p.v = PROFILE_V;
@@ -543,6 +545,15 @@ const SKINS = [
   { id: 'relic', name: { tr: 'Kalıntı (Etkinlik)', en: 'Relic (Event)' }, price: 0, color: 0xff2a6a, glow: 0.6, metal: 0.5, r: 'e', event: true },
 ];
 const skinById = id => SKINS.find(s => s.id === id) || SKINS[0];
+// FAZ3 (plan C-3): KAPLAMA BOYASI — kaplama başına 3 ton (250🪙/ton, kalıcı): sıcak / soğuk / koyu; profile.dyes[skin]=[..], profile.dye[skin]=aktif
+const DYES = [
+  { id: 'warm', icon: '🔥', name: { tr: 'Sıcak', en: 'Warm' }, hsl: [-0.06, 0.1, 0.02] }, // ton turuncu/kızıla kayar
+  { id: 'cool', icon: '❄️', name: { tr: 'Soğuk', en: 'Cool' }, hsl: [0.12, 0.1, 0] },   // ton yeşil/maviye kayar
+  { id: 'dark', icon: '🌑', name: { tr: 'Koyu', en: 'Dark' }, hsl: [0, -0.1, -0.18] },
+];
+const DYE_PRICE = 250;
+function dyeColor(hex, dyeId) { const d = DYES.find(x => x.id === dyeId); if (!d) return hex; const c = new THREE.Color(hex); c.offsetHSL(d.hsl[0], d.hsl[1], d.hsl[2]); return c.getHex(); }
+function skinColor(s) { const dy = profile.dye && profile.dye[s.id]; return dy ? dyeColor(s.color, dy) : s.color; }
 const RARITY = { c: { w: 100, coin: 40, tr: 'Yaygın', en: 'Common', col: '#c8d0d8' }, r: { w: 34, coin: 120, tr: 'Nadir', en: 'Rare', col: '#5ad0ff' }, e: { w: 10, coin: 260, tr: 'Efsanevi', en: 'Epic', col: '#ffcc33' } };
 // başarımlar (koşul sağlanınca coin ödülü)
 const ACHIEVEMENTS = [
@@ -2096,14 +2107,15 @@ let playerTurret = null, turretBaseZ = 0;
 function applySkin(mesh, skinId) {
   const s = skinById(skinId);
   if (s.id === 'default') return; // tankın kendi rengi kalsın
+  const col = skinColor(s); // boya tonu (FAZ3)
   mesh.traverse(o => {
     if (o.isMesh && o.material && o.material.name === 'TankPaint') {
       o.material = o.material.clone();
       o.material.userData.owned = true;
-      o.material.color.setHex(s.color);
+      o.material.color.setHex(col);
       o.material.metalness = s.metal != null ? s.metal : 0.15;
       o.material.roughness = s.rough != null ? s.rough : 0.55;
-      if (s.glow) { o.material.emissive.setHex(s.color); o.material.emissiveIntensity = s.glow; }
+      if (s.glow) { o.material.emissive.setHex(col); o.material.emissiveIntensity = s.glow; }
       else o.material.emissiveIntensity = 0;
     }
   });
@@ -3473,10 +3485,27 @@ function renderSkins() {
     if (s.event && !owned) continue; // etkinlik kaplaması yalnız kazanılınca listelenir
     const equipped = profile.skin === s.id;
     const card = document.createElement('div'); card.className = 'card' + (equipped ? ' sel' : '');
-    const hex = s.color != null ? '#' + s.color.toString(16).padStart(6, '0') : '#5a6b3a';
+    const hex = s.color != null ? '#' + skinColor(s).toString(16).padStart(6, '0') : '#5a6b3a';
     const glow = s.glow ? `box-shadow:inset 0 0 26px ${hex};` : '';
     const grad = s.metal ? `linear-gradient(135deg,rgba(255,255,255,.5),${hex},rgba(0,0,0,.4))` : `linear-gradient(135deg,${hex},#161616)`;
     card.innerHTML = `<div class="cname">${s.name[lang]}</div><div class="cswatch" style="background:${grad};${glow}"></div>`;
+    if (owned && s.id !== 'default') { // FAZ3: boya satırı (3 ton, 250🪙; sahipse tıkla=uygula/kaldır)
+      const ownedD = (profile.dyes && profile.dyes[s.id]) || [], active = (profile.dye && profile.dye[s.id]) || '';
+      const row = document.createElement('div'); row.style.cssText = 'display:flex;justify-content:center;gap:4px;margin:4px 0';
+      for (const d of DYES) {
+        const has = ownedD.includes(d.id), on = active === d.id;
+        const b = document.createElement('button'); b.className = 'mbtn small' + (on ? ' gold' : '') + (!has && profile.coins < DYE_PRICE ? ' cant' : '');
+        b.style.cssText = 'padding:4px 8px;font-size:11px'; b.title = d.name[lang]; b.textContent = d.icon + (has ? (on ? ' ✓' : '') : ' 🪙' + DYE_PRICE);
+        b.onclick = () => {
+          profile.dyes = profile.dyes || {}; profile.dye = profile.dye || {};
+          if (!has) { if (profile.coins < DYE_PRICE) return showToast(t.noMoney); profile.coins -= DYE_PRICE; (profile.dyes[s.id] = profile.dyes[s.id] || []).push(d.id); track('soft_purchase', { t: 'dye', id: s.id + ':' + d.id, cur: 'c', amt: DYE_PRICE }); track('coin_spend', { sink: 'dye', n: DYE_PRICE }); sfxCoin(); updateCoinBar(); showToast(t.dyeGot(d.name[lang]), 2600); profile.dye[s.id] = d.id; }
+          else profile.dye[s.id] = on ? '' : d.id;
+          saveProfile(); setPlayerTank(); renderSkins();
+        };
+        row.appendChild(b);
+      }
+      card.appendChild(row);
+    }
     const btn = document.createElement('button'); btn.className = 'mbtn small' + (s.glow || s.metal ? ' gold' : '');
     if (equipped) { btn.textContent = t.selected; btn.disabled = true; }
     else if (owned) { btn.textContent = t.owned; btn.onclick = () => { profile.skin = s.id; saveProfile(); setPlayerTank(); renderSkins(); }; }
@@ -5231,7 +5260,7 @@ function trackTransitions() {
   if (state !== lastTrackedState) {
     if (state === 'play') { matchMode = mode; matchStartT = clock.elapsedTime; matchStartKills = profile.kills || 0; track('gameplay_start', { mode }); }
     else if (lastTrackedState === 'play') {
-      track('match_end', { mode: matchMode, dur: Math.round(clock.elapsedTime - matchStartT), reason: matchEndReason || 'quit', wave }); // wave: dalga-bazlı düşüş eğrisi için
+      track('match_end', { mode: matchMode, dur: Math.round(clock.elapsedTime - matchStartT), reason: matchEndReason || 'quit', wave, tank: profile.selected, map: lastSoloMap }); // tank/map: denge okuması (tank başına zafer oranı) // wave: dalga-bazlı düşüş eğrisi için
       matchEndReason = '';
       questProgress('match', 1);                                   // görev: maç oyna
       questProgress('kill', (profile.kills || 0) - matchStartKills); // görev: tank patlat
