@@ -27,7 +27,7 @@ const L = {
     lbWeekTitle: 'HAFTANIN EN İYİLERİ',
     timeNewRec: d => `⏱ Süre ${d} — YENİ REKOR!`, timeLine: (d, b) => `⏱ Süre ${d} · Rekorun ${b}`,
     reviveTitle: '💥 NEREDEYSE!', reviveSub: 'Yeni komutanlara özel: aynı dalgadan ücretsiz devam et!',
-    reviveYes: '⚡ DEVAM ET', reviveNo: 'Vazgeç', reviveSubAd: 'Reklam izle, aynı dalgadan tam canla devam et', reviveYesAd: '📺 İZLE VE DEVAM ET', reviveSubGem: 'Aynı dalgadan tam canla devam et', reviveYesGem: '💎 15 · DEVAM ET', adFail: '📺 Reklam yüklenemedi', chestX2: '📺 Sandığı ikiye katla', chestX2Got: '📦 Sandık ×2: +🪙120 +🎰2', patrolX2: n => `📺 Devriyeyi ikiye katla (+🪙${n})`, freeSpin: '📺 Ücretsiz çekiliş', freeSpinDone: 'Bugünkü ücretsiz çekiliş alındı ✓',
+    reviveYes: '⚡ DEVAM ET', reviveNo: 'Vazgeç', reviveSubAd: 'Reklam izle, aynı dalgadan tam canla devam et', reviveYesAd: '📺 İZLE VE DEVAM ET', reviveSubGem: 'Aynı dalgadan tam canla devam et', reviveYesGem: '💎 15 · DEVAM ET', adFail: '📺 Reklam yüklenemedi', chestX2: '📺 Sandığı ikiye katla', chestX2Got: '📦 Sandık ×2: +🪙120 +🎰2', patrolX2: n => `📺 Devriyeyi ikiye katla (+🪙${n})`, freeSpin: '📺 Ücretsiz çekiliş', freeSpinDone: 'Bugünkü ücretsiz çekiliş alındı ✓', returnMsg: d => `👋 Hoş geldin komutan — ${d} gün oldu! +🎰1 · ilk koşuda düşmanlar yavaş`,
     overNewRec: b => `🏆 YENİ REKOR — Dalga ${b}!`, overCheer: b => `Rekorun: Dalga ${b} — bir daha dene!`,
     connLostTitle: '📡 BAĞLANTI KOPTU', connLostSub: 'Sunucuyla bağlantı kesildi — kazanımların kaydedildi.',
     vulnTxt: 'SAVUNMASIZ!',
@@ -107,7 +107,7 @@ const L = {
     lbWeekTitle: "THIS WEEK'S BEST",
     timeNewRec: d => `⏱ Time ${d} — NEW RECORD!`, timeLine: (d, b) => `⏱ Time ${d} · Your best ${b}`,
     reviveTitle: '💥 SO CLOSE!', reviveSub: 'New commander bonus: continue from this wave for free!',
-    reviveYes: '⚡ CONTINUE', reviveNo: 'Give up', reviveSubAd: 'Watch an ad, continue from this wave at full HP', reviveYesAd: '📺 WATCH & CONTINUE', reviveSubGem: 'Continue from this wave at full HP', reviveYesGem: '💎 15 · CONTINUE', adFail: '📺 Ad failed to load', chestX2: '📺 Double the chest', chestX2Got: '📦 Chest ×2: +🪙120 +🎰2', patrolX2: n => `📺 Double patrol (+🪙${n})`, freeSpin: '📺 Free spin', freeSpinDone: "Today's free spin claimed ✓",
+    reviveYes: '⚡ CONTINUE', reviveNo: 'Give up', reviveSubAd: 'Watch an ad, continue from this wave at full HP', reviveYesAd: '📺 WATCH & CONTINUE', reviveSubGem: 'Continue from this wave at full HP', reviveYesGem: '💎 15 · CONTINUE', adFail: '📺 Ad failed to load', chestX2: '📺 Double the chest', chestX2Got: '📦 Chest ×2: +🪙120 +🎰2', patrolX2: n => `📺 Double patrol (+🪙${n})`, freeSpin: '📺 Free spin', freeSpinDone: "Today's free spin claimed ✓", returnMsg: d => `👋 Welcome back, commander — ${d} days! +🎰1 · enemies go easy on your first run`,
     overNewRec: b => `🏆 NEW RECORD — Wave ${b}!`, overCheer: b => `Your best: Wave ${b} — try again!`,
     connLostTitle: '📡 CONNECTION LOST', connLostSub: 'Lost connection to the server — your rewards were saved.',
     vulnTxt: 'VULNERABLE!',
@@ -236,21 +236,41 @@ const V1_SIMPLE = true;
 function wsBase() { return isNativeApp() ? 'wss://' + REMOTE_HOST : (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host; }
 function capPlugins() { return (window.Capacitor && window.Capacitor.Plugins) || {}; }
 function haptic(style) { try { if (!settings.haptics) return; const H = capPlugins().Haptics; if (isNativeApp() && H) H.impact({ style: style || 'MEDIUM' }); } catch {} }
-// P1: günlük yerel bildirim — 20:00 "görevlerin hazır" (izin FTUE sonrası, ayarlardan kapatılabilir; server-push değil)
+// P1 + FAZ1 (plan B-3): yerel bildirim PLANLAYICI — günde EN FAZLA 1; sonraki 7 gün için öncelik:
+// sezon-bitiyor(105) > Cuma etkinlik(104) > seri riskte(103) > günlük görev(101); ayrıca devriye-dolu (102, +8sa, 09-22 arası).
+// Her planlama önce eskileri iptal eder (boot + her maç sonu). İzin FTUE sonrası (games>3). Server-push değil.
+const NOTIF_IDS = [101, 102, 103, 104, 105, 111, 112, 113, 114, 115, 116, 117];
+let notifTapBound = false;
 async function setupNotifs() {
   try {
     const LN = capPlugins().LocalNotifications;
     if (!isNativeApp() || !LN) return;
-    if (!settings.notifs) { LN.cancel({ notifications: [{ id: 101 }] }).catch(() => {}); return; }
+    const ids = NOTIF_IDS.map(id => ({ id }));
+    if (!settings.notifs) { LN.cancel({ notifications: ids }).catch(() => {}); return; }
     if ((profile.games || 0) <= 3) return; // izin sorusu FTUE'den sonra (2. gün civarı)
     const perm = await LN.requestPermissions();
     if (!perm || perm.display !== 'granted') return;
-    await LN.schedule({ notifications: [{
-      id: 101,
-      title: lang === 'tr' ? '🎯 Görevlerin hazır!' : '🎯 Your quests are ready!',
-      body: lang === 'tr' ? 'Günlük görevler + sandık seni bekliyor — seri bozulmasın!' : 'Daily quests + chest are waiting — keep your streak!',
-      schedule: { on: { hour: 20, minute: 0 }, allowWhileIdle: true },
-    }] });
+    await LN.cancel({ notifications: ids }).catch(() => {});
+    if (!notifTapBound) { notifTapBound = true; LN.addListener('localNotificationActionPerformed', ev => { try { track('notif_open', { t: (ev.notification.extra || {}).type }); } catch {} }); }
+    const tr = lang === 'tr', now = new Date(), list = [];
+    { // 102 devriye dolu (bugün başka bildirim yok — oyuncu şu an aktif)
+      const at = new Date(now.getTime() + 8 * 3600e3);
+      if (at.getHours() < 9) at.setHours(9, 0, 0, 0); else if (at.getHours() >= 22) { at.setDate(at.getDate() + 1); at.setHours(9, 0, 0, 0); }
+      list.push({ id: 102, at, type: 'patrol', title: tr ? '🛡️ Devriye dolu' : '🛡️ Patrol complete', body: tr ? '+320🪙 seni bekliyor — topla ve koşuya çık!' : '+320🪙 waiting — collect and run!' });
+    }
+    const sez = ensureSeason(), seasonEnd = Date.UTC(2026, 0, 1) + sez.id * 6 * 7 * 86400000;
+    for (let d = 1; d <= 7; d++) {
+      const day = new Date(now); day.setDate(now.getDate() + d); day.setHours(12, 0, 0, 0);
+      const daysToEnd = Math.round((seasonEnd - day.getTime()) / 86400000);
+      let n;
+      if (daysToEnd === 3 && sez.tier < SEASON_LEN) n = { type: 'season', h: 19, m: 0, title: tr ? '⏳ Sezon 3 gün sonra bitiyor' : '⏳ Season ends in 3 days', body: tr ? `${SEASON_LEN - sez.tier} kademe daha var — XP topla!` : `${SEASON_LEN - sez.tier} tiers left — earn XP!` };
+      else if (day.getDay() === 5) n = { type: 'event', h: 18, m: 0, title: tr ? '🎉 Hafta sonu etkinliği başladı' : '🎉 Weekend event is live', body: tr ? '72 saat — ekstra ödüller seni bekliyor' : '72 hours — extra rewards await' };
+      else if (d === 1 && (profile.streak || 0) >= 2) n = { type: 'streak', h: 21, m: 30, title: tr ? `🔥 ${profile.streak} günlük serin bu gece bitiyor` : `🔥 Your ${profile.streak}-day streak ends tonight`, body: tr ? 'Bir koşu yeter — seriyi koru!' : 'One run keeps it alive!' };
+      else n = { type: 'daily', h: 20, m: 0, title: tr ? '🎯 Görevlerin hazır!' : '🎯 Your quests are ready!', body: tr ? 'Günlük görevler + sandık seni bekliyor — seri bozulmasın!' : 'Daily quests + chest are waiting — keep your streak!' };
+      const at = new Date(day); at.setHours(n.h, n.m, 0, 0);
+      list.push({ id: 110 + d, at, type: n.type, title: n.title, body: n.body });
+    }
+    await LN.schedule({ notifications: list.map(n => ({ id: n.id, title: n.title, body: n.body, extra: { type: n.type }, schedule: { at: n.at, allowWhileIdle: true } })) });
   } catch (e) {}
 }
 function nativeInit() {
@@ -381,12 +401,15 @@ let dailyPending = false; // FTUE: günlük ödülü ilk menü ziyaretine ertele
 // E3: offline devriye kazancı — oyuncu yokken tank "devriyede" coin biriktirir (saatte 40, 8 saat tavan).
 // Araştırma: idle kazanç ucuz + bildirime içerik verir; koşu gelirinin çok altında tutuldu (ekonomiyi bozmaz).
 let patrolPending = 0, patrolHours = 0, patrolX2Amt = 0;
+let returnPending = 0, returnMercy = 0, runMercy = 0; // FAZ1 B-6: 3+ gün sonra dönen oyuncu — karşılama + ilk koşuda uzatılmış merhamet
 (() => {
   try {
     const last = +profile.lastSeen || 0;
     if (last > 0) {
       const hrs = Math.min(8, (Date.now() - last) / 3600e3);
       if (hrs >= 0.5) { patrolPending = Math.round(hrs * 40); patrolHours = Math.round(hrs * 10) / 10; }
+      const daysAway = (Date.now() - last) / 864e5;
+      if (daysAway >= 3 && (profile.games || 0) > 0) returnPending = Math.floor(daysAway);
     }
     profile.lastSeen = Date.now(); saveProfile();
   } catch (e) {}
@@ -1204,9 +1227,9 @@ function damageEnemy(e, dmg) {
   if (e.hp <= 0) {
     e.alive = false; explode(e.x, 1.0, e.z, true); scene.remove(e.mesh); disposeTank(e.mesh);
     popFloater(e.x, 2.2, e.z, '+' + e.score, e.type === 'boss' ? '#ff7a3a' : '#ffe86a');
-    popFloater(e.x, 3.1, e.z, '+🪙' + e.coins, '#ffd76a');
+    popFloater(e.x, 3.1, e.z, '+🪙' + killCoins(e), '#ffd76a');
     if (mode === 'coop') netSend({ t: 'ekill', id: e.id });
-    score += e.score; roundCoins += e.coins; profile.kills++; addCoins(e.coins); updateHUD();
+    onEnemyKilled(e);
   } else { e.hitT = 0.14; }
 }
 function barrelHurtLocalPlayer(cv, R) {
@@ -1967,7 +1990,7 @@ function fire(owner, angOff = 0, playerShot = null) {
   const bTeam = (mode === 'team' && team) ? (isPlayer ? team.mine : owner.team) : null;
   const bOwner = (mode === 'team' && team) ? (isPlayer ? team.you : owner.pid) : null;
   // E1: oyuncu mermisi PvE'de 2 sekme yapar (MEGA SEKME klip anının hammaddesi); düşman/PvP 1 sekme (denge)
-  const nB = (isPlayer && (mode === 'solo' || mode === 'coop')) ? 2 : 1;
+  const nB = ((isPlayer && (mode === 'solo' || mode === 'coop')) ? 2 : 1) + ((isPlayer && buildOn() && matchBuild.bounce) ? 1 : 0); // build: Ekstra Sekme
   bullets.push({ mesh, fromPlayer: isPlayer, playerShot: playerShot == null ? isPlayer : playerShot, vx: fwdX(a) * sp, vz: fwdZ(a) * sp, life: 2.6, bounces: nB, b0: nB, team: bTeam, owner: bOwner });
   muzzleFlash(bx, 1.3, bz);
   sfxFire();
@@ -2066,7 +2089,7 @@ const ENEMY_TYPES = {
 };
 let enemyIdC = 0;
 // merhamet eğrisi (FTUE): solo 1-2. dalgada düşman ateş temposu %35 yavaş — yeni oyuncu ilk dakikada ölmesin
-const enemyMercy = () => (mode === 'solo' && wave <= 2 ? 1.35 : 1);
+const enemyMercy = () => (mode === 'solo' && (wave <= 2 || (runMercy && wave <= 3)) ? 1.35 : 1); // runMercy: dönen oyuncunun ilk koşusu dalga 3'e kadar yumuşak
 function waveComposition(w, extra = 0) {
   if (w % 5 === 0) {
     const list = ['boss'];
@@ -2328,6 +2351,7 @@ let harvestReplay = null, harvestReward = null, harvestEndless = null;
 function showHarvest(opts) {
   state = 'over';
   abortTutorial();
+  if (isNativeApp()) setupNotifs(); // bildirim planı seri/sezon durumuna göre tazelenir
   const t = T();
   const preLvl = profile.level || 1, prePct = ((profile.xp || 0) / xpForLevel(preLvl)) * 100;
   const gained = computeMatchXp(opts.xpKind, opts.xpOpts);
@@ -2740,6 +2764,7 @@ function openMenu() {
   abortTutorial();
   $('reviveoffer').classList.add('hidden');
   if (dailyPending) { dailyPending = false; checkDaily(); } // FTUE: günlük ödül toastı oyun başında değil, ilk menü ziyaretinde
+  if (returnPending) { showToast(T().returnMsg(returnPending), 4600); grantTokens(1, true); returnMercy = 1; track('return_flow', { daysAway: returnPending }); returnPending = 0; }
   if (patrolPending > 0) {
     addCoins(patrolPending); showToast(T().patrolMsg(patrolPending, patrolHours), 4200); track('patrol_claim', { c: patrolPending });
     if (canOfferRewarded()) { patrolX2Amt = patrolPending; } // FAZ1 C-6 #4: menüde "devriyeyi ikiye katla" butonu (bir sonraki koşuya kadar)
@@ -3295,6 +3320,7 @@ function startSolo(mapIdx, weekly) {
   soloStartBest = profile.bestWave || 1;
   soloRunStart = clock.elapsedTime;
   runRevive = { ad: 0, gem: 0 };
+  runMercy = returnMercy; returnMercy = 0; // dönen oyuncu merhameti tek koşu
   $('reviveoffer').classList.add('hidden');
   mode = 'solo'; state = 'play';
   lastSoloMap = mapIdx;
@@ -4644,7 +4670,7 @@ if ((profile.games || 0) > 0) checkDaily(); else dailyPending = true;
 
 // ---------------------------------------------------------------- maç-içi build (Diep tarzı, her maç sıfırlanır — solo)
 // (durum değişkenleri yukarıda team/duel yanında bildirildi — TDZ için)
-function resetBuild() { matchBuild = { fire: 0, armor: 0, speed: 0, dmg: 0, multi: 0 }; buildChoosing = false; }
+function resetBuild() { matchBuild = { fire: 0, armor: 0, speed: 0, dmg: 0, multi: 0, bounce: 0, magnet: 0, vamp: 0, killsSince: 0 }; buildChoosing = false; }
 function buildOn() { return mode === 'solo' && matchBuild; } // şimdilik sadece solo (coop maç-içi build v1.x)
 function bFire() { return buildOn() ? Math.max(0.55, 1 - 0.11 * matchBuild.fire) : 1; } // DENGE: taban 0.4→0.55 (maç-içi yığılma ~15 atış/sn'ye çıkabiliyordu)
 function bSpeed() { return buildOn() ? (1 + 0.10 * matchBuild.speed) : 1; }
@@ -4656,11 +4682,25 @@ const BUILD_OPTS = [
   { id: 'speed', icon: '💨', name: { tr: 'Hız', en: 'Speed' }, desc: { tr: 'Hareket +%10', en: '+10% move' } },
   { id: 'dmg', icon: '💥', name: { tr: 'Güç', en: 'Power' }, desc: { tr: 'Mermi hasarı +1', en: '+1 damage' } },
   { id: 'multi', icon: '🔱', name: { tr: 'Çoklu Atış', en: 'Multi Shot' }, desc: { tr: 'Üçlü atış', en: 'Triple shot' } },
+  // FAZ1 (plan A-2): çeşitlilik — sekme sinerjisi, ekonomi, sürdürülebilirlik
+  { id: 'bounce', icon: '🪃', name: { tr: 'Ekstra Sekme', en: 'Extra Bounce' }, desc: { tr: 'Mermi +1 sekme', en: '+1 bullet bounce' } },
+  { id: 'magnet', icon: '🧲', name: { tr: 'Mıknatıs', en: 'Magnet' }, desc: { tr: 'Yok etme parası +%20', en: '+20% kill coins' } },
+  { id: 'vamp', icon: '🩹', name: { tr: 'Tamir', en: 'Repair' }, desc: { tr: 'Her 6 yok etmede +1 can', en: '+1 HP every 6 kills' } },
 ];
+// kill ödülü tek yerden (mıknatıs çarpanı) + tamir sayacı — 3 kill noktası (solo/coop authority/damageEnemy) bunu çağırır
+function killCoins(e) { return Math.round(e.coins * (buildOn() && matchBuild.magnet ? 1.2 : 1)); }
+function onEnemyKilled(e) {
+  const c = killCoins(e);
+  score += e.score; roundCoins += c; profile.kills++; addCoins(c); updateHUD();
+  if (buildOn() && matchBuild.vamp && player.alive && ++matchBuild.killsSince >= 6) {
+    matchBuild.killsSince = 0;
+    if (player.health < player.maxHealth) { player.health++; renderHealth(); popFloater(player.x, 2.6, player.z, '+1 ❤️', '#7dff9b'); }
+  }
+}
 function offerBuildChoice(onDone) {
   if (!matchBuild) resetBuild();
   buildOnDone = onDone;
-  const BUILD_CAP = { fire: 3, armor: 4, speed: 3, dmg: 2, multi: 1 }; // yığın tavanları (FAZ0: kadans arttı → tavanlar şart)
+  const BUILD_CAP = { fire: 3, armor: 4, speed: 3, dmg: 2, multi: 1, bounce: 1, magnet: 1, vamp: 1 }; // yığın tavanları (FAZ0: kadans arttı → tavanlar şart)
   const pool = BUILD_OPTS.filter(o => (matchBuild[o.id] || 0) < (BUILD_CAP[o.id] || 99)).slice();
   for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t = pool[i]; pool[i] = pool[j]; pool[j] = t; }
   const picks = pool.slice(0, 3), tt = T();
@@ -4871,9 +4911,9 @@ function tick() {
                 if (e.hp <= 0) {
                   e.alive = false; explode(e.x, 1.0, e.z, true); scene.remove(e.mesh); disposeTank(e.mesh);
                   popFloater(e.x, 2.2, e.z, '+' + e.score, e.type === 'boss' ? '#ff7a3a' : '#ffe86a');
-                popFloater(e.x, 3.1, e.z, '+🪙' + e.coins, '#ffd76a'); // denetim: en büyük musluk görünmezdi — kill parası artık ekranda
+                popFloater(e.x, 3.1, e.z, '+🪙' + killCoins(e), '#ffd76a'); // denetim: en büyük musluk görünmezdi — kill parası artık ekranda
                   netSend({ t: 'ekill', id: e.id });
-                  score += e.score; roundCoins += e.coins; profile.kills++; addCoins(e.coins); updateHUD();
+                  onEnemyKilled(e);
                   if ((b.b0 || 1) - b.bounces >= 2) megaBounce(e); // E1: çift sekmeyle kill
                 } else { e.hitT = 0.14; explode(b.mesh.position.x, 1.0, b.mesh.position.z, false); }
                 dead = true; break;
@@ -4928,8 +4968,8 @@ function tick() {
               if (e.hp <= 0) {
                 e.alive = false; explode(e.x, 1.0, e.z, true); scene.remove(e.mesh); disposeTank(e.mesh);
                 popFloater(e.x, 2.2, e.z, '+' + e.score, e.type === 'boss' ? '#ff7a3a' : '#ffe86a');
-                popFloater(e.x, 3.1, e.z, '+🪙' + e.coins, '#ffd76a'); // denetim: en büyük musluk görünmezdi — kill parası artık ekranda
-                score += e.score; roundCoins += e.coins; profile.kills++; addCoins(e.coins); updateHUD();
+                popFloater(e.x, 3.1, e.z, '+🪙' + killCoins(e), '#ffd76a'); // denetim: en büyük musluk görünmezdi — kill parası artık ekranda
+                onEnemyKilled(e);
                 if ((b.b0 || 1) - b.bounces >= 2) megaBounce(e); // E1: çift sekmeyle kill
               } else { e.hitT = 0.14; explode(b.mesh.position.x, 1.0, b.mesh.position.z, false); }
               dead = true; break;
