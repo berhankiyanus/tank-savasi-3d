@@ -550,6 +550,14 @@ const SKINS = [
   { id: 'magma', name: { tr: 'Magma', en: 'Magma' }, price: 700, color: 0xff4a1a, glow: 0.5, metal: 0.4, r: 'e' },
   { id: 'aurora', name: { tr: 'Kutup Işığı', en: 'Aurora' }, price: 700, color: 0x3affd0, glow: 0.6, r: 'e' },
   { id: 'midnight', name: { tr: 'Gece Mavisi', en: 'Midnight' }, price: 400, color: 0x1c2a5a, metal: 0.9, rough: 0.2, r: 'r' },
+  // VARLIK FAZ 5 (plan §3g): DESENLİ KAPLAMALAR — tuvalde üretilen desen + nesne-uzayı tri-planar örnekleme (UV gerekmez; TankPaint + TankLight)
+  { id: 'woodland', name: { tr: 'Orman Kamuflajı', en: 'Woodland Camo' }, price: 900, color: 0xf2f2f2, rough: 0.85, r: 'r', camo: 'woodland' },
+  { id: 'desertcamo', name: { tr: 'Çöl Kamuflajı', en: 'Desert Camo' }, price: 900, color: 0xf2f2f2, rough: 0.85, r: 'r', camo: 'desert' },
+  { id: 'urban', name: { tr: 'Şehir Kamuflajı', en: 'Urban Camo' }, price: 900, color: 0xf2f2f2, rough: 0.8, r: 'r', camo: 'urban' },
+  { id: 'arctic', name: { tr: 'Kutup Kamuflajı', en: 'Arctic Camo' }, price: 900, color: 0xf2f2f2, rough: 0.8, r: 'r', camo: 'arctic' },
+  { id: 'digital', name: { tr: 'Dijital Kamuflaj', en: 'Digital Camo' }, price: 1200, color: 0xf2f2f2, rough: 0.8, r: 'e', camo: 'digital' },
+  { id: 'tiger', name: { tr: 'Kaplan Çizgisi', en: 'Tiger Stripes' }, price: 1200, color: 0xf2f2f2, rough: 0.75, r: 'e', camo: 'tiger' },
+  { id: 'plates', name: { tr: 'Perçinli Zırh', en: 'Riveted Armor' }, price: 1200, color: 0xf2f2f2, metal: 0.5, rough: 0.4, r: 'e', camo: 'plate' },
   // etkinlik ödülü (Toplama): satılmaz, gacha havuzunda değil
   { id: 'relic', name: { tr: 'Kalıntı (Etkinlik)', en: 'Relic (Event)' }, price: 0, color: 0xff2a6a, glow: 0.6, metal: 0.5, r: 'e', event: true },
 ];
@@ -563,6 +571,75 @@ const DYES = [
 const DYE_PRICE = 250;
 function dyeColor(hex, dyeId) { const d = DYES.find(x => x.id === dyeId); if (!d) return hex; const c = new THREE.Color(hex); c.offsetHSL(d.hsl[0], d.hsl[1], d.hsl[2]); return c.getHex(); }
 function skinColor(s) { const dy = profile.dye && profile.dye[s.id]; return dy ? dyeColor(s.color, dy) : s.color; }
+// VARLIK FAZ 5 (plan §3g): DESENLİ KAPLAMA — UV'siz tri-planar. Desen 256² tuvalde bir kez üretilir (indirilecek dosya yok, desen başına
+// paylaşılan tek doku); parça nesne-uzayında üç eksenden örneklenir (dFdx/dFdy → yüzey normali → ağırlık) ve malzeme rengiyle çarpılır.
+const camoTexCache = {};
+function camoNoise(seed) { // döşenebilir 2B değer gürültüsü: 3 oktav (8/16/32 hücre), kosinüs ara değer, deterministik LCG
+  let st = seed >>> 0; const rnd = () => { st = (Math.imul(st, 1664525) + 1013904223) >>> 0; return st / 4294967296; };
+  const grids = [8, 16, 32].map(n => { const g = new Float32Array(n * n); for (let i = 0; i < g.length; i++) g[i] = rnd(); return { n, g }; });
+  return (u, v) => {
+    let acc = 0, amp = 0.55, tot = 0;
+    for (const { n, g } of grids) {
+      const x = u * n, y = v * n, x0 = Math.floor(x), y0 = Math.floor(y), fx = x - x0, fy = y - y0;
+      const sx = (1 - Math.cos(fx * Math.PI)) / 2, sy = (1 - Math.cos(fy * Math.PI)) / 2;
+      const at = (i, j) => g[(((j % n) + n) % n) * n + (((i % n) + n) % n)];
+      const a = at(x0, y0) * (1 - sx) + at(x0 + 1, y0) * sx, b = at(x0, y0 + 1) * (1 - sx) + at(x0 + 1, y0 + 1) * sx;
+      acc += (a * (1 - sy) + b * sy) * amp; tot += amp; amp *= 0.5;
+    }
+    return acc / tot;
+  };
+}
+const CAMO_PATTERNS = { // kind: blob (eşikli gürültü) / pixel (bloklu gürültü) / stripe (gürültüyle bükülen çizgi) / plate (perçinli plaka)
+  woodland: { kind: 'blob', pal: ['#2f4a24', '#5b6b3a', '#7a6a44', '#1e2b18'], seed: 11 },
+  desert: { kind: 'blob', pal: ['#c9b07a', '#a98a58', '#e0cf9a', '#8b6f45'], seed: 23 },
+  urban: { kind: 'blob', pal: ['#8a8f96', '#4a4f56', '#c2c6cc', '#23262b'], seed: 37 },
+  arctic: { kind: 'blob', pal: ['#eef3f7', '#b9c6d2', '#8ea0b3', '#ffffff'], seed: 41 },
+  digital: { kind: 'pixel', pal: ['#3c5a3a', '#6b7d55', '#9aa47a', '#22301f'], seed: 53, px: 8 },
+  tiger: { kind: 'stripe', pal: ['#d9772a', '#1c1a18'], seed: 67 },
+  plate: { kind: 'plate', pal: ['#6a727c', '#2b3036', '#a8b0ba', '#59616b'], seed: 71 },
+};
+function camoCanvas(kind) {
+  if (camoTexCache[kind]) return camoTexCache[kind].canvas;
+  const p = CAMO_PATTERNS[kind] || CAMO_PATTERNS.woodland, S = 256;
+  const cv = document.createElement('canvas'); cv.width = cv.height = S;
+  const ctx = cv.getContext('2d'), img = ctx.createImageData(S, S), d = img.data;
+  const pal = p.pal.map(h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)]);
+  const n1 = camoNoise(p.seed), n2 = camoNoise(p.seed * 7 + 3);
+  for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+    let u = x / S, v = y / S, c;
+    if (p.kind === 'pixel') { u = Math.floor(x / p.px) * p.px / S; v = Math.floor(y / p.px) * p.px / S; }
+    if (p.kind === 'plate') {
+      const g = 64, lx = x % g, ly = y % g, seam = lx < 3 || ly < 3;
+      const rivet = [[9, 9], [55, 9], [9, 55], [55, 55]].some(([rx, ry]) => (lx - rx) ** 2 + (ly - ry) ** 2 < 9);
+      c = seam ? pal[1] : rivet ? pal[2] : pal[((x / g | 0) + (y / g | 0)) % 2 ? 0 : 3];
+    } else if (p.kind === 'stripe') { const w = Math.sin((u * 7 + n1(u, v) * 1.6 + v * 0.35) * Math.PI * 2); c = pal[w > 0.15 ? 1 : 0]; }
+    else { const t = n1(u, v) * 0.7 + n2(u, v) * 0.3; c = pal[t < 0.43 ? 3 : t < 0.5 ? 0 : t < 0.57 ? 1 : 2]; }
+    const i = (y * S + x) * 4; d[i] = c[0]; d[i + 1] = c[1]; d[i + 2] = c[2]; d[i + 3] = 255;
+  }
+  ctx.putImageData(img, 0, 0);
+  camoTexCache[kind] = { canvas: cv, tex: null, url: null };
+  return cv;
+}
+function camoSwatchUrl(kind) { camoCanvas(kind); const e = camoTexCache[kind]; if (!e.url) e.url = e.canvas.toDataURL('image/png'); return e.url; }
+function camoTexture(kind) {
+  camoCanvas(kind); const e = camoTexCache[kind];
+  if (!e.tex) { const t = new THREE.CanvasTexture(e.canvas); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; e.tex = t; }
+  return e.tex;
+}
+const CAMO_FRAG = `
+	{ vec3 cw = abs(normalize(cross(dFdx(vCamoPos), dFdy(vCamoPos)))); cw = pow(cw, vec3(3.0)); cw /= (cw.x + cw.y + cw.z + 1e-4);
+	vec3 cc = texture2D(camoMap, vCamoPos.yz * camoScale).rgb * cw.x + texture2D(camoMap, vCamoPos.xz * camoScale).rgb * cw.y + texture2D(camoMap, vCamoPos.xy * camoScale).rgb * cw.z;
+	diffuseColor.rgb *= cc; }`;
+function applyCamo(mat, kind, scale) { // MeshStandardMaterial klonuna tri-planar desen enjekte eder (klon örneğe özel → onBeforeCompile güvenli)
+  const tex = camoTexture(kind);
+  mat.onBeforeCompile = sh => {
+    sh.uniforms.camoMap = { value: tex }; sh.uniforms.camoScale = { value: scale || 0.55 };
+    sh.vertexShader = 'varying vec3 vCamoPos;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n\tvCamoPos = transformed;');
+    sh.fragmentShader = 'varying vec3 vCamoPos;\nuniform sampler2D camoMap;\nuniform float camoScale;\n' + sh.fragmentShader.replace('#include <map_fragment>', '#include <map_fragment>' + CAMO_FRAG);
+  };
+  mat.customProgramCacheKey = () => 'camo';
+  mat.needsUpdate = true;
+}
 const RARITY = { c: { w: 100, coin: 40, tr: 'Yaygın', en: 'Common', col: '#c8d0d8' }, r: { w: 34, coin: 120, tr: 'Nadir', en: 'Rare', col: '#5ad0ff' }, e: { w: 10, coin: 260, tr: 'Efsanevi', en: 'Epic', col: '#ffcc33' } };
 // başarımlar (koşul sağlanınca coin ödülü)
 const ACHIEVEMENTS = [
@@ -1597,7 +1674,8 @@ function renderAccThumb(a) {
   if (accThumbs[a.id]) return accThumbs[a.id];
   try {
     ensureThumbGl();
-    const g = a.build();
+    const g = a.glb ? (loadedAcc[a.id] ? loadedAcc[a.id].clone(true) : null) : a.build();
+    if (!g) return null; // GLB henüz inmedi → çağıran ensureAcc sonrası yeniler
     g.rotation.y = Math.PI * 0.15;
     thumbScene.add(g);
     const box = new THREE.Box3().setFromObject(g), size = new THREE.Vector3(), ctr = new THREE.Vector3();
@@ -1735,6 +1813,14 @@ const ACCESSORIES = [
   { id: 'wings', name: { tr: 'Melek Kanatları', en: 'Angel Wings' }, icon: '🪽', gem: 60, r: 'e', build: buildWings, mount: { x: 0, y: 0.75, z: 0.35 } },
   { id: 'jetpack', name: { tr: 'Jetpack', en: 'Jetpack' }, icon: '🚀', gem: 50, r: 'e', build: buildJetpack, mount: { x: 0, y: 0.7, z: 1.15 } },
   { id: 'radar', name: { tr: 'Radar Çanağı', en: 'Radar Dish' }, icon: '📡', price: 1400, r: 'r', build: buildRadar, mount: { x: 0, y: 1.5, z: 0.12 } }, // SEZON 2 (FAZ3)
+  // VARLIK FAZ 5 (plan §3f): GLB AKSESUARLAR — build() yerine glb yolu; tembel yüklenir, klonlar geometri/malzemeyi paylaşır (Kenney CC0 kitleri, Blender'da ölçeklendi)
+  { id: 'gift', name: { tr: 'Hediye Kutusu', en: 'Gift Box' }, icon: '🎁', price: 900, r: 'c', glb: 'assets/acc_gift.glb', mount: { x: 0, y: 1.5, z: 0.12 } },
+  { id: 'mushroom', name: { tr: 'Dev Mantar', en: 'Giant Mushroom' }, icon: '🍄', price: 700, r: 'c', glb: 'assets/acc_mushroom.glb', mount: { x: 0, y: 1.5, z: 0.12 } },
+  { id: 'sled', name: { tr: 'Kızak', en: 'Sled' }, icon: '🛷', price: 1100, r: 'r', glb: 'assets/acc_sled.glb', mount: { x: 0, y: 0.04, z: 2.6, ry: Math.PI } }, // gövdenin arkasında yerde çekilir; kıvrık uçlar öne (tanka) baksın
+  { id: 'snowman', name: { tr: 'Kardan Adam', en: 'Snowman' }, icon: '⛄', price: 1300, r: 'r', glb: 'assets/acc_snowman.glb', mount: { x: 0, y: 1.5, z: 0.12, ry: Math.PI } }, // havuç öne baksın
+  { id: 'xmas', name: { tr: 'Yılbaşı Ağacı', en: 'Holiday Tree' }, icon: '🎄', price: 1500, r: 'r', glb: 'assets/acc_xmas.glb', mount: { x: 0, y: 1.5, z: 0.12 } },
+  { id: 'rover', name: { tr: 'Mini Rover', en: 'Mini Rover' }, icon: '🛞', gem: 25, r: 'e', glb: 'assets/acc_rover.glb', mount: { x: 0, y: 0.72, z: 1.2 } },
+  { id: 'speeder', name: { tr: 'Uzay Kızağı', en: 'Speeder' }, icon: '🛸', gem: 45, r: 'e', glb: 'assets/acc_speeder.glb', mount: { x: 0, y: 1.8, z: 0.12 } },
 ];
 function buildRadar() {
   const g = new THREE.Group();
@@ -1746,9 +1832,24 @@ function buildRadar() {
   return g;
 }
 const accById = id => ACCESSORIES.find(a => a.id === id);
+// VARLIK FAZ 5: GLB aksesuar yükleyici — a.glb varsa sahne bir kez iner (loadedAcc), takılırken klonlanır; meshler userData.shared (disposeSubtree atlar)
+const loadedAcc = {}, _accLoading = {};
+function ensureAcc(id) {
+  const a = accById(id);
+  if (!a || !a.glb || loadedAcc[id]) return Promise.resolve();
+  if (!_accLoading[id]) _accLoading[id] = _modelLoader.loadAsync(a.glb).then(g => {
+    g.scene.traverse(n => {
+      if (!n.isMesh) return;
+      n.castShadow = true; n.userData.shared = true;
+      const m = n.material; if (m && /^Glow/.test(m.name)) { m.emissive.copy(m.color); m.emissiveIntensity = 1.0; m.toneMapped = false; }
+    });
+    loadedAcc[id] = g.scene;
+  }).catch(e => { console.warn('aksesuar yüklenemedi:', id, e); track('asset_fail', { f: a.glb }); });
+  return _accLoading[id];
+}
 // kule-üstü oturan aksesuarlar (tank kule yüksekliğine göre kaydırılır); diğerleri gövdeye sabit
-const ACC_TURRET_SLOT = new Set(['surf', 'cone', 'tophat', 'duck', 'crown', 'disco', 'radar']);
-function disposeSubtree(o) { o.traverse(n => { if (n.isMesh) { if (n.geometry) n.geometry.dispose(); if (n.material) (Array.isArray(n.material) ? n.material : [n.material]).forEach(m => m.dispose()); } }); }
+const ACC_TURRET_SLOT = new Set(['surf', 'cone', 'tophat', 'duck', 'crown', 'disco', 'radar', 'gift', 'mushroom', 'snowman', 'xmas', 'speeder']);
+function disposeSubtree(o) { o.traverse(n => { if (n.isMesh && !n.userData.shared) { /* shared: GLB aksesuar klonu — kaynağı paylaşır, dispose ETME */ if (n.geometry) n.geometry.dispose(); if (n.material) (Array.isArray(n.material) ? n.material : [n.material]).forEach(m => m.dispose()); } }); }
 // tank klonu temizliği (GPU sızıntısı fix): yalnız örneğe ÖZEL kaynaklar bırakılır (userData.owned malzeme klonları,
 // ownGeo işaretli geometriler — boss halkaları). Paylaşılan glTF geometri/malzemesine dokunmak diğer klonları bozar.
 function disposeTank(root) {
@@ -1765,8 +1866,14 @@ function disposeLabel(l) { if (l && l.material) l.material.dispose(); }
 function applyAccessory(root, accId, tankDef, slot) {
   const key = slot === 2 ? 'accMesh2' : 'accMesh';
   if (root.userData[key]) { root.remove(root.userData[key]); disposeSubtree(root.userData[key]); root.userData[key] = null; }
+  root.userData[key + 'Want'] = accId || ''; // tembel GLB inince hâlâ istenen aksesuar bu mu? (eski istek takılmasın)
   const a = accById(accId); if (!a) return;
-  const g = a.build(), mt = a.mount;
+  let g;
+  if (a.glb) {
+    if (!loadedAcc[a.id]) { ensureAcc(a.id).then(() => { if (loadedAcc[a.id] && root.userData[key + 'Want'] === accId && !root.userData[key]) applyAccessory(root, accId, tankDef, slot); }); return; }
+    g = loadedAcc[a.id].clone(true);
+  } else g = a.build();
+  const mt = a.mount;
   let y = mt.y || 0;
   // kule-üstü aksesuar → tankın kule yüksekliğine göre kaydır (büyük tanklarda hizalı)
   if (ACC_TURRET_SLOT.has(a.id)) y += (((tankDef && tankDef.turretTop) || 1.5) - 1.5);
@@ -2176,7 +2283,8 @@ function applySkin(mesh, skinId) {
       o.material.roughness = s.rough != null ? s.rough : 0.55;
       if (s.glow) { o.material.emissive.setHex(col); o.material.emissiveIntensity = s.glow; }
       else o.material.emissiveIntensity = 0;
-    } else if (o.isMesh && o.material && o.material.name === 'TankLight') { tintLight(o, col, s.metal != null ? Math.min(0.6, s.metal) : undefined); }
+      if (s.camo) applyCamo(o.material, s.camo); // desenli kaplama (VARLIK FAZ 5)
+    } else if (o.isMesh && o.material && o.material.name === 'TankLight') { tintLight(o, col, s.metal != null ? Math.min(0.6, s.metal) : undefined); if (s.camo) applyCamo(o.material, s.camo); }
   });
 }
 // 1v1'de (düello + top maçı) herkes bu standart tankı kullanır → adil + tutarlı vuruş algılama.
@@ -2202,6 +2310,7 @@ function setPlayerTank(overrideDef) {
   if (def.shot) { customShotMat.color.setHex(def.shot); customShotTailMat.color.setHex(def.shot); }
 }
 await ensureModel(tankById(profile.selected).model); // seçili tank özel modelliyse açılışta yükle
+await Promise.all([ensureAcc(profile.accessory), ensureAcc(profile.accessory2)]); // takılı GLB aksesuarlar açılışta hazır (VARLIK FAZ 5)
 setPlayerTank();
 
 let enemies = [];
@@ -3422,7 +3531,8 @@ async function openShowroom(tankId) {
   showroom.accId = tankId === profile.selected ? profile.accessory : '';
   enterShowroomView();
 }
-function openAccShowroom(accId) {
+async function openAccShowroom(accId) {
+  await ensureAcc(accId); // GLB aksesuar önizleme öncesi hazır (VARLIK FAZ 5)
   ensureShowroom();
   showroom.mode = 'acc'; showroom.tankId = profile.selected; showroom.accId = accId;
   enterShowroomView();
@@ -3548,7 +3658,8 @@ function renderSkins() {
     const hex = s.color != null ? '#' + skinColor(s).toString(16).padStart(6, '0') : '#5a6b3a';
     const glow = s.glow ? `box-shadow:inset 0 0 26px ${hex};` : '';
     const grad = s.metal ? `linear-gradient(135deg,rgba(255,255,255,.5),${hex},rgba(0,0,0,.4))` : `linear-gradient(135deg,${hex},#161616)`;
-    card.innerHTML = `<div class="cname">${s.name[lang]}</div><div class="cswatch" style="background:${grad};${glow}"></div>`;
+    const bg = s.camo ? `url(${camoSwatchUrl(s.camo)}) center/110px repeat` : grad; // desenli kaplama: gerçek desen (VARLIK FAZ 5)
+    card.innerHTML = `<div class="cname">${s.name[lang]}</div><div class="cswatch" style="background:${bg};${glow}"></div>`;
     if (owned && s.id !== 'default') { // FAZ3: boya satırı (3 ton, 250🪙; sahipse tıkla=uygula/kaldır)
       const ownedD = (profile.dyes && profile.dyes[s.id]) || [], active = (profile.dye && profile.dye[s.id]) || '';
       const row = document.createElement('div'); row.style.cssText = 'display:flex;justify-content:center;gap:4px;margin:4px 0';
@@ -3607,6 +3718,10 @@ function renderAccessories() {
         ? `<div class="cswatch cswatch-3d has-thumb"><img class="tankthumb" src="${ath}" alt=""><span class="cs-3d">🔍 3B</span></div>`
         : `<div class="cswatch cswatch-3d" style="background:radial-gradient(circle at 50% 42%,#2b3440,#12161c);display:flex;align-items:center;justify-content:center;font-size:30px"><span>${a.icon}</span><span class="cs-3d">🔍 3B</span></div>`);
     card.querySelector('.cswatch').onclick = () => openAccShowroom(a.id); // ikona dokun → 3B önizleme (tanka takılı hali)
+    if (!ath && a.glb) ensureAcc(a.id).then(() => { // tembel GLB indi → kart görselini yerinde tazele
+      const u = renderAccThumb(a), sw = card.querySelector('.cswatch');
+      if (u && sw && sw.isConnected) { sw.style.cssText = ''; sw.classList.add('has-thumb'); sw.innerHTML = `<img class="tankthumb" src="${u}" alt=""><span class="cs-3d">🔍 3B</span>`; }
+    });
     const btn = document.createElement('button'); btn.className = 'mbtn small' + (a.gem || a.r === 'e' ? ' gold' : '');
     if (equipped) { btn.textContent = t.accRemove; btn.onclick = () => { unequipAccessory(a.id); renderAccessories(); }; }
     else if (owned) { btn.textContent = t.accEquip; btn.onclick = () => { equipAccessory(a.id); renderAccessories(); }; }

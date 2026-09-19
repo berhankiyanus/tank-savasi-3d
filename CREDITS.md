@@ -13,6 +13,7 @@ Bu oyunda kullanılan üçüncü taraf varlıklar ve lisansları. Third-party as
 - `assets/decor_stadium.glb` (ağaçlar), `decor_desert.glb` (kaktüs, kaya, palmiye), `decor_lava.glb` (kaya): Kenney "Nature Kit" — CC0. https://kenney.nl/assets/nature-kit
 - `assets/decor_space.glb` (anten, kubbe, roket kulesi, kristal kaya, meteor): Kenney "Space Kit" — CC0. https://kenney.nl/assets/space-kit
 - `assets/decor_snow.glb` (karlı çamlar, kayalar, kardan adam): Kenney "Holiday Kit" — CC0. https://kenney.nl/assets/holiday-kit
+- Aksesuarlar `assets/acc_gift.glb` (present-b-rectangle), `acc_xmas.glb` (tree-decorated), `acc_snowman.glb` (snowman), `acc_sled.glb` (sled): Kenney "Holiday Kit" — CC0; `acc_mushroom.glb` (mushroom_red): Kenney "Nature Kit" — CC0; `acc_rover.glb` (rover), `acc_speeder.glb` (craft_speederA): Kenney "Space Kit" — CC0.
   (Kenney modellerinde: ölçek/birleştirme, palet dokusu düz malzemelere çevrildi, normalsiz GLB export. Tribün/projektör/pano, harabe, kulübe, bazalt sütun/kalıntı parçaları bu proje için Blender'da özgün üretildi.)
 
 ## HDRI / Aydınlatma

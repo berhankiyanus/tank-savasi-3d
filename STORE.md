@@ -111,7 +111,7 @@ oynanabilen kontroller.
 • 10 dalgalık zafer koşusu + sonsuz mod
 • 13 farklı tank: ağır zırhlılar, keskin nişancılar, sci-fi hover ve dev TITAN
 • 3B garaj vitrini — tankını döndür, incele, kuşan
-• 11 takılabilir aksesuar (sörf tahtası, taç, jetpack, radar...) + 36 kaplama
+• 18 takılabilir aksesuar (sörf tahtası, taç, jetpack, radar...) + 43 kaplama
 • 13 harita: çöl, kar, lav, uzay, şehir harabesi, liman, kanyon, fabrika...
 • Bota karşı düello: Çaylak / Usta / Efsane zorlukları
 • Arkadaşla oda kurup 1v1 düello (davet linkiyle tek dokunuş)
@@ -131,7 +131,7 @@ and put your victory on the clock. Short matches, fast action, one-hand controls
 • 10-wave victory run + endless mode
 • 12 distinct tanks: heavy armor, snipers, sci-fi hovercraft and the giant TITAN
 • 3D garage showroom — rotate, inspect, equip
-• 11 mountable accessories (surfboard, crown, jetpack, radar...) + 36 skins
+• 18 mountable accessories (surfboard, crown, jetpack, radar...) + 43 skins
 • 13 maps: desert, snow, lava, space, city ruins, harbor, canyon, factory...
 • Bot duels: Rookie / Pro / Legend difficulty
 • Create a room and duel a friend 1v1 (one-tap invite link)
