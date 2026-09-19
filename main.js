@@ -25,7 +25,7 @@ const L = {
     masteryWord: 'Ustalık', rankWord: 'Rütbe', masteryBuy: (r, c) => `⭐ Rütbe ${r} · 🪙${c}`, masteryNeed: (k, n) => `${k}/${n} yok etme`, masteryUp: (nm, r) => `⭐ ${nm} — Rütbe ${r}! ${r === 5 ? 'USTA unvanı' : r === 4 ? 'kill parası +%5' : r === 3 ? 'altın toz izi' : ''}`, masteryMax: 'USTA', masteryHint: 'Bu tankla yok et → rütbe',
     kitsTitle: '🎒 SEFER KİTLERİ — bir sonraki koşuda kullanılır', kitReady: '✓ HAZIR', kitsArmed: k => `🎒 Kitler devrede: ${k}`, premBuy: '👑 Komutan Rayı · 💎120', premActive: '👑 Komutan Rayı aktif — her kademe ×2', premBought: n => `👑 Komutan Rayı alındı! Geriye dönük ${n} kademe ödülü verildi`, starterTitle: '🎁 BAŞLANGIÇ PAKETİ', starterDesc: '💎60 + Hover Tank + 🪙1000 + 🎰3', starterOnce: 'Tek seferlik · yeni komutan fırsatı', starterGot: '🎁 Başlangıç paketi alındı: Hover Tank garajda!',
     chapterWord: 'BÖLÜM', chVictories: 'zafer', chapterDone: (n, nm) => `📖 Bölüm ${n} tamamlandı: ${nm} — +🎰2 +💎1`,
-    eventNames: { doubleGold: '🎉 ÇİFTE ALTIN', bossRush: '💀 BOSS RUSH' }, eventLeft: (h, m) => `${h}sa ${m}dk`, eventDoubleTip: '🎉 Çifte Altın: hafta sonu tüm koşularda yok etme parası ×2!', eventBossTip: '💀 Boss Rush: 5 dalga, her dalga boss — boss başı 150🪙, zaferde +🎰2', lbSpeed: '⏱ HIZ', lbSpeedTitle: '⏱ HAFTANIN EN HIZLI ZAFERLERİ',
+    eventNames: { doubleGold: '🎉 ÇİFTE ALTIN', bossRush: '💀 BOSS RUSH', speedRace: '⏱ HIZ YARIŞI', collect: '🧩 TOPLAMA' }, eventSpeedTip: '⏱ Hız Yarışı: 10 dalga zaferlerin hız tablosunda yarışır — bu hafta sonu her zafer +🎰2', eventCollectTip: "🧩 Toplama: yok etmelerin %8'i parça düşürür — 30 parça = etkinlik kaplaması KALINTI", partGot: n => `🧩 Parça ${n}/30`, relicGot: '🧩 30 parça tamam — KALINTI kaplaması garajda!', friendPh: 'Arkadaş adı', friendBtn: 'KARŞILAŞTIR', friendNone: 'İlk 20 içinde bulunamadı', youWord: 'Sen', eventLeft: (h, m) => `${h}sa ${m}dk`, eventDoubleTip: '🎉 Çifte Altın: hafta sonu tüm koşularda yok etme parası ×2!', eventBossTip: '💀 Boss Rush: 5 dalga, her dalga boss — boss başı 150🪙, zaferde +🎰2', lbSpeed: '⏱ HIZ', lbSpeedTitle: '⏱ HAFTANIN EN HIZLI ZAFERLERİ',
     gemTip: 'Elmas al', namePh: 'İsmin', midW: 'KISIK', setNotifs: 'Bildirimler', streakFrozen: '🧊 Serin donduruldu — kaldığın yerden devam!', pityLine: n => `🛡️ Garanti: ${n} çekilişte Efsanevi`,
     setHaptic: 'Titreşim', privacyLbl: 'Gizlilik Politikası',
     connWaking: '⏳ Sunucu uyanıyor — birkaç saniye sürebilir...', offlineMsg: '📡 İnternet yok — bağlanınca tekrar dene',
@@ -110,7 +110,7 @@ const L = {
     masteryWord: 'Mastery', rankWord: 'Rank', masteryBuy: (r, c) => `⭐ Rank ${r} · 🪙${c}`, masteryNeed: (k, n) => `${k}/${n} kills`, masteryUp: (nm, r) => `⭐ ${nm} — Rank ${r}! ${r === 5 ? 'MASTER title' : r === 4 ? '+5% kill coins' : r === 3 ? 'golden dust trail' : ''}`, masteryMax: 'MASTER', masteryHint: 'Kill with this tank → rank up',
     kitsTitle: '🎒 SORTIE KITS — used on your next run', kitReady: '✓ READY', kitsArmed: k => `🎒 Kits active: ${k}`, premBuy: '👑 Commander Track · 💎120', premActive: '👑 Commander Track active — every tier ×2', premBought: n => `👑 Commander Track unlocked! ${n} tier rewards granted retroactively`, starterTitle: '🎁 STARTER PACK', starterDesc: '💎60 + Hover Tank + 🪙1000 + 🎰3', starterOnce: 'One time · new commander offer', starterGot: '🎁 Starter pack claimed: Hover Tank is in your garage!',
     chapterWord: 'CHAPTER', chVictories: 'wins', chapterDone: (n, nm) => `📖 Chapter ${n} complete: ${nm} — +🎰2 +💎1`,
-    eventNames: { doubleGold: '🎉 DOUBLE GOLD', bossRush: '💀 BOSS RUSH' }, eventLeft: (h, m) => `${h}h ${m}m`, eventDoubleTip: '🎉 Double Gold: kill coins ×2 in every run this weekend!', eventBossTip: '💀 Boss Rush: 5 waves, a boss every wave — 150🪙 per boss, +🎰2 on victory', lbSpeed: '⏱ SPEED', lbSpeedTitle: "⏱ THIS WEEK'S FASTEST VICTORIES",
+    eventNames: { doubleGold: '🎉 DOUBLE GOLD', bossRush: '💀 BOSS RUSH', speedRace: '⏱ SPEED RACE', collect: '🧩 COLLECTION' }, eventSpeedTip: '⏱ Speed Race: 10-wave victories compete on the speed board — every win +🎰2 this weekend', eventCollectTip: '🧩 Collection: 8% of kills drop a part — 30 parts = the RELIC event skin', partGot: n => `🧩 Part ${n}/30`, relicGot: '🧩 30 parts complete — RELIC skin is in your garage!', friendPh: 'Friend name', friendBtn: 'COMPARE', friendNone: 'Not found in the top 20', youWord: 'You', eventLeft: (h, m) => `${h}h ${m}m`, eventDoubleTip: '🎉 Double Gold: kill coins ×2 in every run this weekend!', eventBossTip: '💀 Boss Rush: 5 waves, a boss every wave — 150🪙 per boss, +🎰2 on victory', lbSpeed: '⏱ SPEED', lbSpeedTitle: "⏱ THIS WEEK'S FASTEST VICTORIES",
     gemTip: 'Get gems', namePh: 'Your name', midW: 'LOW', setNotifs: 'Notifications', streakFrozen: '🧊 Streak frozen — pick up where you left off!', pityLine: n => `🛡️ Guaranteed Epic within ${n} spins`,
     setHaptic: 'Haptics', privacyLbl: 'Privacy Policy',
     connWaking: '⏳ Server waking up — may take a few seconds...', offlineMsg: '📡 No internet — try again when connected',
@@ -528,6 +528,8 @@ const SKINS = [
   { id: 'ember', name: { tr: 'Kor', en: 'Ember' }, price: 700, color: 0xffb02a, glow: 0.6, r: 'e' },
   { id: 'venom', name: { tr: 'Panzehir', en: 'Venom' }, price: 700, color: 0x2affa0, glow: 0.55, r: 'e' },
   { id: 'royal', name: { tr: 'Kraliyet', en: 'Royal' }, price: 900, color: 0x3a4dff, glow: 0.5, metal: 0.6, r: 'e' },
+  // etkinlik ödülü (Toplama): satılmaz, gacha havuzunda değil
+  { id: 'relic', name: { tr: 'Kalıntı (Etkinlik)', en: 'Relic (Event)' }, price: 0, color: 0xff2a6a, glow: 0.6, metal: 0.5, r: 'e', event: true },
 ];
 const skinById = id => SKINS.find(s => s.id === id) || SKINS[0];
 const RARITY = { c: { w: 100, coin: 40, tr: 'Yaygın', en: 'Common', col: '#c8d0d8' }, r: { w: 34, coin: 120, tr: 'Nadir', en: 'Rare', col: '#5ad0ff' }, e: { w: 10, coin: 260, tr: 'Efsanevi', en: 'Epic', col: '#ffcc33' } };
@@ -704,7 +706,7 @@ function weeklySpec() {
 let weeklyRun = null; // aktif koşu haftalık modda mı ({map, mod, waves?})
 // FAZ1 (plan B-1): HAFTA SONU ETKİNLİĞİ — Cuma 18:00 → Pazar 24:00 TR; şablon ISO hafta % 2 (doubleGold / bossRush).
 // Sunucu /events aynı formülü uygular + EVENT_FORCE ile elle açabilir (sürümsüz canlı-ops); fetch başarısızsa yerel formül.
-const EVENT_TYPES = ['doubleGold', 'bossRush'];
+const EVENT_TYPES = ['doubleGold', 'bossRush', 'speedRace', 'collect']; // 4 haftalık rotasyon (sunucuyla aynı)
 let activeEvent = { active: false }, eventFetchedAt = 0;
 function eventSpec() {
   const now = Date.now(), tr = new Date(now + 3 * 3600e3);
@@ -724,11 +726,21 @@ async function fetchEvent(force) {
   try { const r = await fetch(apiBase() + '/events', { cache: 'no-store' }); const j = await r.json(); if (j && typeof j.active === 'boolean') activeEvent = j; } catch {}
   renderEventBtn();
 }
+function eventKey() { return 'e' + (activeEvent.endsAt || 0); }
+function eventParts() { return (profile.eventParts && profile.eventParts[eventKey()]) || 0; }
+function onEventKill() { // Toplama: kill başına %8 parça; 30 → KALINTI kaplaması (bir kez)
+  if (!eventLive() || activeEvent.type !== 'collect' || mode !== 'solo' || Math.random() >= 0.08) return;
+  profile.eventParts = profile.eventParts || {}; const k = eventKey(); const n = (profile.eventParts[k] || 0) + 1; profile.eventParts[k] = n;
+  if (n <= 30) showToast(T().partGot(n), 1800);
+  if (n === 30 && !profile.skins.includes('relic')) { profile.skins.push('relic'); showToast(T().relicGot, 4200); sfxPower(); track('event_complete', { type: 'collect' }); }
+  saveProfile();
+}
 function renderEventBtn() {
   const b = $('btn-event'); if (!b) return;
   if (!eventLive()) { b.style.display = 'none'; return; }
   const t = T(), left = Math.max(0, (activeEvent.endsAt || 0) - Date.now()), hh = Math.floor(left / 3600e3), mm = Math.floor((left % 3600e3) / 60e3);
-  b.style.display = ''; b.textContent = `${t.eventNames[activeEvent.type] || activeEvent.type}${activeEvent.endsAt ? ' · ' + t.eventLeft(hh, mm) : ''}`;
+  const parts = activeEvent.type === 'collect' ? ` · ${eventParts()}/30` : '';
+  b.style.display = ''; b.textContent = `${t.eventNames[activeEvent.type] || activeEvent.type}${parts}${activeEvent.endsAt ? ' · ' + t.eventLeft(hh, mm) : ''}`;
 }
 
 // ---------------------------------------------------------------- sabitler
@@ -2127,6 +2139,8 @@ function fire(owner, angOff = 0, playerShot = null) {
   if (isPlayer) {
     player.noFireT = 0; // Hayalet: ateş gizlenmeyi bozar
     if (mechIs('pierce')) b.pierce = 1;
+    if (buildOn() && matchBuild.pierce) b.pierce = (b.pierce || 0) + 1; // Delici kartı (Nişancı ile yığılır: 2 düşman)
+    if (buildOn() && matchBuild.big) mesh.scale.setScalar(1.4); // Ağır Mermi
     if (mechIs('lob')) { // Obüs: havan mermisi — sabit 18 birim menzil, 1.1 sn uçuş, duvar aşar, alan hasarı
       const travel = 18 - 2.6, dur = 1.1; b.lob = true; b.lobT = 0; b.lobDur = dur; b.vx = fwdX(a) * travel / dur; b.vz = fwdZ(a) * travel / dur; b.bounces = 0; b.b0 = 0; b.life = dur + 0.2; // namludan 18 birime iner
       mesh.scale.setScalar(1.9); tail.visible = false;
@@ -2266,19 +2280,23 @@ const ENEMY_TYPES = {
 // FAZ2 (plan A-5): KAMİKAZE (ateş etmez, dalar, 0.6sn fitil → r3 patlama: oyuncu VE düşmanlara 1) · MAYINCI (5sn'de bir arkasına mayın, maks 4; 1sn kurulma, r2.5, herkese 1; mermi mayını patlatır)
 ENEMY_TYPES.kamikaze = { hp: 1, speed: 9.0, turn: 3.2, cool: [1e9, 1e9], bspeed: 0, keep: 0, sight: 60, scale: 0.8, color: 0xff7a1a, coins: 7, score: 120, kamikaze: true, glow: true };
 ENEMY_TYPES.miner = { hp: 2, speed: 3.4, turn: 1.6, cool: [2.6, 4.2], bspeed: 18, keep: 14, sight: 60, scale: 1.0, color: 0x6a4a9a, coins: 12, score: 220, miner: true };
-const BOSS_TYPES = new Set(['boss', 'boss_blitz']);
+// FAZ2 (plan A-3) 3. boss arketipi KALE (boss_fort): sabit (harita merkezine yakın), kule döner + üçlü atış, 8sn'de 2 scout doğurur;
+// ön 120° yay 0 hasar (🛡️), arka 120° yay ×2 → kanat manevrası ister
+ENEMY_TYPES.boss_fort = { hp: 20, speed: 0, turn: 1.2, cool: [2.2, 3.2], bspeed: 22, keep: 0, sight: 90, scale: 2.3, color: 0x4a4a5a, coins: 110, score: 2600, triple: true, glow: true, fort: true };
+const BOSS_TYPES = new Set(['boss', 'boss_blitz', 'boss_fort']);
+const BOSS_CYCLE = ['boss', 'boss_blitz', 'boss_fort']; // dalga 5 GENERAL · 10 YILDIRIM · 15 KALE · döner
 const isBoss = t => BOSS_TYPES.has(t);
 let enemyIdC = 0;
 // merhamet eğrisi (FTUE): solo 1-2. dalgada düşman ateş temposu %35 yavaş — yeni oyuncu ilk dakikada ölmesin
 const enemyMercy = () => (mode === 'solo' && (wave <= 2 || (runMercy && wave <= 3)) ? 1.35 : 1); // runMercy: dönen oyuncunun ilk koşusu dalga 3'e kadar yumuşak
 function waveComposition(w, extra = 0) {
   if (weeklyRun && weeklyRun.mod === 'bossRush') { // etkinlik: her dalga boss (arketipler dönüşümlü) + dalga sayısı kadar eskort
-    const list = [w % 2 === 0 ? 'boss_blitz' : 'boss']; for (let i = 0; i < w + extra; i++) list.push(Math.random() < 0.5 ? 'scout' : 'normal'); return list;
+    const list = [BOSS_CYCLE[(w - 1) % BOSS_CYCLE.length]]; for (let i = 0; i < w + extra; i++) list.push(Math.random() < 0.5 ? 'scout' : 'normal'); return list;
   }
   if (w % 5 === 0) {
-    const main = (w / 5) % 2 === 0 ? 'boss_blitz' : 'boss'; // 5: GENERAL, 10: YILDIRIM (final), sonsuzda dönüşümlü
+    const bi = (w / 5 - 1) % BOSS_CYCLE.length, main = BOSS_CYCLE[bi]; // 5: GENERAL, 10: YILDIRIM (final), 15: KALE, sonsuzda döner
     const list = [main];
-    if (weeklyRun && weeklyRun.mod === 'doubleBoss') list.push(main === 'boss' ? 'boss_blitz' : 'boss'); // haftalık mod: çift boss (iki arketip)
+    if (weeklyRun && weeklyRun.mod === 'doubleBoss') list.push(BOSS_CYCLE[(bi + 1) % BOSS_CYCLE.length]); // haftalık mod: çift boss (iki farklı arketip)
     const n = 1 + Math.floor(w / 10) + extra;
     for (let i = 0; i < n; i++) list.push(Math.random() < 0.5 ? 'scout' : 'normal');
     return list;
@@ -2299,11 +2317,12 @@ function waveComposition(w, extra = 0) {
 function spawnEnemies(types) {
   for (const type of types) {
     const d = ENEMY_TYPES[type] || ENEMY_TYPES.normal;
-    const cell = randOpenCell(player.x, player.z, isBoss(type) ? 22 : 18);
+    let cell = randOpenCell(player.x, player.z, isBoss(type) ? 22 : 18);
+    if (type === 'boss_fort') { const c2 = openCells.slice().sort((a, b) => (a.x * a.x + a.z * a.z) - (b.x * b.x + b.z * b.z)).find(c => Math.hypot(c.x - player.x, c.z - player.z) >= 12); if (c2) cell = c2; } // KALE: merkeze en yakın açık hücre
     const e = {
       id: ++enemyIdC, type, color: d.color, hp: d.hp, maxHp: d.hp, baseScale: d.scale, hitT: 0,
       speed: d.speed, turn: d.turn, bspeed: d.bspeed, keep: d.keep, sight: d.sight,
-      triple: !!d.triple, coins: d.coins, score: d.score, kamikaze: !!d.kamikaze, miner: !!d.miner, mineT: 3, fuseT: 0,
+      triple: !!d.triple, coins: d.coins, score: d.score, kamikaze: !!d.kamikaze, miner: !!d.miner, mineT: 3, fuseT: 0, fort: !!d.fort, spawnT: 8,
       mesh: buildTank({ color: d.color, scale: d.scale, glow: d.glow }),
       x: cell.x, z: cell.z, a: Math.random() * Math.PI * 2,
       cool: (d.cool[0] + Math.random() * (d.cool[1] - d.cool[0])) * enemyMercy(),
@@ -2312,7 +2331,7 @@ function spawnEnemies(types) {
     if (isBoss(type)) {
       // rapor: boss "okunabilir" olmalı — atış öncesi TELEGRAF halkası (turuncu), atış sonrası SAVUNMASIZ an halkası (yeşil, 2x hasar)
       e.windup = 0; e.vulnT = 0;
-      e.bossName = (type === 'boss_blitz' ? 'YILDIRIM ' : 'GENERAL ') + botName(); // boss bar'da isimli düşman (kişilik hissi)
+      e.bossName = (type === 'boss_blitz' ? 'YILDIRIM ' : type === 'boss_fort' ? 'KALE ' : 'GENERAL ') + botName(); // boss bar'da isimli düşman (kişilik hissi)
       const mkRing = col => {
         const r = new THREE.Mesh(new THREE.RingGeometry(1.12, 1.34, 40),
           new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.85, side: THREE.DoubleSide, toneMapped: false, depthWrite: false }));
@@ -2324,6 +2343,7 @@ function spawnEnemies(types) {
       e.dashT = 0; e.stunT = 0;
     }
     if (weeklyRun && weeklyRun.mod === 'tough') { e.hp += 1; e.maxHp += 1; } // haftalık mod: zırhlı düşmanlar
+    if (buildOn() && matchBuild.slow) { e.speed *= 0.9; e.turn *= 0.9; } // Sis kartı
     if (isBoss(type) && weeklyRun && weeklyRun.mod === 'bossRush') e.coins = 150; // Boss Rush: boss başı 150🪙
     e.mesh.position.set(e.x, 0, e.z);
     scene.add(e.mesh); enemies.push(e);
@@ -2347,7 +2367,7 @@ function grantTokens(n, silent) {
 }
 // jeton makinesi (gacha) — ağırlıklı rastgele kaplama; kopya çıkarsa coin'e döner (GDD kuralı)
 function tokenOdds() {
-  const pool = SKINS.filter(s => s.id !== 'default');
+  const pool = SKINS.filter(s => s.id !== 'default' && !s.event);
   const sum = { c: 0, r: 0, e: 0 }; let total = 0;
   for (const s of pool) { sum[s.r] += RARITY[s.r].w; total += RARITY[s.r].w; }
   return { c: sum.c / total * 100, r: sum.r / total * 100, e: sum.e / total * 100 };
@@ -2355,7 +2375,7 @@ function tokenOdds() {
 function spinToken(free) {
   if (!free) { if ((profile.tokens || 0) < 1) return; profile.tokens--; }
   const pity = (profile.pity || 0) + 1; // P1: 30 çekilişte garanti Efsanevi (kötü-şans koruması)
-  let pool = SKINS.filter(s => s.id !== 'default');
+  let pool = SKINS.filter(s => s.id !== 'default' && !s.event);
   if (pity >= 30) { const ep = pool.filter(s => s.r === 'e'); if (ep.length) pool = ep; }
   let total = 0; for (const s of pool) total += RARITY[s.r].w;
   let roll = Math.random() * total, pick = pool[pool.length - 1];
@@ -3402,6 +3422,7 @@ function renderSkins() {
   wrap.innerHTML = '';
   for (const s of SKINS) {
     const owned = s.id === 'default' || profile.skins.includes(s.id);
+    if (s.event && !owned) continue; // etkinlik kaplaması yalnız kazanılınca listelenir
     const equipped = profile.skin === s.id;
     const card = document.createElement('div'); card.className = 'card' + (equipped ? ' sel' : '');
     const hex = s.color != null ? '#' + s.color.toString(16).padStart(6, '0') : '#5a6b3a';
@@ -3676,6 +3697,7 @@ function soloVictory() {
   const runDur = Math.max(1, Math.round(clock.elapsedTime - soloRunStart));
   const timeRec = !profile.bestRunTime || runDur < profile.bestRunTime;
   if (!weeklyRun) submitTime(runDur); // hız tablosu: yalnız standart 10 dalga sayılır (modlu koşular adil değil)
+  if (!weeklyRun && eventLive() && activeEvent.type === 'speedRace') { grantTokens(2, true); gemTxt += ' &nbsp;·&nbsp; ⏱ +🎰2'; track('event_complete', { type: 'speedRace' }); }
   if (timeRec) profile.bestRunTime = runDur;
   const timeTxt = '<br>' + (timeRec ? t.timeNewRec(fmtTime(runDur)) : t.timeLine(fmtTime(runDur), fmtTime(profile.bestRunTime)));
   let bonusXp = 0;
@@ -4676,12 +4698,22 @@ $('btn-back-season').addEventListener('click', openMenu);
 $('lbt-day').addEventListener('click', () => renderLeaderboard('day'));
 $('lbt-week').addEventListener('click', () => renderLeaderboard('week'));
 $('lbt-speed').addEventListener('click', () => renderLeaderboard('speed'));
+$('btn-friend').addEventListener('click', async () => { // FAZ2 (plan B-5-lite): isimle karşılaştırma — hafta + hız tablolarının ilk 20'sinde arar
+  const t = T(), name = ($('friendname').value || '').trim().slice(0, 14); if (!name) return;
+  const res = $('friendres'); res.textContent = t.lbLoad;
+  const [wk, sp] = await Promise.all([fetchLeaderboard('week'), fetchLeaderboard('speed')]);
+  const find = (rows, n) => (rows || []).find(r => String(r.name).toLowerCase() === n.toLowerCase());
+  const me = profile.name || 'Oyuncu', mw = find(wk, me), ms = find(sp, me), fw = find(wk, name), fs = find(sp, name);
+  const line = (nm, w2, s2) => `<b>${esc(nm)}</b>: 🌊 ${w2 ? w2.score : '—'} · ⏱ ${s2 ? fmtTime(s2.score) : '—'}`;
+  res.innerHTML = (fw || fs) ? `${line(t.youWord, mw, ms)}<br>${line(name, fw, fs)}` : t.friendNone;
+  track('friend_compare', { found: !!(fw || fs) });
+});
 $('btn-event').addEventListener('click', () => {
   if (!eventLive()) return;
   const ws = weeklySpec(), t = T();
   track('event_join', { type: activeEvent.type });
   if (activeEvent.type === 'bossRush') { showToast(t.eventBossTip, 3200); startSolo(ws.map, { map: ws.map, mod: 'bossRush', waves: 5 }); }
-  else { showToast(t.eventDoubleTip, 3200); $('btn-quickplay').click(); }
+  else { showToast(activeEvent.type === 'speedRace' ? t.eventSpeedTip : activeEvent.type === 'collect' ? t.eventCollectTip : t.eventDoubleTip, 3400); $('btn-quickplay').click(); }
 });
 $('btn-back-lb').addEventListener('click', openMenu);
 $('btn-single').addEventListener('click', () => { $('title').textContent = T().chooseMap; $('submsg').textContent = T().bestWave(profile.bestWave); renderKits(); renderMaps(); showPanel('panel-maps'); });
@@ -5001,6 +5033,7 @@ function updateEnemy(e, dt, tgt) {
   circleVsWalls(pos, TANK_R);
   e.x = pos.x; e.z = pos.z;
   if (e.miner && mode === 'solo') { e.mineT -= dt; if (e.mineT <= 0) { e.mineT = 5; if (mines.length < 10 && mines.filter(m => m.owner === e.id).length < 4) dropMine(e); } }
+  if (e.fort && mode === 'solo') { e.spawnT -= dt; if (e.spawnT <= 0) { e.spawnT = 8; if (enemies.filter(x => x.alive).length < 8) { spawnEnemies(['scout', 'scout']); popFloater(e.x, 3.8, e.z, '⚠️ +2', '#ff8c1a'); } } } // KALE eskort
   if (e.hitT > 0) { e.hitT -= dt; e.mesh.scale.setScalar((e.baseScale || 1) * (1 + Math.max(0, e.hitT) * 1.8)); }
   e.mesh.position.set(e.x, 0, e.z);
   e.mesh.rotation.y = e.a;
@@ -5029,11 +5062,11 @@ if ((profile.games || 0) > 0) checkDaily(); else dailyPending = true;
 
 // ---------------------------------------------------------------- maç-içi build (Diep tarzı, her maç sıfırlanır — solo)
 // (durum değişkenleri yukarıda team/duel yanında bildirildi — TDZ için)
-function resetBuild() { matchBuild = { fire: 0, armor: 0, speed: 0, dmg: 0, multi: 0, bounce: 0, magnet: 0, vamp: 0, killsSince: 0 }; buildChoosing = false; }
+function resetBuild() { matchBuild = { fire: 0, armor: 0, speed: 0, dmg: 0, multi: 0, bounce: 0, magnet: 0, vamp: 0, pierce: 0, big: 0, slow: 0, killsSince: 0 }; buildChoosing = false; }
 function buildOn() { return mode === 'solo' && matchBuild; } // şimdilik sadece solo (coop maç-içi build v1.x)
-function bFire() { return buildOn() ? Math.max(0.55, 1 - 0.11 * matchBuild.fire) : 1; } // DENGE: taban 0.4→0.55 (maç-içi yığılma ~15 atış/sn'ye çıkabiliyordu)
+function bFire() { return buildOn() ? Math.max(0.55, 1 - 0.11 * matchBuild.fire) * (matchBuild.big ? 1.1 : 1) : 1; } // DENGE: taban 0.4→0.55 (maç-içi yığılma ~15 atış/sn'ye çıkabiliyordu)
 function bSpeed() { return buildOn() ? (1 + 0.10 * matchBuild.speed) : 1; }
-function bDmg() { return buildOn() ? matchBuild.dmg : 0; }
+function bDmg() { return buildOn() ? matchBuild.dmg + (matchBuild.big ? 1 : 0) : 0; }
 function bMulti() { return !!(buildOn() && matchBuild.multi > 0); }
 const BUILD_OPTS = [
   { id: 'fire', icon: '🔥', name: { tr: 'Hızlı Ateş', en: 'Rapid Fire' }, desc: { tr: 'Atış hızı +%11', en: '+11% fire rate' } },
@@ -5045,9 +5078,18 @@ const BUILD_OPTS = [
   { id: 'bounce', icon: '🪃', name: { tr: 'Ekstra Sekme', en: 'Extra Bounce' }, desc: { tr: 'Mermi +1 sekme', en: '+1 bullet bounce' } },
   { id: 'magnet', icon: '🧲', name: { tr: 'Mıknatıs', en: 'Magnet' }, desc: { tr: 'Yok etme parası +%20', en: '+20% kill coins' } },
   { id: 'vamp', icon: '🩹', name: { tr: 'Tamir', en: 'Repair' }, desc: { tr: 'Her 6 yok etmede +1 can', en: '+1 HP every 6 kills' } },
+  // FAZ2 (plan A-2): nadir altın kartlar (%20 olasılıkla bir slot) + Sis
+  { id: 'pierce', icon: '🗡️', name: { tr: 'Delici', en: 'Piercing' }, desc: { tr: 'Mermi ilk düşmanı deler', en: 'Shells pierce the first enemy' }, rare: true },
+  { id: 'big', icon: '💣', name: { tr: 'Ağır Mermi', en: 'Heavy Shell' }, desc: { tr: 'Hasar +1, mermi büyük, tempo −%10', en: '+1 dmg, big shell, −10% rate' }, rare: true },
+  { id: 'slow', icon: '🌫️', name: { tr: 'Sis', en: 'Fog' }, desc: { tr: 'Yeni düşmanlar %10 yavaş', en: 'New enemies 10% slower' } },
 ];
 // solo hasar akışı tek yerden (mermi, havan alanı, çarpma): savunmasız ×2, kill'de floater/coin/mega; true = öldü
 function soloDamage(e, dmg, b) {
+  if (e.fort && b) { // KALE: ön yay 0 hasar, arka yay ×2
+    const rel = Math.abs(angNorm(headingTo(e.x, e.z, b.mesh.position.x, b.mesh.position.z) - e.a));
+    if (rel < Math.PI / 3) { popFloater(b.mesh.position.x, 2.6, b.mesh.position.z, '🛡️', '#b8c4d0'); sfxBounce(); e.hitT = 0.14; explode(b.mesh.position.x, 1.0, b.mesh.position.z, false); return false; }
+    if (rel > 2 * Math.PI / 3) { dmg *= 2; popFloater(b.mesh.position.x, 2.6, b.mesh.position.z, 'x2!', '#54ff7a'); }
+  }
   const vuln = isBoss(e.type) && e.vulnT > 0;
   e.hp -= dmg * (vuln ? 2 : 1);
   if (vuln && b) popFloater(b.mesh.position.x, 2.6, b.mesh.position.z, 'x2!', '#54ff7a');
@@ -5076,6 +5118,7 @@ function setPlayerOpacity(op) {
 function killCoins(e) { return Math.round(e.coins * (buildOn() && matchBuild.magnet ? 1.2 : 1) * (isDoubleGold() ? 2 : 1) * (mode === 'solo' && runKits.magnet ? 1.15 : 1) * (mechIs('rich') ? 1.1 : 1) * (mode === 'solo' && masteryRank(profile.selected) >= 4 ? 1.05 : 1)); } // Altın Kral +%10; Ustalık 4+ +%5 // Çifte Altın ×2, Mıknatıs kiti ×1.15
 function onEnemyKilled(e) {
   if (mode === 'solo') masteryOf(profile.selected).kills++; // ustalık: bu tankla yok etme sayısı
+  onEventKill();
   const c = killCoins(e);
   score += e.score; roundCoins += c; profile.kills++; addCoins(c); updateHUD();
   if (buildOn() && matchBuild.vamp && player.alive && ++matchBuild.killsSince >= 6) {
@@ -5086,13 +5129,15 @@ function onEnemyKilled(e) {
 function offerBuildChoice(onDone) {
   if (!matchBuild) resetBuild();
   buildOnDone = onDone;
-  const BUILD_CAP = { fire: 3, armor: 4, speed: 3, dmg: 2, multi: 1, bounce: 1, magnet: 1, vamp: 1 }; // yığın tavanları (FAZ0: kadans arttı → tavanlar şart)
-  const pool = BUILD_OPTS.filter(o => (matchBuild[o.id] || 0) < (BUILD_CAP[o.id] || 99)).slice();
+  const BUILD_CAP = { fire: 3, armor: 4, speed: 3, dmg: 2, multi: 1, bounce: 1, magnet: 1, vamp: 1, pierce: 1, big: 1, slow: 1 }; // yığın tavanları (FAZ0: kadans arttı → tavanlar şart)
+  const pool = BUILD_OPTS.filter(o => (matchBuild[o.id] || 0) < (BUILD_CAP[o.id] || 99) && !o.rare).slice();
+  const rares = BUILD_OPTS.filter(o => o.rare && (matchBuild[o.id] || 0) < 1);
   for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t = pool[i]; pool[i] = pool[j]; pool[j] = t; }
   const picks = pool.slice(0, 3), tt = T();
+  if (rares.length && Math.random() < 0.2) picks[Math.floor(Math.random() * picks.length)] = rares[Math.floor(Math.random() * rares.length)]; // %20: bir slot altın nadir kart
   $('build-title').textContent = tt.buildTitle;
   $('build-cards').innerHTML = picks.map(o =>
-    `<button class="buildcard" data-id="${o.id}"><div class="bc-ic">${o.icon}</div><div class="bc-nm">${o.name[lang]}</div><div class="bc-ds">${o.desc[lang]}</div></button>`).join('');
+    `<button class="buildcard" data-id="${o.id}"${o.rare ? ' style="border:2px solid #ffd76a;box-shadow:0 0 14px rgba(255,215,106,.45)"' : ''}><div class="bc-ic">${o.icon}</div><div class="bc-nm">${o.rare ? '✨ ' : ''}${o.name[lang]}</div><div class="bc-ds">${o.desc[lang]}</div></button>`).join('');
   for (const b of $('build-cards').children) b.onclick = () => pickBuild(b.dataset.id);
   $('buildchoice').classList.remove('hidden');
   buildChoosing = true;
@@ -5103,7 +5148,7 @@ function pickBuild(id) {
   sfxPower(); haptic('LIGHT');
   $('buildchoice').classList.add('hidden');
   buildChoosing = false;
-  track('build_pick', { id, wave });
+  track('build_pick', { id, wave, rare: !!(BUILD_OPTS.find(o => o.id === id) || {}).rare });
   const fn = buildOnDone; buildOnDone = null; if (fn) fn();
 }
 
