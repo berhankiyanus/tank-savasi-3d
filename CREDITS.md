@@ -3,6 +3,7 @@
 Bu oyunda kullanılan üçüncü taraf varlıklar ve lisansları. Third-party assets used in this game and their licenses.
 
 ## 3D Modeller / Models
+- `assets/tank_guardian.glb` (Muhafız): "Tank" — Quaternius, CC0 (Poly Pizza). https://poly.pizza/m/jWS1CLA0RO  (armature kaldırıldı, kule ayrıldı, decimate/dissolve, düz malzemeler, GLB export)
 - Tanklar (tank.glb, tank_heavy/twin/arty/mamut/hover/titan.glb) ve dekor setleri (decor_city/harbor/canyon.glb): Blender'da bu proje için özgün üretildi. Original, made in Blender for this project.
 
 ## HDRI / Aydınlatma
