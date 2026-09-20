@@ -59,6 +59,7 @@ const L = {
     seasonChest: n => `Sezon Sandığı · ${n}`, seasonChestDesc: 'Bu sezona özel 12\'lik seçki: yalnız Nadir + Efsanevi · 10\'da garanti Efsanevi · sezon değişince havuz değişir',
     mysteryTitle: '❓ Günün Gizemli Öğesi', mysteryDesc: 'Sahip olmadığın rastgele bir öğe (kaplama, aksesuar, palet, efekt) · günde 1', mysteryDone: '✓ Bugün alındı — yarın yeni gizemli öğe', mysteryBuy: c => `AL · 🪙${c}`,
     featTitle: '⭐ HAFTANIN ÖNE ÇIKANLARI', featOff: '−%20', featLeft: d => `${d} gün kaldı`,
+    onlyFor: n => `Yalnız ${n}`, heroTag: 'ÖZEL',
     buildTitle: 'YÜKSELTME SEÇ',
     gachaNew: s => `🎁 YENİ KAPLAMA! ${s}`, gachaDup: (s, c) => `🔁 ${s} zaten var → +🪙${c}`, tokenGot: n => `🎰 +${n} jeton!`,
     ftueGift: s => `🎁 İlk düşmanını yok ettin! "${s}" kaplaması kazandın — Garaj → Kaplamalar'dan tak`,
@@ -154,6 +155,7 @@ const L = {
     seasonChest: n => `Season Chest · ${n}`, seasonChestDesc: 'This season\'s curated 12-item pool: Rare + Epic only · guaranteed Epic within 10 · pool changes every season',
     mysteryTitle: '❓ Mystery Item of the Day', mysteryDesc: 'A random item you do not own (skin, accessory, tracks, effect) · once a day', mysteryDone: '✓ Bought today — new mystery item tomorrow', mysteryBuy: c => `BUY · 🪙${c}`,
     featTitle: '⭐ FEATURED THIS WEEK', featOff: '−20%', featLeft: d => `${d} days left`,
+    onlyFor: n => `Only ${n}`, heroTag: 'HERO',
     buildTitle: 'CHOOSE UPGRADE',
     gachaNew: s => `🎁 NEW SKIN! ${s}`, gachaDup: (s, c) => `🔁 ${s} already owned → +🪙${c}`, tokenGot: n => `🎰 +${n} tokens!`,
     ftueGift: s => `🎁 First enemy down! You earned the "${s}" skin — equip it in Garage → Skins`,
@@ -581,6 +583,11 @@ const SKINS = [
   { id: 'plates', name: { tr: 'Perçinli Zırh', en: 'Riveted Armor' }, price: 1200, color: 0xf2f2f2, metal: 0.5, rough: 0.4, r: 'e', camo: 'plate' },
   // KOZMETİK 2.0 (K1): EJDERHA SETİ kaplaması — elmasla doğrudan ya da Ejderha Seti sandığından; animasyonlu pul deseni
   { id: 'dragon', name: { tr: 'Ejderha Pulu', en: 'Dragon Scale' }, price: 0, gem: 30, color: 0xffffff, rough: 0.5, metal: 0.25, r: 'e', camo: 'dragon', anim: 1, set: 'dragon' },
+  // KOZMETİK 2.0 (K4): TANKA ÖZEL HERO DESENLER — yalnız o gövdede takılır (RLS gövdeye özel decal), animasyonlu
+  { id: 'thunder', name: { tr: 'Yıldırım', en: 'Thunder' }, price: 1200, color: 0xf2f2f2, rough: 0.6, metal: 0.3, r: 'e', camo: 'lightning', anim: 1, bodies: ['sniper'] },
+  { id: 'mamutflame', name: { tr: 'Mamut Alevi', en: 'Mammoth Flame' }, price: 1200, color: 0xf2f2f2, rough: 0.6, r: 'e', camo: 'flames', anim: 1, bodies: ['mamut'] },
+  { id: 'titancircuit', name: { tr: 'Titan Devresi', en: 'Titan Circuit' }, price: 1200, color: 0xf2f2f2, rough: 0.45, metal: 0.4, r: 'e', camo: 'circuit', anim: 1, bodies: ['titan'] },
+  { id: 'kraken', name: { tr: 'Kraken', en: 'Kraken' }, price: 1200, color: 0xf2f2f2, rough: 0.55, r: 'e', camo: 'kraken', anim: 1, bodies: ['guardian'] },
   // KOZMETİK 2.0 (K3): koleksiyon ödülü — satılmaz, sandıkta yok; tüm kaplamalar toplanınca (gökkuşağı döngüsü)
   { id: 'chromatic', name: { tr: 'Kromatik', en: 'Chromatic' }, price: 0, color: 0xffffff, metal: 0.5, rough: 0.3, r: 'e', chroma: 1, collection: 'skins' },
   // etkinlik ödülü (Toplama): satılmaz, gacha havuzunda değil
@@ -623,12 +630,52 @@ const CAMO_PATTERNS = { // kind: blob (eşikli gürültü) / pixel (bloklu gür�
   tiger: { kind: 'stripe', pal: ['#d9772a', '#1c1a18'], seed: 67 },
   plate: { kind: 'plate', pal: ['#6a727c', '#2b3036', '#a8b0ba', '#59616b'], seed: 71 },
   dragon: { kind: 'scale', pal: ['#7a1410', '#b8281c', '#e0a030', '#3a0806'], seed: 83 }, // pul: üst üste binen daireler, altın vurgu
+  lightning: { kind: 'lightning', pal: ['#0c1428', '#9fd8ff', '#ffffff', '#1c2e58'], seed: 97 },
+  flames: { kind: 'flames', pal: ['#ffe066', '#ff8a1e', '#c8261a', '#2a0a06'], seed: 101 },
+  circuit: { kind: 'circuit', pal: ['#0e2a1a', '#38d07a', '#e0b040', '#163a24'], seed: 103 },
+  kraken: { kind: 'kraken', pal: ['#061420', '#1f8a7a', '#8fe8d0', '#0d3a44'], seed: 107 },
 };
 function camoCanvas(kind) {
   if (camoTexCache[kind]) return camoTexCache[kind].canvas;
   const p = CAMO_PATTERNS[kind] || CAMO_PATTERNS.woodland, S = 256;
   const cv = document.createElement('canvas'); cv.width = cv.height = S;
   const ctx = cv.getContext('2d'), img = ctx.createImageData(S, S), d = img.data;
+  const seedRnd = (sd => () => { sd = (Math.imul(sd, 1664525) + 1013904223) >>> 0; return sd / 4294967296; })(p.seed >>> 0);
+  if (p.kind === 'lightning') { // dikey şimşekler: başlangıç x = bitiş x (dikey döşenebilir), kenar payı (yatay döşeme sorunsuz)
+    ctx.fillStyle = p.pal[0]; ctx.fillRect(0, 0, S, S);
+    for (let b = 0; b < 6; b++) {
+      const x0 = 24 + seedRnd() * (S - 48), pts = [[x0, 0]]; let x = x0;
+      for (let y = 12; y < S; y += 10 + seedRnd() * 8) { x += (seedRnd() - 0.5) * 22; pts.push([x, y]); }
+      const drift = (x - x0) / pts.length; pts.forEach((q, i) => { q[0] -= drift * i; }); pts.push([x0, S]);
+      for (const [wd, col, al] of [[7, p.pal[3], 0.9], [3, p.pal[1], 1], [1.2, p.pal[2], 1]]) {
+        ctx.globalAlpha = al; ctx.strokeStyle = col; ctx.lineWidth = wd; ctx.lineJoin = 'round'; ctx.beginPath(); pts.forEach((q, i) => (i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1]))); ctx.stroke();
+        if (wd === 3) for (let i = 2; i < pts.length - 2; i += 5) { ctx.beginPath(); ctx.moveTo(pts[i][0], pts[i][1]); ctx.lineTo(pts[i][0] + (seedRnd() - 0.5) * 50, pts[i][1] + 14 + seedRnd() * 16); ctx.stroke(); } // dallar
+      }
+    }
+    ctx.globalAlpha = 1; camoTexCache[kind] = { canvas: cv, tex: null, url: null }; return cv;
+  }
+  if (p.kind === 'circuit') { // devre kartı: 16 px ızgarada Manhattan izler + pad'ler (kenarlar boş → dikiş kart kenarı gibi okunur)
+    ctx.fillStyle = p.pal[0]; ctx.fillRect(0, 0, S, S); ctx.lineCap = 'round';
+    for (let t = 0; t < 26; t++) {
+      let x = 16 + Math.floor(seedRnd() * 14) * 16, y = 16 + Math.floor(seedRnd() * 14) * 16; const col = seedRnd() < 0.2 ? p.pal[2] : p.pal[1];
+      ctx.strokeStyle = col; ctx.fillStyle = col; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.moveTo(x, y);
+      for (let k = 0; k < 3; k++) { const h = seedRnd() < 0.5; const d = (Math.floor(seedRnd() * 4) + 1) * 16 * (seedRnd() < 0.5 ? -1 : 1); if (h) x = Math.max(16, Math.min(S - 16, x + d)); else y = Math.max(16, Math.min(S - 16, y + d)); ctx.lineTo(x, y); }
+      ctx.stroke(); ctx.fillRect(x - 3, y - 3, 6, 6);
+    }
+    ctx.fillStyle = p.pal[3]; for (let i = 0; i < 40; i++) { const gx = 8 + Math.floor(seedRnd() * 15) * 16, gy = 8 + Math.floor(seedRnd() * 15) * 16; ctx.fillRect(gx, gy, 3, 3); } // vialar
+    camoTexCache[kind] = { canvas: cv, tex: null, url: null }; return cv;
+  }
+  if (p.kind === 'kraken') { // dokunaçlar: dikey sinüs eğrileri (tam periyot → dikey döşenebilir) + vantuz halkaları
+    ctx.fillStyle = p.pal[0]; ctx.fillRect(0, 0, S, S);
+    for (let k = 0; k < 4; k++) {
+      const x0 = 32 + k * 64, amp = 14 + seedRnd() * 10, ph = seedRnd() * Math.PI * 2, per = 1 + Math.floor(seedRnd() * 2);
+      const cx = y => x0 + amp * Math.sin((y / S) * Math.PI * 2 * per + ph);
+      ctx.strokeStyle = p.pal[3]; ctx.lineWidth = 26; ctx.lineCap = 'round'; ctx.beginPath(); for (let y = -8; y <= S + 8; y += 4) (y < 0 ? ctx.moveTo(cx(y), y) : ctx.lineTo(cx(y), y)); ctx.stroke();
+      ctx.strokeStyle = p.pal[1]; ctx.lineWidth = 18; ctx.beginPath(); for (let y = -8; y <= S + 8; y += 4) (y < 0 ? ctx.moveTo(cx(y), y) : ctx.lineTo(cx(y), y)); ctx.stroke();
+      for (let y = 8; y < S; y += 16) { const x = cx(y); ctx.fillStyle = p.pal[2]; ctx.beginPath(); ctx.arc(x + (y / 16 % 2 ? 4 : -4), y, 4.2, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = p.pal[3]; ctx.beginPath(); ctx.arc(x + (y / 16 % 2 ? 4 : -4), y, 1.8, 0, Math.PI * 2); ctx.fill(); }
+    }
+    camoTexCache[kind] = { canvas: cv, tex: null, url: null }; return cv;
+  }
   if (p.kind === 'scale') { // pul deseni: alt satırdan üste çizilen daireler birbirini örter (16 px periyot → döşenebilir)
     ctx.fillStyle = p.pal[3]; ctx.fillRect(0, 0, S, S);
     const st = 16;
@@ -650,6 +697,7 @@ function camoCanvas(kind) {
       const rivet = [[9, 9], [55, 9], [9, 55], [55, 55]].some(([rx, ry]) => (lx - rx) ** 2 + (ly - ry) ** 2 < 9);
       c = seam ? pal[1] : rivet ? pal[2] : pal[((x / g | 0) + (y / g | 0)) % 2 ? 0 : 3];
     } else if (p.kind === 'stripe') { const w = Math.sin((u * 7 + n1(u, v) * 1.6 + v * 0.35) * Math.PI * 2); c = pal[w > 0.15 ? 1 : 0]; }
+    else if (p.kind === 'flames') { const tt = ((v + 0.38 * n1(u * 2 % 1, v) - 0.19) % 1 + 1) % 1; c = pal[tt < 0.2 ? 0 : tt < 0.42 ? 1 : tt < 0.66 ? 2 : 3]; } // alev dilleri: dikey koordinat gürültüyle bükülür
     else { const t = n1(u, v) * 0.7 + n2(u, v) * 0.3; c = pal[t < 0.43 ? 3 : t < 0.5 ? 0 : t < 0.57 ? 1 : 2]; }
     const i = (y * S + x) * 4; d[i] = c[0]; d[i + 1] = c[1]; d[i + 2] = c[2]; d[i + 3] = 255;
   }
@@ -2257,8 +2305,8 @@ function updateParticles(dt) {
     }
   }
 }
-function muzzleFlash(x, y, z) {
-  popFlash(x, y, z, flashColor, 26, 9, 0.09);
+function muzzleFlash(x, y, z, col) {
+  popFlash(x, y, z, col || flashColor, 26, 9, 0.09);
 }
 // yükselen skor yazıları
 const floaters = [];
@@ -2344,9 +2392,10 @@ const player = {
 };
 let playerTurret = null, turretBaseZ = 0;
 
-function applySkin(mesh, skinId) {
+function applySkin(mesh, skinId, tankId) {
   const s = skinById(skinId);
   if (s.id === 'default') return; // tankın kendi rengi kalsın
+  if (s.bodies && tankId && !s.bodies.includes(tankId)) return; // K4: tanka özel desen başka gövdede uygulanmaz
   const col = skinColor(s); // boya tonu (FAZ3)
   mesh.traverse(o => {
     if (o.isMesh && o.material && o.material.name === 'TankPaint') {
@@ -2395,13 +2444,19 @@ const TRAILS = [
   { id: 'frostbeam', name: { tr: 'Buz Işını', en: 'Frost Beam' }, price: 900, r: 'r', color: 0x9fe8ff, tail: 0x5ab0ff },
   { id: 'toxictrail', name: { tr: 'Zehir İzi', en: 'Toxic Trail' }, price: 1200, r: 'e', color: 0x8aff2a, tail: 0x2aff8a },
   { id: 'dragonfire', name: { tr: 'Ejderha Ateşi', en: 'Dragon Fire' }, price: 0, gem: 30, r: 'e', color: 0xff6a1e, tail: 0xb03aff, set: 'dragon' },
-  { id: 'goldrush', name: { tr: 'Altın Hücum', en: 'Gold Rush' }, price: 0, r: 'e', color: 0xffe066, tail: 0xffb020, collection: 'trails' }, // K3 ödülü
+  { id: 'emerald', name: { tr: 'Zümrüt İzi', en: 'Emerald Trail' }, price: 900, r: 'r', color: 0x2aff8a, tail: 0xffd24a },
+  { id: 'plasmatrail', name: { tr: 'Plazma İzi', en: 'Plasma Trail' }, price: 1200, r: 'e', color: 0xff3aa0, tail: 0x7a2dff, big: 1 },
+  { id: 'shadow', name: { tr: 'Gölge İzi', en: 'Shadow Trail' }, price: 1200, r: 'e', color: 0x7a2dff, tail: 0x1a1a22, big: 1 },
+  { id: 'goldrush', name: { tr: 'Altın Hücum', en: 'Gold Rush' }, price: 0, r: 'e', color: 0xffe066, tail: 0xffb020, big: 1, collection: 'trails' }, // K3 ödülü
 ];
 const EXPLOSIONS = [
   { id: 'default', name: { tr: 'Standart Patlama', en: 'Standard Blast' }, price: 0 },
   { id: 'frostblast', name: { tr: 'Buz Patlaması', en: 'Frost Blast' }, price: 900, r: 'r', hot: [0xbfeeff, 0x6ab8ff], ring: 0xbfeeff },
   { id: 'confetti', name: { tr: 'Konfeti', en: 'Confetti' }, price: 1200, r: 'e', hot: [0xff4a8a, 0x4aff8a, 0xffd24a, 0x4a9aff], ring: 0xffffff, big: 1.3 },
   { id: 'dragonblast', name: { tr: 'Ejderha Patlaması', en: 'Dragon Blast' }, price: 0, gem: 30, r: 'e', hot: [0xff6a1e, 0xb03aff], ring: 0xff8a3a, big: 1.5, set: 'dragon' },
+  { id: 'toxicblast', name: { tr: 'Zehir Patlaması', en: 'Toxic Blast' }, price: 900, r: 'r', hot: [0x8aff2a, 0x2aff8a], ring: 0x8aff2a },
+  { id: 'voidblast', name: { tr: 'Boşluk Patlaması', en: 'Void Blast' }, price: 1200, r: 'e', hot: [0x7a2dff, 0x1a1a22, 0xb04aff], ring: 0xb04aff, big: 1.5 },
+  { id: 'starburst', name: { tr: 'Yıldız Patlaması', en: 'Starburst' }, price: 1200, r: 'e', hot: [0xffffff, 0xffd24a, 0x6fe0ff], ring: 0xffffff, big: 1.6 },
   { id: 'goldblast', name: { tr: 'Altın Patlama', en: 'Gold Blast' }, price: 0, r: 'e', hot: [0xffe066, 0xffb020, 0xffffff], ring: 0xffe066, big: 1.4, collection: 'explosions' }, // K3 ödülü
 ];
 const TITLES = [
@@ -2413,6 +2468,7 @@ const trailById = id => TRAILS.find(x => x.id === id) || TRAILS[0];
 const explosionById = id => EXPLOSIONS.find(x => x.id === id) || EXPLOSIONS[0];
 const titleById = id => TITLES.find(x => x.id === id);
 let playerExplPal = null; // oyuncunun seçili patlama paleti (explode'a geçer)
+let playerMuzzle = null, playerTrailBig = false; // K5: namlu alevi rengi + büyük iz
 // 1v1'de (düello + top maçı) herkes bu standart tankı kullanır → adil + tutarlı vuruş algılama.
 // (Garaj seçimi/yükseltmeler sadece tek oyunculu + kooperatifte geçerli. İleride "rekabetçi" mod seçime açılabilir.)
 const DUEL_TANK = { ...TANKS[0] };
@@ -2420,7 +2476,7 @@ function setPlayerTank(overrideDef) {
   const def = overrideDef || effTank(profile.selected);
   if (player.mesh) { scene.remove(player.mesh); disposeTank(player.mesh); }
   player.mesh = buildTank(def);
-  applySkin(player.mesh, profile.skin);
+  applySkin(player.mesh, profile.skin, def.id);
   applyTracks(player.mesh, profile.track); // KOZMETİK 2.0: palet kaplaması
   applyAccessory(player.mesh, profile.accessory, def);
   if (profile.accSlot2 && profile.accessory2 && accSlotType(profile.accessory2) !== accSlotType(profile.accessory)) applyAccessory(player.mesh, profile.accessory2, def, 2); // 2. yuva
@@ -2437,6 +2493,7 @@ function setPlayerTank(overrideDef) {
   if (def.shot) { customShotMat.color.setHex(def.shot); customShotTailMat.color.setHex(def.shot); }
   const trl = trailById(profile.trail); // KOZMETİK 2.0: iz kozmetiği tank kimlik renginin önüne geçer
   if (trl.id !== 'default') { playerShotCustom = true; customShotMat.color.setHex(trl.color); customShotTailMat.color.setHex(trl.tail || trl.color); }
+  playerMuzzle = trl.id !== 'default' ? trl.color : (def.shot || null); playerTrailBig = !!trl.big; // K5
   playerExplPal = explosionById(profile.explosion); if (playerExplPal.id === 'default') playerExplPal = null;
 }
 await ensureModel(tankById(profile.selected).model); // seçili tank özel modelliyse açılışta yükle
@@ -2481,7 +2538,7 @@ function fire(owner, angOff = 0, playerShot = null) {
   mesh.position.set(bx, 1.13, bz);
   mesh.rotation.y = a;
   const tail = new THREE.Mesh(bulletTailGeo, isPlayer ? (playerShotCustom ? customShotTailMat : playerTailMat) : enemyTailMat);
-  tail.position.z = 0.75; mesh.add(tail);
+  tail.position.z = 0.75; if (isPlayer && playerTrailBig) tail.scale.set(1.35, 1.35, 1.7); mesh.add(tail); // K5: efsanevi izler daha uzun
   scene.add(mesh);
   let sp;
   if (isPlayer) sp = player.stat.bspeed;
@@ -2504,7 +2561,7 @@ function fire(owner, angOff = 0, playerShot = null) {
     }
   }
   bullets.push(b);
-  muzzleFlash(bx, 1.3, bz);
+  muzzleFlash(bx, 1.3, bz, isPlayer ? playerMuzzle : null); // K5: oyuncunun iz/kimlik renginde namlu alevi
   sfxFire();
   if (isPlayer && playerTurret) recoil = 0.14;
 }
@@ -3718,7 +3775,7 @@ function buildShowroomTank() {
   const def = effTank(showroom.tankId);
   const m = buildTank(def);
   // seçili tankta oyuncunun kaplaması, diğerlerinde varsayılan görünüm
-  applySkin(m, showroom.tankId === profile.selected ? profile.skin : 'default');
+  applySkin(m, showroom.tankId === profile.selected ? profile.skin : 'default', showroom.tankId);
   if (showroom.tankId === profile.selected) applyTracks(m, profile.track); // KOZMETİK 2.0
   applyAccessory(m, showroom.accId, def); // önizlenen/takılı aksesuar
   if (showroom.mode === 'tank' && showroom.tankId === profile.selected && profile.accSlot2 && profile.accessory2) applyAccessory(m, profile.accessory2, def, 2); // 2. yuva vitrinde
@@ -3963,7 +4020,8 @@ function renderSkins() {
     const glow = s.glow ? `box-shadow:inset 0 0 26px ${hex};` : '';
     const grad = s.metal ? `linear-gradient(135deg,rgba(255,255,255,.5),${hex},rgba(0,0,0,.4))` : `linear-gradient(135deg,${hex},#161616)`;
     const bg = s.chroma ? 'linear-gradient(90deg,#ff4a4a,#ffd24a,#4aff6a,#4ac8ff,#b04aff,#ff4a4a)' : s.camo ? `url(${camoSwatchUrl(s.camo)}) center/110px repeat` : grad; // desen / kromatik
-    card.innerHTML = `<div class="cname">${s.set ? SETS[s.set].icon + ' ' : ''}${s.name[lang]}</div><div class="cswatch" style="background:${bg};${glow}"></div>`;
+    const bodyNames = s.bodies ? s.bodies.map(id => (tankById(id) || { name: { tr: id, en: id } }).name[lang]).join(', ') : '', compat = !s.bodies || s.bodies.includes(profile.selected);
+    card.innerHTML = `<div class="cname">${s.set ? SETS[s.set].icon + ' ' : ''}${s.name[lang]}</div><div class="cswatch" style="background:${bg};${glow}"></div>` + (s.bodies ? `<div class="cstat" style="text-align:center;color:${compat ? '#7dff9b' : '#ffd76a'}">${t.heroTag} · ${t.onlyFor(bodyNames)}</div>` : '');
     if (owned && s.id !== 'default') { // FAZ3: boya satırı (3 ton, 250🪙; sahipse tıkla=uygula/kaldır)
       const ownedD = (profile.dyes && profile.dyes[s.id]) || [], active = (profile.dye && profile.dye[s.id]) || '';
       const row = document.createElement('div'); row.style.cssText = 'display:flex;justify-content:center;gap:4px;margin:4px 0';
@@ -3982,8 +4040,8 @@ function renderSkins() {
       card.appendChild(row);
     }
     const btn = document.createElement('button'); btn.className = 'mbtn small' + (s.glow || s.metal || s.gem ? ' gold' : '');
-    if (equipped) { btn.textContent = t.selected; btn.disabled = true; }
-    else if (owned) { btn.textContent = t.owned; btn.onclick = () => { profile.skin = s.id; saveProfile(); setPlayerTank(); renderSkins(); }; }
+    if (equipped) { btn.textContent = compat ? t.selected : t.onlyFor(bodyNames); btn.disabled = true; }
+    else if (owned) { btn.textContent = compat ? t.owned : t.onlyFor(bodyNames); btn.disabled = !compat; btn.onclick = () => { profile.skin = s.id; saveProfile(); setPlayerTank(); renderSkins(); }; }
     else {
       btn.innerHTML = iconize(`${t.buy} · ${s.gem ? '💎' + s.gem : '🪙' + s.price}`);
       btn.classList.toggle('cant', s.gem ? (profile.gems || 0) < s.gem : profile.coins < s.price);
