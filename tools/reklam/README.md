@@ -38,6 +38,13 @@ Kod tarafında KALICI değişiklik yok; her şey geçici kanca + enjekte edilen 
 - DOM overlay'ler captureStream'e girmez: HUD/kart/sayaç/boss barı kompozitör canvas'ında çizilir.
 - Gerçek isabet: düşmanlar namlu önüne konur (`S.putEnemy`), oto-ateş vurur; nöbetçi düşman (`S.sentinel`) dalganın bitmesini engeller.
 
+## v2 (2026-09-20): araştırmaya dayalı C/D varyantları (`BRIEF.md`, `ads2.js`, `build2.sh`)
+- Kurallar `BRIEF.md`'de (kanca 0-3 sn, ilk 5 sn'de 2+ kesme, 9:16 ana + 16:9/1:1/4:5 türev, metinler y∈[430,1490], marka sol üstte, CTA alt %20'nin üstünde, sessiz izlenebilir altyazı, 7-14 günde tazeleme).
+- Yükleme: `_reclib.js` + `_ads.js` (yardımcılar: setStage/parade/showroomDrive/openSR/flash/card) + `_ads2.js` (window.__C, window.__D). Çekim sırası:
+  `await __C.prep()` (sonda mermiyle gerçek 2 sekmeli MEGA SEKME yolu bulur) → `__C.s1..s4` (15 sn) · `__C.s2(3,'C2b.webm')` + `__C.s5..s7` (30 sn) · `__D.s1..s4` (14 sn).
+- Kurgu: `build2.sh ~/Desktop/tank-reklam-2026/tank-C15-9x16.mp4 C1 C2 C3 C4` · `... tank-C30-9x16.mp4 C1 C2b C3 C5 C6 C7` · `... tank-D14-9x16.mp4 D1 D2 D3 D4` → `build2.sh --deriv <mp4>` (16:9 blur-pad, 1:1 ve 4:5 kırpma).
+- Ders: pane'de rAF ~4 fps'ye düşerse (dosya paneli öne geçince) `resize_window` desktop → 540×960 yeniden ayarı uyandırır; kayıt 3 kare kalmışsa boyut <1 MB'tan anlaşılır. Sandık kartı `S.card` içinde çizildiği için koordinatlar merkeze görelidir (0 = W/2).
+
 ## Mağaza ekran görüntüleri (`shots.js`)
 Headless Chromium (playwright-core + ~/Library/Caches/ms-playwright/chromium-1208) ile STORE.md §9'daki 6 kare, 3 boyut × TR/EN:
 iPhone 6.7" 1290×2796 (430×932@3), iPhone 6.5" 1284×2778 (428×926@3), Android 1080×1920 (405×720@2.667).
