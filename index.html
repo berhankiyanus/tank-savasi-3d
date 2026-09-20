@@ -219,6 +219,12 @@
   .co-card.pop { animation: copop .45s cubic-bezier(.2,1.4,.4,1) forwards; }
   .co-btns { display: flex; gap: 10px; }
   .chest-pool { font-size: 11px; line-height: 1.7; color: #cfe6bf; margin: 6px 0; }
+  /* K6: komutan kartı + avatar seçimi */
+  .idcard { display: flex; align-items: center; gap: 12px; margin: 8px auto; padding: 10px 12px; max-width: 440px; border: 2px solid #c8d0d8; border-radius: 14px; background: linear-gradient(180deg, rgba(40,50,30,.9), rgba(20,28,16,.92)); }
+  .idav { width: 62px; height: 62px; border-radius: 50%; border: 3px solid #c8d0d8; display: flex; align-items: center; justify-content: center; font-size: 34px; background: #0f1610; flex: 0 0 auto; }
+  .idtxt { text-align: left; min-width: 0; } .idname { font-size: 19px; font-weight: bold; letter-spacing: 1px; overflow-wrap: anywhere; } .idline { font-size: 13px; margin-top: 2px; }
+  .avpick { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin: 6px 0 10px; }
+  .avbtn { padding: 6px 8px; min-width: 56px; display: inline-flex; flex-direction: column; align-items: center; gap: 2px; } .avic { font-size: 22px; line-height: 1; } .avsub { font-size: 10px; }
   @keyframes coshake { 0%,100% { transform: rotate(0) } 15% { transform: rotate(-12deg) scale(1.05) } 30% { transform: rotate(10deg) } 45% { transform: rotate(-9deg) scale(1.1) } 60% { transform: rotate(8deg) } 75% { transform: rotate(-5deg) scale(1.15) } 90% { transform: rotate(3deg) } }
   @keyframes coburst { 0% { transform: scale(1.15); filter: drop-shadow(0 0 20px var(--rc,#ffd76a)) brightness(1.3) } 100% { transform: scale(1.8); opacity: 0; filter: drop-shadow(0 0 90px var(--rc,#ffd76a)) brightness(3) } }
   @keyframes copop { 0% { opacity: 0; transform: scale(.6) } 100% { opacity: 1; transform: scale(1) } }
@@ -522,6 +528,7 @@
 
   <!-- profil & başarımlar -->
   <div id="panel-profile" class="panel">
+    <div id="identity"></div>
     <div id="achlist"></div>
     <button class="mbtn small" id="btn-back-profile">‹ GERİ</button>
   </div>

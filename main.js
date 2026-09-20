@@ -60,6 +60,10 @@ const L = {
     mysteryTitle: '❓ Günün Gizemli Öğesi', mysteryDesc: 'Sahip olmadığın rastgele bir öğe (kaplama, aksesuar, palet, efekt) · günde 1', mysteryDone: '✓ Bugün alındı — yarın yeni gizemli öğe', mysteryBuy: c => `AL · 🪙${c}`,
     featTitle: '⭐ HAFTANIN ÖNE ÇIKANLARI', featOff: '−%20', featLeft: d => `${d} gün kaldı`,
     onlyFor: n => `Yalnız ${n}`, heroTag: 'ÖZEL',
+    // K6: komutan kartı / rozet / prestij / avatar
+    identityTitle: '🪪 KOMUTAN KARTI', badgeWord: 'Rozet', avatarWord: 'AVATAR', prestigeBtn: '⭐ PRESTİJ', prestigeAt: n => `Prestij: Sv ${n}`,
+    prestigeHint: n => `Seviye ${n}'e ulaşınca prestij: seviyen 1'e döner, ⭐ + 10💎 + "Kıdemli Komutan" unvanı; hiçbir öğe ve kilit kaybolmaz`, prestigeDone: n => `⭐ Prestij ${n}! +10💎 · Kıdemli Komutan`,
+    avatarLocked: 'Kilitli', avatarDragon: 'Ejderha Seti', avatarTrophy: 'Tüm koleksiyon', avatarStar: 'İlk prestij', badgeUp: b => `🛡️ Yeni rozet: ${b}`,
     buildTitle: 'YÜKSELTME SEÇ',
     gachaNew: s => `🎁 YENİ KAPLAMA! ${s}`, gachaDup: (s, c) => `🔁 ${s} zaten var → +🪙${c}`, tokenGot: n => `🎰 +${n} jeton!`,
     ftueGift: s => `🎁 İlk düşmanını yok ettin! "${s}" kaplaması kazandın — Garaj → Kaplamalar'dan tak`,
@@ -156,6 +160,9 @@ const L = {
     mysteryTitle: '❓ Mystery Item of the Day', mysteryDesc: 'A random item you do not own (skin, accessory, tracks, effect) · once a day', mysteryDone: '✓ Bought today — new mystery item tomorrow', mysteryBuy: c => `BUY · 🪙${c}`,
     featTitle: '⭐ FEATURED THIS WEEK', featOff: '−20%', featLeft: d => `${d} days left`,
     onlyFor: n => `Only ${n}`, heroTag: 'HERO',
+    identityTitle: '🪪 COMMANDER CARD', badgeWord: 'Badge', avatarWord: 'AVATAR', prestigeBtn: '⭐ PRESTIGE', prestigeAt: n => `Prestige at Lv ${n}`,
+    prestigeHint: n => `Reach level ${n} to prestige: level resets to 1, you gain ⭐ + 10💎 + the "Veteran Commander" title; nothing else is lost`, prestigeDone: n => `⭐ Prestige ${n}! +10💎 · Veteran Commander`,
+    avatarLocked: 'Locked', avatarDragon: 'Dragon Set', avatarTrophy: 'Full collection', avatarStar: 'First prestige', badgeUp: b => `🛡️ New badge: ${b}`,
     buildTitle: 'CHOOSE UPGRADE',
     gachaNew: s => `🎁 NEW SKIN! ${s}`, gachaDup: (s, c) => `🔁 ${s} already owned → +🪙${c}`, tokenGot: n => `🎰 +${n} tokens!`,
     ftueGift: s => `🎁 First enemy down! You earned the "${s}" skin — equip it in Garage → Skins`,
@@ -203,7 +210,7 @@ let lang = (() => { try { return localStorage.getItem('tanklang'); } catch (e) {
 const T = () => L[lang];
 
 // ---------------------------------------------------------------- kalıcı profil
-const DEFAULT_PROFILE = { coins: 0, owned: ['recruit'], selected: 'recruit', bestWave: 1, upgrades: {}, kills: 0, wins: 0, games: 0, skins: ['default'], skin: 'default', achieved: [], lastDaily: '', streak: 0, name: '', gift1: false, level: 1, xp: 0, tokens: 0, gems: 0, accessories: [], accessory: '', tracks: ['default'], track: 'default', trails: ['default'], trail: 'default', explosions: ['default'], explosion: 'default', titles: [], title: '', chestPity: {} };
+const DEFAULT_PROFILE = { coins: 0, owned: ['recruit'], selected: 'recruit', bestWave: 1, upgrades: {}, kills: 0, wins: 0, games: 0, skins: ['default'], skin: 'default', achieved: [], lastDaily: '', streak: 0, name: '', gift1: false, level: 1, xp: 0, tokens: 0, gems: 0, accessories: [], accessory: '', tracks: ['default'], track: 'default', trails: ['default'], trail: 'default', explosions: ['default'], explosion: 'default', titles: [], title: '', chestPity: {}, avatars: ['helmet'], avatar: 'helmet', prestige: 0 };
 const PROFILE_V = 4; // şema sürümü — migrateProfile() eski kayıtları yeni alanlarla tamamlar
 let profile;
 try {
@@ -236,6 +243,7 @@ function migrateProfile(p) {
   for (const k of ['tracks', 'trails', 'explosions']) if (!Array.isArray(p[k])) p[k] = ['default']; // KOZMETİK 2.0 (v4)
   for (const k of ['track', 'trail', 'explosion']) if (typeof p[k] !== 'string') p[k] = 'default';
   if (!Array.isArray(p.titles)) p.titles = []; if (typeof p.title !== 'string') p.title = '';
+  if (!Array.isArray(p.avatars)) p.avatars = ['helmet']; if (typeof p.avatar !== 'string') p.avatar = 'helmet'; if (typeof p.prestige !== 'number') p.prestige = 0; // K6
   if (!Array.isArray(p.rewardedLog)) p.rewardedLog = [];
   if (typeof p.code !== 'string') p.code = '';
   p.v = PROFILE_V;
@@ -2463,7 +2471,66 @@ const TITLES = [
   { id: 'dragonlord', name: { tr: 'Ejderha Efendisi', en: 'Dragon Lord' }, col: '#ff7a3a' },
   { id: 'fleetlord', name: { tr: 'Filo Efendisi', en: 'Fleet Lord' }, col: '#6fe0ff' },     // K3: tüm tanklar
   { id: 'collector', name: { tr: 'Koleksiyoncu', en: 'Collector' }, col: '#ffd76a' },       // K3: tüm koleksiyon
+  { id: 'veteran', name: { tr: 'Kıdemli Komutan', en: 'Veteran Commander' }, col: '#ffefb0' },  // K6: ilk prestij
 ];
+// ---------------------------------------------------------------- KOZMETİK 2.0 (K6): ROZET ÇERÇEVESİ + PRESTİJ + AVATAR (vanity; güç yok)
+const BADGE_STAGES = [
+  { id: 'silver', name: { tr: 'Gümüş', en: 'Silver' }, col: '#c8d0d8', from: 1, to: 10 },
+  { id: 'cobalt', name: { tr: 'Kobalt', en: 'Cobalt' }, col: '#5ad0ff', from: 11, to: 25 },
+  { id: 'gold', name: { tr: 'Altın', en: 'Gold' }, col: '#ffd76a', from: 26, to: 50 },
+  { id: 'onyx', name: { tr: 'Oniks', en: 'Onyx' }, col: '#b48cff', from: 51, to: 99 },
+  { id: 'aurum', name: { tr: 'Aurum', en: 'Aurum' }, col: '#ffefb0', from: 100, to: 99999 },
+];
+const ROMAN = ['I', 'II', 'III', 'IV', 'V'];
+function badgeOf(level) { // aşama + kademe (I-V): seviye pill'i çerçevesi, komutan kartı, seviye atlama toast'u
+  const st = BADGE_STAGES.find(x => level >= x.from && level <= x.to) || BADGE_STAGES[0];
+  const span = Math.max(1, Math.min(st.to, 200) - st.from + 1), tier = Math.max(1, Math.min(5, 1 + Math.floor((level - st.from) / (span / 5))));
+  return { st, tier, label: `${st.name[lang]} ${ROMAN[tier - 1]}` };
+}
+const PRESTIGE_LEVEL = 100;
+const AVATARS = [
+  { id: 'helmet', icon: '🪖', price: 0 },
+  { id: 'fox', icon: '🦊', gem: 20 }, { id: 'wolf', icon: '🐺', gem: 20 }, { id: 'eagle', icon: '🦅', gem: 20 }, { id: 'robot', icon: '🤖', gem: 20 }, { id: 'skull', icon: '💀', gem: 20 },
+  { id: 'dragon', icon: '🐉', lockKey: 'avatarDragon', unlock: () => (profile.titles || []).includes('dragonlord') },
+  { id: 'trophy', icon: '🏆', lockKey: 'avatarTrophy', unlock: () => !!(profile.colDone && profile.colDone.all) },
+  { id: 'star', icon: '🌟', lockKey: 'avatarStar', unlock: () => (profile.prestige || 0) > 0 },
+];
+const avatarIcon = () => (AVATARS.find(a => a.id === profile.avatar) || AVATARS[0]).icon;
+function syncAvatars() { profile.avatars = profile.avatars || ['helmet']; for (const a of AVATARS) if (a.unlock && a.unlock() && !profile.avatars.includes(a.id)) profile.avatars.push(a.id); }
+function doPrestige() {
+  if ((profile.level || 1) < PRESTIGE_LEVEL) return;
+  profile.prestige = (profile.prestige || 0) + 1; profile.level = 1; profile.xp = 0;
+  grantItem('title', 'veteran'); addGems(10); syncAvatars(); saveProfile();
+  const el = $('lvlnum'); if (el) el.textContent = 'Sv 1 ⭐' + profile.prestige; const lf = $('lvlfill'); if (lf) lf.style.width = '2%';
+  applyLang(); updateStats(); // seviye kapıları prestijle açık kalır (gateOk)
+  showToast(T().prestigeDone(profile.prestige), 4200); sfxPower(); haptic('HEAVY'); track('prestige', { n: profile.prestige });
+  renderIdentity();
+}
+function renderIdentity() { // profil paneli başı: avatar + isim + unvan + rozet + prestij + avatar seçimi
+  const el = $('identity'); if (!el) return; const t = T(); syncAvatars();
+  const lvl = profile.level || 1, bd = badgeOf(lvl), tt = profile.title ? titleById(profile.title) : null;
+  const stars = profile.prestige ? ' ' + '⭐'.repeat(Math.min(5, profile.prestige)) + (profile.prestige > 5 ? '×' + profile.prestige : '') : '';
+  el.innerHTML = `<div class="idcard" style="border-color:${bd.st.col};box-shadow:0 0 14px ${bd.st.col}55"><div class="idav" style="border-color:${bd.st.col}">${avatarIcon()}</div><div class="idtxt"><div class="idname">${esc(profile.name)}${stars}</div>` +
+    `<div class="idline" style="color:${tt ? tt.col : '#9aa'}">${tt ? '🏷️ ' + tt.name[lang] : t.titleNone}</div><div class="idline" style="color:${bd.st.col}">${t.badgeWord}: ${bd.label} · Sv ${lvl}</div></div></div>`;
+  const pr = document.createElement('div'); pr.className = 'shop-note'; pr.style.textAlign = 'center';
+  if (lvl >= PRESTIGE_LEVEL) { const b = document.createElement('button'); b.className = 'mbtn small gold breath'; b.textContent = t.prestigeBtn; b.onclick = doPrestige; pr.appendChild(b); const d = document.createElement('div'); d.textContent = t.prestigeHint(PRESTIGE_LEVEL); pr.appendChild(d); }
+  else pr.textContent = `${t.prestigeAt(PRESTIGE_LEVEL)} · ${t.prestigeHint(PRESTIGE_LEVEL)}`;
+  el.appendChild(pr);
+  const av = document.createElement('div'); av.className = 'avpick';
+  const head = document.createElement('div'); head.className = 'cname'; head.style.cssText = 'width:100%;text-align:center;color:#ffd76a;margin:6px 0 2px'; head.textContent = t.avatarWord; av.appendChild(head);
+  for (const a of AVATARS) {
+    const owned = (profile.avatars || []).includes(a.id), on = profile.avatar === a.id;
+    const b = document.createElement('button'); b.className = 'mbtn small avbtn' + (on ? ' gold' : '');
+    b.innerHTML = `<span class="avic">${a.icon}</span>` + (owned ? '' : `<span class="avsub">${a.gem ? iconize('💎' + a.gem) : (t[a.lockKey] || t.avatarLocked)}</span>`);
+    b.disabled = on || (!owned && !a.gem);
+    b.onclick = () => {
+      if (!owned) { if ((profile.gems || 0) < a.gem) return showToast(t.noMoney); profile.gems -= a.gem; profile.avatars.push(a.id); track('soft_purchase', { t: 'avatar', id: a.id, cur: 'g', amt: a.gem }); track('gem_spend', { sink: 'avatar', n: a.gem }); sfxCoin(); }
+      profile.avatar = a.id; saveProfile(); updateCoinBar(); updateStats(); renderIdentity();
+    };
+    av.appendChild(b);
+  }
+  el.appendChild(av);
+}
 const trailById = id => TRAILS.find(x => x.id === id) || TRAILS[0];
 const explosionById = id => EXPLOSIONS.find(x => x.id === id) || EXPLOSIONS[0];
 const titleById = id => TITLES.find(x => x.id === id);
@@ -2801,6 +2868,7 @@ function checkSets() { // set tamamlanınca unvan (bir kez); satın alma ve sand
     if (typeof updateStats === 'function') updateStats();
   }
   checkCollections(); // K3
+  syncAvatars(); // K6: set/koleksiyon avatarları
 }
 const CHESTS = [
   { id: 'skin', icon: '🎨', name: { tr: 'Kaplama Sandığı', en: 'Skin Chest' }, cost: 1, pool: () => SKINS.filter(x => x.id !== 'default' && !x.event && !x.set && !x.collection).map(x => ({ kind: 'skin', it: x })) },
@@ -3002,7 +3070,7 @@ function renderMachine() { // garaj kaplama sekmesi: sandıklara kısa yol (eski
 function updateStats() {
   const brt = profile.bestRunTime ? ` &nbsp;·&nbsp; ⏱ ${fmtTime(profile.bestRunTime)}` : ''; // en hızlı zafer (rekor vitrini)
   const tt = profile.title ? titleById(profile.title) : null; // KOZMETİK 2.0: unvan
-  $('statsline').innerHTML = (tt ? `<span style="color:${tt.col}">🏷️ ${tt.name[lang]}</span> &nbsp;·&nbsp; ` : '') + `🏆 D.${profile.bestWave}${brt} &nbsp;·&nbsp; ⚔️ ${profile.kills} &nbsp;·&nbsp; 🥇 ${profile.wins} &nbsp;·&nbsp; 🏅`;
+  $('statsline').innerHTML = `${avatarIcon()} ` + (tt ? `<span style="color:${tt.col}">🏷️ ${tt.name[lang]}</span> &nbsp;·&nbsp; ` : '') + `🏆 D.${profile.bestWave}${brt} &nbsp;·&nbsp; ⚔️ ${profile.kills} &nbsp;·&nbsp; 🥇 ${profile.wins} &nbsp;·&nbsp; 🏅`;
 }
 let toastT = 0, statsCheckT = 2;
 // TOAST KUYRUĞU (denetim bulgusu: tek #toast elementinde bildirimler birbirini eziyordu —
@@ -3125,6 +3193,7 @@ function onLevelUp(lvl) {
   sfxPower();
   if (lvl === LEVEL_GATES.duel || lvl === LEVEL_GATES.skins || lvl === LEVEL_GATES.acc) { applyLang(); showToast(T().gateOpen, 3600); } // kilit açıldı — etiketlerden 🔒 düşsün + kutlama
   track('level_up', { level: lvl });
+  const bPrev = badgeOf(lvl - 1), bNow = badgeOf(lvl); if (bNow.label !== bPrev.label) showToast(T().badgeUp(bNow.label), 3200); // K6: rozet kademesi atladı
 }
 // maç sonunda kazanılan XP (mod + performansa göre)
 function computeMatchXp(kind, opts) {
@@ -3236,9 +3305,11 @@ function animateHarvestXp(preLvl, prePct) {
 }
 function updateLevelBar() {
   const el = $('lvlnum'); if (!el) return;
+  const bd = badgeOf(profile.level || 1), lw = $('levelwrap'); if (lw) { lw.style.borderColor = bd.st.col; lw.style.boxShadow = `0 0 8px ${bd.st.col}66`; lw.title = bd.label; } // K6 rozet çerçevesi
   const need = xpForLevel(profile.level || 1);
   el.textContent = (lang === 'tr' ? 'Sv ' : 'Lv ') + (profile.level || 1);
   $('lvlfill').style.width = Math.max(2, Math.min(100, ((profile.xp || 0) / need) * 100)) + '%';
+  if (profile.prestige) el.textContent = el.textContent.replace(/ ⭐.*$/, '') + ' ⭐' + profile.prestige; // K6 prestij yıldızı
 }
 // ---------------------------------------------------------------- günlük görevler (3/gün, gece yenilenir)
 const QUESTS = [
@@ -4238,6 +4309,7 @@ function openProfile() {
   const t = T();
   $('title').textContent = t.profileTitle;
   $('submsg').textContent = `🪙 ${profile.coins} · 🏆 D.${profile.bestWave} · ⚔️ ${profile.kills} · 🥇 ${profile.wins} · 🎮 ${profile.games}`;
+  renderIdentity(); // K6
   renderAchievements();
   showPanel('panel-profile');
 }
@@ -4604,7 +4676,7 @@ function botName() { return BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.lengt
 // FAZ0 (büyüme planı B-7): eski {3,4,6} aksesuarı ~3,5 saate itiyordu (L6=2.324 XP ≈ 30 zafer). Yeni hedef:
 // düello L2 (100 XP ≈ 8-10 dk), kaplama L3 (355 XP ≈ 25 dk), aksesuar L4 (796 XP ≈ 45-50 dk).
 const LEVEL_GATES = { duel: 2, skins: 3, acc: 4 };
-const gateOk = k => (profile.level || 1) >= LEVEL_GATES[k];
+const gateOk = k => (profile.prestige || 0) > 0 || (profile.level || 1) >= LEVEL_GATES[k]; // K6: prestij kapıları açık tutar
 const gateSuffix = k => (gateOk(k) ? '' : ` 🔒${LEVEL_GATES[k]}`);
 // bot zorluk kademeleri — inceleme: tek ayarlı bot yeni oyuncuyu 5-1 eziyordu; Çaylak yenilebilir olmalı,
 // Efsane ustalara meydan okumalı. Galibiyet ödülü kademeyle artar (rekabet motivasyonu).
