@@ -484,7 +484,7 @@ let matchEndReason = ''; // analitik: maç neden bitti (death/victory/win/lose/d
 // game-icons stencil yardımcıları (index.html'deki #gisprite sembollerine referans; renk currentColor'dan)
 const gi = id => `<svg class="gi"><use href="#gi-${id}"/></svg>`;
 // VARLIK FAZ 4: innerHTML'e giden metinlerde para/elmas/jeton emojisi → stencil ikon (textContent/bildirim/toast'ta emoji kalır)
-const iconize = s => String(s).replace(/🪙/g, gi('coins')).replace(/💎/g, gi('gem')).replace(/🎰/g, gi('token'));
+const iconize = s => String(s).replace(/🪙/g, gi('coins')).replace(/💎/g, gi('gem')).replace(/🎰/g, gi('token')).replace(/⚡/g, gi('bolt')).replace(/🔒/g, gi('lock')).replace(/📤/g, gi('share')).replace(/🎁/g, gi('chest')).replace(/🕹️/g, gi('joystick')).replace(/🛡️/g, gi('shield')).replace(/🏆/g, gi('trophy')); /* U5: innerHTML'e giden en görünür emojiler stencil ikon */
 // VARLIK FAZ 2: yeni tank modellerinde geniş gövde yüzeyleri 'TankLight' — boyanın açık tonuyla boyanır ki tank kimlik rengi okunsun
 const _tintW = new THREE.Color(0xffffff);
 function tintLight(o, hex, metal) {
@@ -1108,7 +1108,7 @@ try {
     const trq = (localStorage.getItem('tanklang') || navigator.language || 'tr').toLowerCase().startsWith('tr');
     ld.innerHTML = `<div class="ldtitle">TANK SAVAŞI 3D</div>
       <div class="ldtext" style="max-width:280px;text-align:center">⚠️ ${trq ? 'Yükleme başarısız — internet bağlantını kontrol et' : 'Loading failed — check your connection'}</div>
-      <button id="bootretry" style="margin-top:18px;font:bold 17px system-ui;padding:12px 26px;border-radius:12px;border:2px solid #7dff9b;background:#1c2a14;color:#7dff9b;cursor:pointer">↻ ${trq ? 'TEKRAR DENE' : 'RETRY'}</button>`;
+      <button id="bootretry" style="margin-top:18px;font:bold 17px 'Russo One',monospace;padding:12px 26px;border-radius:12px;border:2px solid #7dff9b;background:#1c2a14;color:#7dff9b;cursor:pointer">↻ ${trq ? 'TEKRAR DENE' : 'RETRY'}</button>`;
     document.getElementById('bootretry').onclick = () => location.reload();
   }
   throw err; // modül dursun; retry temiz reload yapar
@@ -3074,7 +3074,7 @@ function checkCollections() {
 }
 function renderCollection() {
   const t = T(); $('tokenmachine').innerHTML = '';
-  const wrap = $('cardwrap-garage'); wrap.style.cssText = 'display:flex;flex-wrap:wrap;justify-content:center;gap:12px;margin:12px 8px'; wrap.innerHTML = '';
+  const wrap = $('cardwrap-garage'); wrap.className = 'card-list'; wrap.innerHTML = '';
   let sh = 0, st = 0; const rows = COLLECTIONS.map(c => { const pr = colProgress(c); sh += pr.have; st += pr.total; return { c, pr }; });
   const head = document.createElement('div'); head.className = 'cname'; head.style.cssText = 'width:100%;text-align:center;color:#ffd76a;margin:4px 0'; head.textContent = `${t.colTitle} · ${t.colTotal} ${sh}/${st} (%${Math.round(sh / st * 100)})`; wrap.appendChild(head);
   for (const { c, pr } of rows) {
@@ -3677,8 +3677,9 @@ function drawMinimap() {
   // son 1-2 düşman: minimap noktası nabız gibi büyüsün (avlanma yardımı)
   const aliveE = enemies.reduce((n, e) => n + (e.alive ? 1 : 0), 0);
   const ePulse = aliveE > 0 && aliveE <= 2 ? 1 + Math.abs(Math.sin(clock.elapsedTime * 6)) * 1.0 : 1;
-  c.fillStyle = ePulse > 1 ? '#ff6a3a' : '#ff4030';
-  if (enemies.length) { for (const e of enemies) if (e.alive) dot(e.x, e.z, (isBoss(e.type) ? 4.5 : 2.5) * ePulse); }
+  c.fillStyle = ePulse > 1 ? '#ff6a3a' : '#ff4030'; c.strokeStyle = '#3a0a06'; c.lineWidth = 1; /* U7: düşman = kırmızı KARE + koyu kenar (renk körlüğünde şekil farkı) */
+  const sq = (x, z, r) => { const ax = px(x), az = pz(z); c.fillRect(ax - r, az - r, r * 2, r * 2); c.strokeRect(ax - r, az - r, r * 2, r * 2); };
+  if (enemies.length) { for (const e of enemies) if (e.alive) sq(e.x, e.z, (isBoss(e.type) ? 4.5 : 2.5) * ePulse); }
   else for (const m of coopEnemies.values()) dot(m.position.x, m.position.z, 2.5);
   if (mode === 'ball' && ball) { c.fillStyle = '#ffffff'; dot(ball.x, ball.z, 3); }
   if (mode === 'duel' && duel && duel.remoteAlive) { c.fillStyle = '#ff7a5a'; dot(duel.x, duel.z, 3); }
@@ -3689,7 +3690,8 @@ function drawMinimap() {
   if (player.alive) {
     const ax = px(player.x), az = pz(player.z);
     c.fillStyle = '#3aff5d'; c.beginPath(); c.arc(ax, az, 3.5, 0, 7); c.fill();
-    c.strokeStyle = '#3aff5d'; c.lineWidth = 1.5;
+    c.strokeStyle = '#ffffff'; c.lineWidth = 1.5; c.beginPath(); c.arc(ax, az, 4.6, 0, 7); c.stroke(); /* oyuncu: beyaz halka */
+    c.strokeStyle = '#ffffff'; c.lineWidth = 1.5;
     c.beginPath(); c.moveTo(ax, az); c.lineTo(ax + fwdX(player.a) * 7, az + fwdZ(player.a) * 7); c.stroke();
   }
 }
@@ -3825,6 +3827,7 @@ function applyLang() {
   $('hlabel').textContent = t.health;
   $('firebtn').textContent = t.fire;
   { const fn = $('friendname'), fb = $('btn-friend'), lr = $('lb-report'); if (fn) fn.placeholder = t.friendPh; if (fb) fb.textContent = t.friendBtn; if (lr) lr.textContent = t.lbReport; } /* LANSMAN: EN'de Türkçe kalmıyordu */
+  { const al = (id, v) => { const e = $(id); if (e) e.setAttribute('aria-label', v); }; al('btn-settings', t.setTitle || 'Ayarlar'); al('btn-settings-menu', t.setTitle || 'Ayarlar'); al('firebtn', t.fire || 'ATEŞ'); al('gembar', '💎'); const lt = $('lang-tr'), le = $('lang-en'); if (lt) lt.setAttribute('aria-pressed', lang === 'tr'); if (le) le.setAttribute('aria-pressed', lang === 'en'); const mm = $('minimap'); if (mm) mm.setAttribute('aria-hidden', 'true'); } /* U8: erişilebilirlik etiketleri */
   $('gt-tanks').textContent = t.tabTanks;
   $('gt-skins').textContent = t.tabSkins + gateSuffix('skins');
   $('gt-acc').textContent = t.accTab + gateSuffix('acc'); // ölü anahtar bağlandı (EN'de 'AKSESUAR' kalıyordu)
@@ -3966,8 +3969,7 @@ function renderShowroomUI() {
   } else {
     const isGem = !!base.gem;
     act.innerHTML = iconize(`${t.buy} · ${isGem ? '💎' + base.gem : '🪙' + base.price}`);
-    act.classList.toggle('cant', isGem ? (profile.gems || 0) < base.gem : profile.coins < base.price);
-    act.className = 'mbtn sr-btn gold' + (isGem ? ' breath' : ''); // premium: nefes animasyonu (istek yaratma)
+    { const ok = isGem ? (profile.gems || 0) >= base.gem : profile.coins >= base.price; act.className = 'mbtn sr-btn gold' + (ok && isGem ? ' breath' : '') + (ok ? '' : ' cant'); } /* U9: sınıf ataması .cant'ı siliyordu; alınamıyorsa nefes yok */
     act.onclick = () => {
       if (isGem ? (profile.gems || 0) < base.gem : profile.coins < base.price) return showToast(T().noMoney);
       if (isGem) profile.gems -= base.gem; else profile.coins -= base.price;
@@ -4038,7 +4040,7 @@ function renderGarage() {
   $('tokenmachine').innerHTML = ''; // makine sadece kaplama sekmesinde
   const wrap = $('cardwrap-garage');
   wrap.className = 'card-list';
-  wrap.style.cssText = 'display:flex;flex-wrap:wrap;justify-content:center;gap:12px;margin:12px 8px';
+  wrap.className = 'card-list';
   wrap.innerHTML = '';
   for (const base of TANKS) {
     const owned = profile.owned.includes(base.id);
@@ -4094,7 +4096,7 @@ function renderGarage() {
         const lvl = (profile.upgrades[base.id] && profile.upgrades[base.id][u.key]) || 0;
         const row = document.createElement('button');
         row.className = 'mbtn small';
-        row.style.cssText = 'display:block;width:100%;margin:3px 0;font-size:11px;padding:6px 4px;letter-spacing:0';
+        row.style.cssText = 'display:block;width:100%;margin:4px 0;font-size:12px;padding:9px 6px;min-height:38px;letter-spacing:0';
         const dots = '●'.repeat(lvl) + '○'.repeat(UP_MAX - lvl);
         if (lvl >= UP_MAX) { row.textContent = `${u.name[lang]} ${dots} ${t.maxLevel}`; row.disabled = true; }
         else {
@@ -4135,7 +4137,7 @@ function renderSkins() {
   const t = T();
   renderMachine();
   const wrap = $('cardwrap-garage');
-  wrap.style.cssText = 'display:flex;flex-wrap:wrap;justify-content:center;gap:12px;margin:12px 8px';
+  wrap.className = 'card-list';
   wrap.innerHTML = '';
   for (const s of SKINS) {
     const owned = s.id === 'default' || profile.skins.includes(s.id);
@@ -4154,7 +4156,7 @@ function renderSkins() {
       for (const d of DYES) {
         const has = ownedD.includes(d.id), on = active === d.id;
         const b = document.createElement('button'); b.className = 'mbtn small' + (on ? ' gold' : '') + (!has && profile.coins < DYE_PRICE ? ' cant' : '');
-        b.style.cssText = 'padding:4px 8px;font-size:11px'; b.title = d.name[lang]; b.textContent = d.icon + (has ? (on ? ' ✓' : '') : ' 🪙' + DYE_PRICE);
+        b.style.cssText = 'padding:8px 10px;font-size:12px;min-height:36px'; b.title = d.name[lang]; b.textContent = d.icon + (has ? (on ? ' ✓' : '') : ' 🪙' + DYE_PRICE);
         b.onclick = () => {
           profile.dyes = profile.dyes || {}; profile.dye = profile.dye || {};
           if (!has) { if (profile.coins < DYE_PRICE) return showToast(t.noMoney); profile.coins -= DYE_PRICE; (profile.dyes[s.id] = profile.dyes[s.id] || []).push(d.id); checkSets(); track('soft_purchase', { t: 'dye', id: s.id + ':' + d.id, cur: 'c', amt: DYE_PRICE }); track('coin_spend', { sink: 'dye', n: DYE_PRICE }); sfxCoin(); updateCoinBar(); showToast(t.dyeGot(d.name[lang]), 2600); profile.dye[s.id] = d.id; }
@@ -4181,7 +4183,7 @@ function renderAccessories() {
   $('tokenmachine').innerHTML = '';
   $('submsg').textContent = `🪙 ${profile.coins}  ·  💎 ${profile.gems || 0}`;
   const wrap = $('cardwrap-garage');
-  wrap.style.cssText = 'display:flex;flex-wrap:wrap;justify-content:center;gap:12px;margin:12px 8px';
+  wrap.className = 'card-list';
   wrap.innerHTML = '';
   // FAZ3: 2. yuva kilidi (60💎) — başlık butonu
   if (!profile.accSlot2) {
@@ -4251,13 +4253,13 @@ function cosmeticCard(kind, it, key, rerender) { // ortak kart: swatch + SEÇ / 
 }
 function renderTracks() {
   const t = T(); $('tokenmachine').innerHTML = '';
-  const wrap = $('cardwrap-garage'); wrap.style.cssText = 'display:flex;flex-wrap:wrap;justify-content:center;gap:12px;margin:12px 8px'; wrap.innerHTML = '';
+  const wrap = $('cardwrap-garage'); wrap.className = 'card-list'; wrap.innerHTML = '';
   if (effTank(profile.selected).id === 'hover') { const n = document.createElement('div'); n.className = 'shop-note'; n.style.width = '100%'; n.textContent = t.trackNote; wrap.appendChild(n); }
   for (const it of TRACKS) if (!it.collection || profile.tracks.includes(it.id)) wrap.appendChild(cosmeticCard('track', it, 'track', renderTracks));
 }
 function renderFx() {
   const t = T(); $('tokenmachine').innerHTML = '';
-  const wrap = $('cardwrap-garage'); wrap.style.cssText = 'display:flex;flex-wrap:wrap;justify-content:center;gap:12px;margin:12px 8px'; wrap.innerHTML = '';
+  const wrap = $('cardwrap-garage'); wrap.className = 'card-list'; wrap.innerHTML = '';
   const section = label => { const h = document.createElement('div'); h.className = 'cname'; h.style.cssText = 'width:100%;text-align:center;color:#ffd76a;margin:6px 0 0'; h.textContent = label; wrap.appendChild(h); };
   section(t.fxTrails); for (const it of TRAILS) if (!it.collection || profile.trails.includes(it.id)) wrap.appendChild(cosmeticCard('trail', it, 'trail', renderFx));
   section(t.fxExpl); for (const it of EXPLOSIONS) if (!it.collection || profile.explosions.includes(it.id)) wrap.appendChild(cosmeticCard('explosion', it, 'explosion', renderFx));
@@ -4304,7 +4306,7 @@ async function buyStarter(btn) {
 function renderShop() {
   $('submsg').textContent = `💎 ${profile.gems || 0} · 🎰 ${profile.tokens || 0}`;
   const wrap = $('shoplist');
-  wrap.style.cssText = 'display:flex;flex-wrap:wrap;justify-content:center;gap:12px;margin:12px 8px';
+  wrap.className = 'card-list';
   wrap.innerHTML = '';
   renderChests(wrap); // KOZMETİK 2.0 (K1): sandık ailesi rafın başında
   renderMystery(wrap); renderFeatured(wrap); // K8
@@ -4373,7 +4375,7 @@ function openProfile() {
 function renderMaps() {
   const t = T();
   const wrap = $('cardwrap-maps');
-  wrap.style.cssText = 'display:flex;flex-wrap:wrap;justify-content:center;gap:12px;margin:12px 8px';
+  wrap.className = 'card-list';
   wrap.innerHTML = '';
   // FAZ0/FAZ1: kartlar bölüm → kilit sırasına göre; dizi indeksleri (QUICK_MAPS, weeklySpec, lastSoloMap) değişmez
   const ordered = [];
