@@ -17,6 +17,11 @@ function copy(src, dst) {
       if (f === '.DS_Store' || EXCLUDE.has(f)) continue;
       copy(path.join(src, f), path.join(dst, f));
     }
+  } else if (path.basename(src) === 'main.js') {
+    // üretim kopyası: geliştirme simülasyonu (sahte reklam/satın alma başarısı) kesinlikle kapalı
+    const js = fs.readFileSync(src, 'utf8'), re = /^const DEV_SIM = .*$/m;
+    if (!re.test(js)) throw new Error('main.js: DEV_SIM satırı bulunamadı (build-www)');
+    fs.writeFileSync(dst, js.replace(re, 'const DEV_SIM = false;'));
   } else if (path.basename(src) === 'sw.js') {
     // native sürüm damgası: her paket taze önbellek adıyla çıkar (offline eski kabukta kalmaz)
     const stamped = fs.readFileSync(src, 'utf8').replaceAll('__BUILDSTAMP__', Date.now().toString(36)); // damga yorumda da geçiyor → replaceAll

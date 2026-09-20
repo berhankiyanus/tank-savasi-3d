@@ -40,7 +40,7 @@ const L = {
     vulnTxt: 'SAVUNMASIZ!',
     tutTitle: 'EĞİTİM', tutSteps: ['Tankı sür', 'Ateş et', 'Mermiyi duvardan sektir', 'Varili patlat'],
     tutDone: '🎓 Eğitim tamam! +🪙100',
-    shopNote: '💎 Elmaslarla premium tank ve aksesuar alınır. Gerçek para satın almaları henüz aktif değil — mağaza sürümüyle gelecek.',
+    shopNote: '💎 Elmaslar seviye atlayarak, sezon kademeleriyle ve günün ilk zaferiyle kazanılır; premium tank ve aksesuar alır.',
     freeGems: '🎁 Ücretsiz 💎 kazan: her 5. seviyede +2 · sezon kademeleri 8/16/24 · günün ilk koşu zaferi +1',
     packPop: '★ POPÜLER', packBest: '★ EN AVANTAJLI',
     againBtn: '↻ TEKRAR OYNA', rewardedBtn: '📺 Reklam izle → x2 ödül', rewardedGot: '🎉 x2 ödül alındı!', adLoading: '📺 Yükleniyor...',
@@ -142,7 +142,7 @@ const L = {
     vulnTxt: 'VULNERABLE!',
     tutTitle: 'TUTORIAL', tutSteps: ['Drive the tank', 'Fire your cannon', 'Bounce a shot off a wall', 'Blow up a barrel'],
     tutDone: '🎓 Tutorial complete! +🪙100',
-    shopNote: '💎 Gems buy premium tanks and accessories. Real-money purchases are not live yet — coming with the store release.',
+    shopNote: '💎 Gems are earned by leveling up, season tiers and the first victory of the day; they buy premium tanks and accessories.',
     freeGems: '🎁 Earn free 💎: +2 every 5th level · season tiers 8/16/24 · first run victory each day +1',
     packPop: '★ POPULAR', packBest: '★ BEST VALUE',
     againBtn: '↻ PLAY AGAIN', rewardedBtn: '📺 Watch ad → 2x reward', rewardedGot: '🎉 2x reward claimed!', adLoading: '📺 Loading...',
@@ -268,7 +268,7 @@ if (typeof settings.volMusic !== 'number') settings.volMusic = 1;
 if (!['normal', 'tight', 'wide'].includes(settings.stick)) settings.stick = 'normal'; // FAZ3: joystick ölü bölge (0.2 / 0.1 / 0.3)
 const stickDz = () => (settings.stick === 'tight' ? 0.1 : settings.stick === 'wide' ? 0.3 : 0.2);
 if (typeof settings.autoFire !== 'boolean') settings.autoFire = ('ontouchstart' in window || navigator.maxTouchPoints > 0); // (IS_TOUCH henüz tanımsız — TDZ)
-const GAME_VER = '0.9.0'; // ayarlar panelinde görünür; mağaza sürümleriyle birlikte artır
+const GAME_VER = '1.0.0'; // ayarlar panelinde görünür; mağaza sürümleriyle birlikte artır
 function saveSettings() { try { localStorage.setItem('tanksettings', JSON.stringify(settings)); } catch (e) { /* engelli depolama: ayar kalıcı olmaz ama oyun çalışır */ } }
 
 // ---------------------------------------------------------------- sunucu adresi (web vs native app)
@@ -338,7 +338,8 @@ function nativeInit() {
 // DOĞRUDAN çağırmaz; yalnızca bu soyut arayüzü kullanır. Web'de stub, native'de AdMob/StoreKit'e bağlanır — hesap sonrası).
 // geliştirme simülasyonu YALNIZCA yerel geliştirmede aktif: üretimde sahte başarı dönmez
 // (inceleme kuralı: gerçek sağlayıcı yokken satın alma/reklam "başarılı" görünmemeli)
-const DEV_SIM = !isNativeApp() && /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
+const DEV_SIM = !window.Capacitor && !isNativeApp() && /^(localhost|127\.0\.0\.1)$/.test(location.hostname) && location.port !== ''; /* Capacitor kökeni https://localhost (portsuz) → asla; build-www.js www kopyasında satırı 'false' yapar */
+const IAP_ENABLED = false; /* LANSMAN P0-1: Play Billing bağlanana kadar gerçek para yüzeyleri (elmas paketleri, başlangıç paketi, cüzdan +) gizli; kod duruyor */
 const Platform = {
   // gerçek reklam gösterilebilir mi? (native: AdMob eklentisi; web: yalnızca yerel geliştirme simülasyonu)
   adsAvailable() { return isNativeApp() ? !!capPlugins().AdMob : DEV_SIM; },
@@ -2845,7 +2846,7 @@ const healthEl = $('health'), scoreEl = $('score'), waveEl = $('wave');
 const msgEl = $('msg'), flashEl = $('flash'), bannerEl = $('wavebanner');
 const duelStatusEl = $('duelstatus'), coinsEl = $('coins');
 
-function updateCoinBar() { coinsEl.textContent = profile.coins; updateTokenBar(); updateGemBar(); }
+function updateCoinBar() { coinsEl.textContent = profile.coins; updateTokenBar(); updateGemBar(); const gp = document.querySelector('#gembar .gem-plus'); if (gp) gp.style.display = IAP_ENABLED ? '' : 'none'; /* P0-1 */ }
 function updateTokenBar() { const el = $('tokens'); if (el) el.textContent = profile.tokens || 0; }
 function updateGemBar() { const el = $('gems'); if (el) el.textContent = profile.gems || 0; }
 function grantTokens(n, silent) {
@@ -4244,7 +4245,7 @@ function openShop() {
 }
 // FAZ1 (plan C-4): BAŞLANGIÇ PAKETİ — ₺29,99 sabit SKU (ilk ödeme kırıcı): 60💎 + Hover + 1000🪙 + 3🎰; games≥6 sonrası tek seferlik görünür.
 const STARTER = { sku: 'starter_pack', price: '₺29,99', gems: 60, coins: 1000, tokens: 3, tank: 'hover' };
-function starterVisible() { return (profile.games || 0) >= 6 && !profile.starterBought; }
+function starterVisible() { return IAP_ENABLED && (profile.games || 0) >= 6 && !profile.starterBought; }
 async function buyStarter(btn) {
   btn.disabled = true; const old = btn.textContent; btn.textContent = '...';
   const ok = await Platform.purchase(STARTER.sku);
@@ -4269,7 +4270,7 @@ function renderShop() {
     const btn = document.createElement('button'); btn.className = 'mbtn small gold breath'; btn.textContent = STARTER.price; btn.onclick = () => buyStarter(btn);
     card.appendChild(btn); wrap.appendChild(card);
   }
-  GEM_PACKS.forEach((p, pi) => {
+  if (IAP_ENABLED) GEM_PACKS.forEach((p, pi) => {
     const total = p.gems + p.bonus;
     const card = document.createElement('div'); card.className = 'card';
     // kademe görseli: paket büyüdükçe yığın büyür + zemin ısınır (soğuk mavi → mor-altın)

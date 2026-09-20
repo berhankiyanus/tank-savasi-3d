@@ -77,6 +77,11 @@ Android Studio'da:
 - **Keystore yedeği:** anahtarı Google Play App Signing'e devret (önerilen) — kendi keystore'un
   sadece upload anahtarı olur, kaybolursa Play'den sıfırlatabilirsin.
 
+### Android yerel projede elle yapılan ayarlar (android/ git'te değil — `npx cap add android` sonrası tekrar uygula)
+- `android/app/src/main/AndroidManifest.xml` → `<activity … android:screenOrientation="portrait">` (dikey kilit; UI yalnız dikey tasarlandı).
+- `android/app/build.gradle` → `versionName "1.0.0"` (main.js `GAME_VER` ve package.json ile aynı), `versionCode` her yüklemede +1.
+- İmzalama: `android/keystore.properties` (git'te değil) + `signingConfigs.release` bloğu (bkz. §4).
+
 ## 5. Zorunlu belgeler (ikisi için de)
 - **Gizlilik politikası** (bir URL gerekli). Basit bir sayfa yeter; analitik dışında veri
   toplamadığını, PII olmadığını belirt. İstersen Render'da `/privacy` olarak yayınlayabiliriz.
@@ -84,6 +89,7 @@ Android Studio'da:
 - **Destek e-postası:** berhankiyanus123@gmail.com
 
 ## 6. Sürüm numarası artırma (güncelleme yüklerken)
+Üç yerde birlikte: main.js `GAME_VER` · package.json `version` · android/app/build.gradle `versionName` (+ `versionCode` +1). Lansman: 1.0.0 / versionCode 1.
 - iOS: Xcode → Target → General → Version + Build.
 - Android: `android/app/build.gradle` → `versionCode` (tam sayı, her yüklemede +1) + `versionName`.
 
