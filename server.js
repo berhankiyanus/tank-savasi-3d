@@ -19,7 +19,7 @@ const MIME = {
   '.md': 'text/plain; charset=utf-8',
 };
 // yalnızca yayın dosyaları sunulur (kod/.git/konfig sızıntısına karşı allowlist)
-const ALLOW_FILES = new Set(['/index.html', '/main.js', '/sw.js', '/manifest.json', '/privacy.html', '/CREDITS.md']);
+const ALLOW_FILES = new Set(['/index.html', '/main.js', '/sw.js', '/manifest.json', '/privacy.html', '/CREDITS.md', '/playable.html']); // playable.html: oynanabilir reklam demosu (tools/playable/dist kopyası)
 const ALLOW_DIRS = ['/assets/', '/libs/'];
 
 // ---- opsiyonel KALICI depo (P1): Render'da PostgreSQL oluşturup DATABASE_URL bağlanırsa
