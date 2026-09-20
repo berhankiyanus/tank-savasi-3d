@@ -119,6 +119,10 @@ const ctl = { turn: 0, move: 0, fire: false, moved: false, fired: false };
   const keys = {}; addEventListener('keydown', e => { keys[e.code] = true; audio(); if (e.code === 'Space') { ctl.fire = true; ctl.fired = true; } }); addEventListener('keyup', e => { keys[e.code] = false; if (e.code === 'Space') ctl.fire = false; });
   setInterval(() => { if (pid != null) return; const t = (keys.ArrowLeft || keys.KeyA ? 1 : 0) - (keys.ArrowRight || keys.KeyD ? 1 : 0), m = (keys.ArrowUp || keys.KeyW ? 1 : 0) - (keys.ArrowDown || keys.KeyS ? 1 : 0); if (t || m) { ctl.turn = t; ctl.move = m; ctl.moved = true; } else if (!pid) { ctl.turn = ctl.move = 0; } }, 30);
   document.addEventListener('pointerdown', () => audio(), { once: true });
+  /* iOS Safari: viewport 'user-scalable=no' yok sayılır; hızlı ATEŞ dokunuşları çift dokunuş sayılıp sayfayı büyütür.
+     Dokunma varsayılanlarını sayfa düzeyinde engelle (pointer olayları yine çalışır), pinch (gesturestart) ve dblclick kapat. */
+  for (const t of ['touchstart', 'touchmove', 'touchend']) document.addEventListener(t, e => { e.preventDefault(); }, { passive: false });
+  document.addEventListener('gesturestart', e => e.preventDefault()); document.addEventListener('dblclick', e => e.preventDefault());
 }
 // CTA: her ağın çıkış kancası (biri çalışır)
 function cta() {
