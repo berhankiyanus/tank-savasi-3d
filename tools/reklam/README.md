@@ -45,6 +45,12 @@ Kod tarafında KALICI değişiklik yok; her şey geçici kanca + enjekte edilen 
 - Kurgu: `build2.sh ~/Desktop/tank-reklam-2026/tank-C15-9x16.mp4 C1 C2 C3 C4` · `... tank-C30-9x16.mp4 C1 C2b C3 C5 C6 C7` · `... tank-D14-9x16.mp4 D1 D2 D3 D4` → `build2.sh --deriv <mp4>` (16:9 blur-pad, 1:1 ve 4:5 kırpma).
 - Ders: pane'de rAF ~4 fps'ye düşerse (dosya paneli öne geçince) `resize_window` desktop → 540×960 yeniden ayarı uyandırır; kayıt 3 kare kalmışsa boyut <1 MB'tan anlaşılır. Sandık kartı `S.card` içinde çizildiği için koordinatlar merkeze görelidir (0 = W/2).
 
+## v3 (2026-09-20): TEK reklam videosu (`ads3.js`, window.__E) — yayındaki sürüm
+- Neden: v1/v2 karanlık haritalar (lav/uzay/gece) + uzak/kuşbakışı kamera + küçük tank = zayıf görüntü. v3 parlak haritalar (Kar/Stadyum/Kanyon) + yakın takip kamerası (`S.camIso` yumuşatılmış yön, `S.camPair` oyuncu+iniş noktası, `S.camOrbit` kapanış).
+- Akış (13,7 sn): E1 Kar kanca — gerçek 2 sekmeli vuruş, mermi 1.8× + `slowmoT 0.8` (mermi 0,35 sn'de sekiyor, ağır çekimsiz görünmez) → "MEGA SEKME!" · E2 Stadyum x4 seri (ateş + garantili yok etme) · E3 Kanyon GENERAL KARA (hp 5, otomatik ateş, 2,6 sn'de zorla) · E4 vitrin Ejderha Seti · E5 Stadyum orbit + logo + CTA.
+- Çekim: `E.prep(3)` (Kar; koni probu bulamazsa eski prob — Stadyum'da iç duvar az, sekme yolu çıkmaz) → `E.s1..s5`. javascript_tool 45 sn sınırı: zinciri arka planda başlat (`window.__runP = (async()=>{...})()`), 38 sn'lik poll ile bekle; prep+E1 ≈ 20 sn, E3-E5 ≈ 9 sn.
+- Kurgu: `build2.sh ~/Desktop/tank-reklam-2026/TankSavasi3D-reklam.mp4 E1 E2 E3 E4 E5` (−14,6 LUFS). Türev gerekirse `build2.sh --deriv`.
+
 ## Mağaza ekran görüntüleri (`shots.js`)
 Headless Chromium (playwright-core + ~/Library/Caches/ms-playwright/chromium-1208) ile STORE.md §9'daki 6 kare, 3 boyut × TR/EN:
 iPhone 6.7" 1290×2796 (430×932@3), iPhone 6.5" 1284×2778 (428×926@3), Android 1080×1920 (405×720@2.667).
