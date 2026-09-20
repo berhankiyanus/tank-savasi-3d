@@ -198,8 +198,8 @@ function tick(now) {
     if (P.alive && !enemies.some(e => e.alive)) { if (wave === 1) { startWave(2); } else finish('win'); }
   }
   for (const p of parts) { if (p.life <= 0) continue; p.life -= dt; p.vy -= 22 * dt; p.m.position.x += p.vx * dt; p.m.position.y += p.vy * dt; p.m.position.z += p.vz * dt; if (p.m.position.y < 0.15) { p.m.position.y = 0.15; p.vy *= -0.4; p.vx *= 0.7; p.vz *= 0.7; } p.m.rotation.x += dt * 9; p.m.rotation.z += dt * 7; if (p.life <= 0) p.m.visible = false; }
-  const portrait = camera.aspect < 1, back = portrait ? 10 : 11.5, ahead = portrait ? 7 : 6;
-  camT.set(P.x - fwdX(P.a) * back, portrait ? 15 : 9, P.z - fwdZ(P.a) * back); camera.position.lerp(camT, 1 - Math.exp(-4 * dt));
+  const portrait = camera.aspect < 1, back = portrait ? 10 : 10.5, ahead = portrait ? 7 : 5;
+  camT.set(P.x - fwdX(P.a) * back, portrait ? 15 : 11, P.z - fwdZ(P.a) * back); /* yatayda tank tam görünsün */ camera.position.lerp(camT, 1 - Math.exp(-4 * dt));
   shake = Math.max(0, shake - dt * 1.2); if (shake > 0) { camera.position.x += (Math.random() - 0.5) * shake; camera.position.y += (Math.random() - 0.5) * shake * 0.6; camera.position.z += (Math.random() - 0.5) * shake; }
   camera.lookAt(P.x + fwdX(P.a) * ahead, 1.0, P.z + fwdZ(P.a) * ahead);
   renderer.render(scene, camera);
