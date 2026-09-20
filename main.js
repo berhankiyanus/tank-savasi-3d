@@ -429,7 +429,7 @@ const CLIENT_ID = (() => {
 function submitScore(score) {
   if (!score || score < 1) return;
   try {
-    const payload = JSON.stringify({ cid: CLIENT_ID, name: profile.name || 'Oyuncu', score: score | 0 });
+    const payload = JSON.stringify({ cid: CLIENT_ID, name: profile.name || 'Oyuncu', score: score | 0, av: avatarIcon(), ti: profile.title || '' }); // KOZMETİK 2.0: vanity
     const url = apiBase() + '/lb';
     if (navigator.sendBeacon) navigator.sendBeacon(url, payload);
     else fetch(url, { method: 'POST', body: payload, keepalive: true }).catch(() => {});
@@ -438,7 +438,7 @@ function submitScore(score) {
 function submitTime(sec) {
   if (!sec || sec < 60) return;
   try {
-    const payload = JSON.stringify({ cid: CLIENT_ID, name: profile.name || 'Oyuncu', time: sec | 0 });
+    const payload = JSON.stringify({ cid: CLIENT_ID, name: profile.name || 'Oyuncu', time: sec | 0, av: avatarIcon(), ti: profile.title || '' });
     const url = apiBase() + '/lb';
     if (navigator.sendBeacon) navigator.sendBeacon(url, payload);
     else fetch(url, { method: 'POST', body: payload, keepalive: true }).catch(() => {});
@@ -502,7 +502,7 @@ const TANKS = [
   { id: 'scout',    name: { tr: 'Kaşif',      en: 'Scout'    }, price: 150,  color: 0x2f7db0, scale: 0.90, health: 4, speed: 10.6, turn: 3.3, cool: 0.42, bspeed: 28, model: 'scout', turretTop: 2.17 },
   { id: 'guardian', name: { tr: 'Muhafız',    en: 'Guardian' }, price: 300,  color: 0x707070, scale: 1.00, health: 8, speed: 6.4,  turn: 2.0, cool: 0.50, bspeed: 22, mech: 'regen', model: 'guardian', turretTop: 2.16 }, // Quaternius tank (CC0) — kendi GLB'si, ölçek 1.0 (model zaten geniş: ±1.38)
   { id: 'sniper',   name: { tr: 'Nişancı',    en: 'Sniper'   }, price: 500,  color: 0x7a3aa0, scale: 1.00, health: 5, speed: 8.6,  turn: 2.8, cool: 0.40, bspeed: 42, shot: 0xb46aff, mech: 'pierce', model: 'sniper', turretTop: 1.33 },
-  { id: 'phantom',  name: { tr: 'Hayalet',    en: 'Phantom'  }, price: 1000,  color: 0x1aa37a, scale: 1.00, health: 6, speed: 9.6,  turn: 3.0, cool: 0.40, bspeed: 32, glow: true, shot: 0x3affc8, mech: 'stealth' },
+  { id: 'phantom',  name: { tr: 'Hayalet',    en: 'Phantom'  }, price: 1000,  color: 0x1aa37a, scale: 1.00, health: 6, speed: 9.6,  turn: 3.0, cool: 0.40, bspeed: 32, glow: true, shot: 0x3affc8, mech: 'stealth', model: 'phantom', turretTop: 1.78 }, // Zsky 'Tank' (CC BY) — modern alçak MBT
   { id: 'goldking', name: { tr: 'Altın Kral', en: 'Gold King'}, price: 2200, color: 0xffcc33, scale: 1.08, health: 8, speed: 9.2,  turn: 2.9, cool: 0.38, bspeed: 36, glow: true, metal: true, shot: 0xffd24a, mech: 'rich', model: 'goldking', turretTop: 2.21 },
   { id: 'heavy',    name: { tr: 'Ağır Tank',   en: 'Heavy Tank'}, price: 4200, color: 0x6b6f4a, scale: 0.95, health: 11, speed: 5.6, turn: 1.8, cool: 0.50, bspeed: 30, model: 'heavy', metal: true, turretTop: 1.8, shot: 0xffb45a },
   { id: 'twin',     name: { tr: 'İkiz Namlu',  en: 'Twin Cannon'}, price: 5500, color: 0x556047, scale: 0.95, health: 7,  speed: 8.4, turn: 2.8, cool: 0.52, bspeed: 30, model: 'twin', turretTop: 1.62, shot: 0xbfe84a, mech: 'twin' },
@@ -511,6 +511,9 @@ const TANKS = [
   { id: 'mamut',    name: { tr: 'Mamut',       en: 'Mammoth'   }, price: 9500, color: 0x525a3a, scale: 1.18, health: 12, speed: 5.0, turn: 1.6, cool: 0.48, bspeed: 28, model: 'mamut', metal: true, turretTop: 1.9, shot: 0xff9a3a, mech: 'ram' },
   // SEZON 2 (FAZ3): BURÇ — heavy.glb yeniden kullanım + çelik mavisi; mech aegis (25 sn'de bir 4 sn otomatik kalkan)
   { id: 'bastion',  name: { tr: 'Burç',        en: 'Bastion'   }, price: 11000, color: 0x3a5a6a, scale: 0.95, health: 10, speed: 6.0, turn: 1.9, cool: 0.46, bspeed: 30, model: 'heavy', metal: true, turretTop: 1.8, shot: 0x7ad0ff, mech: 'aegis' },
+  // KOZMETİK 2.0 sonrası yeni tanklar (CC BY modeller, Blender boru hattı): coin merdiveninin yeni tepesi; yan-basamak
+  { id: 'lynx',     name: { tr: 'Vaşak',       en: 'Lynx'      }, price: 12500, color: 0xc8a020, scale: 0.95, health: 6,  speed: 10.8, turn: 3.4, cool: 0.52, bspeed: 30, model: 'lynx', turretTop: 2.4, shot: 0xf0d040, mech: 'twin' }, // Zsky 'Light Tank' (CC BY) — çift namlulu hafif tank
+  { id: 'boxer',    name: { tr: 'Boksör',      en: 'Boxer'     }, price: 14000, color: 0x6a7a3a, scale: 1.05, health: 11, speed: 6.2, turn: 1.9, cool: 0.50, bspeed: 30, model: 'boxer', metal: true, turretTop: 1.55, shot: 0xb0ff60, mech: 'knock' }, // KolosStudios 'Tank' (CC BY) — yuvarlak kuleli ağır
   { id: 'hover',    name: { tr: 'Hover Tank',  en: 'Hover Tank'}, gem: 75, color: 0x3a4450, scale: 1.00, health: 5, speed: 12.0, turn: 3.5, cool: 0.40, bspeed: 34, model: 'hover', metal: true, glow: true, turretTop: 1.5, shot: 0x35e0ff, mech: 'hover' },
   { id: 'titan',    name: { tr: 'Titan',       en: 'Titan'     }, gem: 150, color: 0x40444a, scale: 1.05, health: 13, speed: 5.2, turn: 1.6, cool: 0.44, bspeed: 32, model: 'titan', metal: true, glow: true, turretTop: 2.05, shot: 0xff4a3a, mech: 'knock' },
 ];
@@ -607,6 +610,10 @@ const DYES = [
   { id: 'warm', icon: '🔥', name: { tr: 'Sıcak', en: 'Warm' }, hsl: [-0.06, 0.1, 0.02] }, // ton turuncu/kızıla kayar
   { id: 'cool', icon: '❄️', name: { tr: 'Soğuk', en: 'Cool' }, hsl: [0.12, 0.1, 0] },   // ton yeşil/maviye kayar
   { id: 'dark', icon: '🌑', name: { tr: 'Koyu', en: 'Dark' }, hsl: [0, -0.1, -0.18] },
+  // K9: painted genişletme — 6 ton
+  { id: 'light', icon: '☀️', name: { tr: 'Açık', en: 'Light' }, hsl: [0, 0.05, 0.16] },
+  { id: 'vivid', icon: '✨', name: { tr: 'Canlı', en: 'Vivid' }, hsl: [0, 0.35, 0.02] },
+  { id: 'inverse', icon: '🔄', name: { tr: 'Zıt', en: 'Inverse' }, hsl: [0.5, 0, 0] },
 ];
 const DYE_PRICE = 250;
 function dyeColor(hex, dyeId) { const d = DYES.find(x => x.id === dyeId); if (!d) return hex; const c = new THREE.Color(hex); c.offsetHSL(d.hsl[0], d.hsl[1], d.hsl[2]); return c.getHex(); }
@@ -1085,7 +1092,7 @@ function getRoomEnv() {
 
 // ---------------------------------------------------------------- tank modelleri (tembel-yükleme)
 // farklı GLB gövde modelleri; ilk pakete girmez, seçilince/önizlenince yüklenir (performans bütçesi)
-const MODEL_PATHS = { recruit: 'assets/tank_recruit.glb', scout: 'assets/tank_scout.glb', sniper: 'assets/tank_sniper.glb', goldking: 'assets/tank_goldking.glb', guardian: 'assets/tank_guardian.glb', heavy: 'assets/tank_heavy.glb', hover: 'assets/tank_hover.glb', twin: 'assets/tank_twin.glb', arty: 'assets/tank_arty.glb', titan: 'assets/tank_titan.glb', mamut: 'assets/tank_mamut.glb' };
+const MODEL_PATHS = { recruit: 'assets/tank_recruit.glb', scout: 'assets/tank_scout.glb', phantom: 'assets/tank_phantom.glb', lynx: 'assets/tank_lynx.glb', boxer: 'assets/tank_boxer.glb', sniper: 'assets/tank_sniper.glb', goldking: 'assets/tank_goldking.glb', guardian: 'assets/tank_guardian.glb', heavy: 'assets/tank_heavy.glb', hover: 'assets/tank_hover.glb', twin: 'assets/tank_twin.glb', arty: 'assets/tank_arty.glb', titan: 'assets/tank_titan.glb', mamut: 'assets/tank_mamut.glb' };
 const loadedModels = {}; // modelId -> gltf.scene
 const _modelLoader = new GLTFLoader();
 async function ensureModel(modelId) {
@@ -2472,6 +2479,7 @@ const TITLES = [
   { id: 'fleetlord', name: { tr: 'Filo Efendisi', en: 'Fleet Lord' }, col: '#6fe0ff' },     // K3: tüm tanklar
   { id: 'collector', name: { tr: 'Koleksiyoncu', en: 'Collector' }, col: '#ffd76a' },       // K3: tüm koleksiyon
   { id: 'veteran', name: { tr: 'Kıdemli Komutan', en: 'Veteran Commander' }, col: '#ffefb0' },  // K6: ilk prestij
+  { id: 'painter', name: { tr: 'Ressam', en: 'Painter' }, col: '#ff9ad0' },                     // K9: tüm boyalar
 ];
 // ---------------------------------------------------------------- KOZMETİK 2.0 (K6): ROZET ÇERÇEVESİ + PRESTİJ + AVATAR (vanity; güç yok)
 const BADGE_STAGES = [
@@ -3003,6 +3011,7 @@ const COLLECTIONS = [
   { id: 'tracks', icon: '⚙️', name: { tr: 'Paletler', en: 'Tracks' }, all: () => TRACKS.filter(x => x.id !== 'default' && !x.collection).map(x => x.id), owned: () => profile.tracks, reward: { kind: 'track', id: 'tr_goldstone' } },
   { id: 'trails', icon: '🔥', name: { tr: 'Mermi İzleri', en: 'Shot Trails' }, all: () => TRAILS.filter(x => x.id !== 'default' && !x.collection).map(x => x.id), owned: () => profile.trails, reward: { kind: 'trail', id: 'goldrush' } },
   { id: 'explosions', icon: '💥', name: { tr: 'Patlamalar', en: 'Blasts' }, all: () => EXPLOSIONS.filter(x => x.id !== 'default' && !x.collection).map(x => x.id), owned: () => profile.explosions, reward: { kind: 'explosion', id: 'goldblast' } },
+  { id: 'dyes', icon: '🖌️', name: { tr: 'Boyalar', en: 'Dyes' }, all: () => SKINS.filter(x => x.id !== 'default' && !x.event && !x.collection).flatMap(x => DYES.map(d => x.id + ':' + d.id)), owned: () => Object.entries(profile.dyes || {}).flatMap(([sid, arr]) => (arr || []).map(d => sid + ':' + d)), reward: { kind: 'title', id: 'painter' } }, // K9
 ];
 function colProgress(c) { const all = c.all(), own = c.owned(); return { have: all.filter(id => own.includes(id)).length, total: all.length }; }
 function grantItem(kind, id) {
@@ -3484,7 +3493,8 @@ async function renderLeaderboard(period) {
   $('lblist').innerHTML = rows.map((r, i) => {
     const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1) + '.';
     const me = r.name === myName ? ' me' : '';
-    return `<div class="lbrow${me}"><span class="lbrank">${medal}</span><span class="lbname">${esc(r.name)}</span><span class="lbscore">${period === 'speed' ? '⏱ ' + fmtTime(r.score) : '🌊 ' + r.score}</span></div>`;
+    const tt = r.ti ? titleById(r.ti) : null; // KOZMETİK 2.0: sunucudan avatar + unvan (allowlist)
+    return `<div class="lbrow${me}"><span class="lbrank">${medal}</span><span class="lbname">${r.av ? esc(r.av) + ' ' : ''}${esc(r.name)}${tt ? ` <span class="lbtitle" style="color:${tt.col}">${tt.name[lang]}</span>` : ''}</span><span class="lbscore">${period === 'speed' ? '⏱ ' + fmtTime(r.score) : '🌊 ' + r.score}</span></div>`;
   }).join('');
 }
 function renderQuests() {
@@ -4095,14 +4105,14 @@ function renderSkins() {
     card.innerHTML = `<div class="cname">${s.set ? SETS[s.set].icon + ' ' : ''}${s.name[lang]}</div><div class="cswatch" style="background:${bg};${glow}"></div>` + (s.bodies ? `<div class="cstat" style="text-align:center;color:${compat ? '#7dff9b' : '#ffd76a'}">${t.heroTag} · ${t.onlyFor(bodyNames)}</div>` : '');
     if (owned && s.id !== 'default') { // FAZ3: boya satırı (3 ton, 250🪙; sahipse tıkla=uygula/kaldır)
       const ownedD = (profile.dyes && profile.dyes[s.id]) || [], active = (profile.dye && profile.dye[s.id]) || '';
-      const row = document.createElement('div'); row.style.cssText = 'display:flex;justify-content:center;gap:4px;margin:4px 0';
+      const row = document.createElement('div'); row.style.cssText = 'display:flex;flex-wrap:wrap;justify-content:center;gap:4px;margin:4px 0';
       for (const d of DYES) {
         const has = ownedD.includes(d.id), on = active === d.id;
         const b = document.createElement('button'); b.className = 'mbtn small' + (on ? ' gold' : '') + (!has && profile.coins < DYE_PRICE ? ' cant' : '');
         b.style.cssText = 'padding:4px 8px;font-size:11px'; b.title = d.name[lang]; b.textContent = d.icon + (has ? (on ? ' ✓' : '') : ' 🪙' + DYE_PRICE);
         b.onclick = () => {
           profile.dyes = profile.dyes || {}; profile.dye = profile.dye || {};
-          if (!has) { if (profile.coins < DYE_PRICE) return showToast(t.noMoney); profile.coins -= DYE_PRICE; (profile.dyes[s.id] = profile.dyes[s.id] || []).push(d.id); track('soft_purchase', { t: 'dye', id: s.id + ':' + d.id, cur: 'c', amt: DYE_PRICE }); track('coin_spend', { sink: 'dye', n: DYE_PRICE }); sfxCoin(); updateCoinBar(); showToast(t.dyeGot(d.name[lang]), 2600); profile.dye[s.id] = d.id; }
+          if (!has) { if (profile.coins < DYE_PRICE) return showToast(t.noMoney); profile.coins -= DYE_PRICE; (profile.dyes[s.id] = profile.dyes[s.id] || []).push(d.id); checkSets(); track('soft_purchase', { t: 'dye', id: s.id + ':' + d.id, cur: 'c', amt: DYE_PRICE }); track('coin_spend', { sink: 'dye', n: DYE_PRICE }); sfxCoin(); updateCoinBar(); showToast(t.dyeGot(d.name[lang]), 2600); profile.dye[s.id] = d.id; }
           else profile.dye[s.id] = on ? '' : d.id;
           saveProfile(); setPlayerTank(); renderSkins();
         };

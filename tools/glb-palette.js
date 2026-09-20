@@ -8,7 +8,7 @@ const read = p => { const b = fs.readFileSync(p); const jl = b.readUInt32LE(12);
 const strip = n => (n || '').replace(/\.\d{3}$/, '');
 const src = read(source), dst = read(target);
 const map = Object.fromEntries((mapStr || '').split(',').filter(Boolean).map(p => p.split('=')));
-const srcCol = {}; for (const m of src.json.materials || []) { const f = (m.pbrMetallicRoughness || {}).baseColorFactor; if (f) srcCol[strip(m.name)] = f; }
+const srcCol = {}; for (const m of src.json.materials || []) { const f = (m.pbrMetallicRoughness || {}).baseColorFactor; if (!f) continue; srcCol[m.name] = f; if (!srcCol[strip(m.name)]) srcCol[strip(m.name)] = f; } // tam ad öncelikli (Material.001 gibi adlar çakışmasın)
 const done = [];
 for (const m of dst.json.materials || []) {
   const from = Object.keys(map).find(k => map[k] === m.name);

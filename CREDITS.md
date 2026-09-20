@@ -8,6 +8,9 @@ Bu oyunda kullanılan üçüncü taraf varlıklar ve lisansları. Third-party as
 - `assets/tank_recruit.glb` (Acemi): "Tank" — Quaternius, CC0 (Poly Pizza, Animated Tank Pack). https://poly.pizza/m/cW3zvvkMOM
 - `assets/tank_goldking.glb` (Altın Kral): "Tank" — Quaternius, CC0 (Poly Pizza, Animated Tank Pack). https://poly.pizza/m/uYHpj7lz1J
 - `assets/tank_scout.glb` (Kaşif): "Tank" — Quaternius, CC0 (Poly Pizza, Toon Shooter Game Kit). https://poly.pizza/m/Dc4k4CooN3
+- `assets/tank_phantom.glb` (Hayalet): "Tank" — Zsky, CC BY 3.0 (Poly Pizza, Low Poly Military Vehicles). https://poly.pizza/m/7GG1xDtc8l — kule ayrıldı, yeniden ölçek/yön, düz malzemeler, normalsiz GLB (modified)
+- `assets/tank_lynx.glb` (Vaşak): "Light Tank" — Zsky, CC BY 3.0 (Poly Pizza). https://poly.pizza/m/S1jUTRmAjD — modified (aynı işlem)
+- `assets/tank_boxer.glb` (Boksör): "Tank" — KolosStudios, CC BY 3.0 (Poly Pizza, Military Pack). https://poly.pizza/m/egcLMSGiuA — modified (aynı işlem)
   (Quaternius modellerinde yapılan değişiklikler: armature/animasyon kaldırıldı, kule `TankTurret` olarak ayrıldı, yeniden yönlendirme/ölçek, remove doubles + limited dissolve + decimate, düz Principled malzemeler `TankPaint/TankLight/TankDark/GunMetal/TankWheel`, normalsiz GLB export. Modified.)
 - Tanklar (tank.glb, tank_heavy/twin/arty/mamut/hover/titan.glb) ve dekor setleri (decor_city/harbor/canyon.glb): Blender'da bu proje için özgün üretildi. Original, made in Blender for this project.
 - `assets/decor_stadium.glb` (ağaçlar), `decor_desert.glb` (kaktüs, kaya, palmiye), `decor_lava.glb` (kaya): Kenney "Nature Kit" — CC0. https://kenney.nl/assets/nature-kit
@@ -34,4 +37,4 @@ Bu oyunda kullanılan üçüncü taraf varlıklar ve lisansları. Third-party as
 - three.js (r160) — MIT. https://threejs.org
 - Capacitor — MIT. https://capacitorjs.com
 
-Lisans metinleri: CC0 https://creativecommons.org/publicdomain/zero/1.0/ · CC BY 3.0 https://creativecommons.org/licenses/by/3.0/ · OFL https://openfontlicense.org
+Lisans metinleri: CC0 https://creativecommons.org/publicdomain/zero/1.0/ · CC BY 3.0 https://creativecommons.org/licenses/by/3.0/ (Zsky ve KolosStudios modelleri: atıf + değiştirildi notu) · OFL https://openfontlicense.org

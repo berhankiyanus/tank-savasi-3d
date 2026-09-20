@@ -109,7 +109,7 @@ oynanabilen kontroller.
 
 ⚔️ ÖZELLİKLER
 • 10 dalgalık zafer koşusu + sonsuz mod
-• 13 farklı tank: ağır zırhlılar, keskin nişancılar, sci-fi hover ve dev TITAN
+• 15 farklı tank: ağır zırhlılar, keskin nişancılar, çift namlulu Vaşak, sci-fi hover ve dev TITAN
 • 3B garaj vitrini — tankını döndür, incele, kuşan
 • 19 takılabilir aksesuar (sörf tahtası, taç, jetpack, ejderha kanadı...) + 48 kaplama (4'ü tanka özel hero desen) + 10 palet kaplaması + 7 mermi izi / 6 patlama efekti · sandıklar (havuz ve oranlar görünür), Sezon Sandığı, günün gizemli öğesi, haftalık öne çıkanlar, Ejderha Seti · Koleksiyon sekmesi ve altın tamamlama ödülleri (Kromatik) · unvan, avatar, rozet çerçevesi ve prestij
 • 13 harita: çöl, kar, lav, uzay, şehir harabesi, liman, kanyon, fabrika...
@@ -129,7 +129,7 @@ and put your victory on the clock. Short matches, fast action, one-hand controls
 
 ⚔️ FEATURES
 • 10-wave victory run + endless mode
-• 12 distinct tanks: heavy armor, snipers, sci-fi hovercraft and the giant TITAN
+• 15 distinct tanks: heavy armor, snipers, the twin-barrel Lynx, sci-fi hovercraft and the giant TITAN
 • 3D garage showroom — rotate, inspect, equip
 • 19 mountable accessories (surfboard, crown, jetpack, dragon wings...) + 48 skins (4 body-exclusive hero decals) + 10 track skins + 7 shot trails / 6 blast effects · chests with visible pools and odds, Season Chest, daily mystery item, weekly featured deals, Dragon Set · Collection tab with gold completion rewards (Chromatic) · titles, avatars, badge frames and prestige
 • 13 maps: desert, snow, lava, space, city ruins, harbor, canyon, factory...
