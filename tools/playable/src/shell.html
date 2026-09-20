@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="ad.orientation" content="portrait,landscape">
+<meta name="ad.size" content="width=320,height=480">
+<title>Tank Savaşı 3D</title>
+<link rel="icon" href="data:,">
+%%GOOGLE_EXIT%%
+<style>
+@font-face { font-family: 'Russo One'; font-style: normal; font-weight: 400; src: url(data:font/woff2;base64,%%FONT_LATIN%%) format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'Russo One'; font-style: normal; font-weight: 400; src: url(data:font/woff2;base64,%%FONT_LATINEXT%%) format('woff2'); unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #0d1409; font-family: 'Russo One', "Courier New", monospace; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: none; }
+#game { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+.hud { position: fixed; z-index: 10; pointer-events: none; color: #fff; text-shadow: 0 2px 0 #000, 0 0 10px rgba(0,0,0,.8); }
+#top { top: calc(10px + env(safe-area-inset-top)); left: 12px; right: 12px; display: flex; justify-content: space-between; align-items: flex-start; font-size: clamp(13px, 3.6vmin, 20px); letter-spacing: 1px; }
+#hearts { letter-spacing: 2px; font-size: clamp(14px, 4vmin, 22px); }
+#wave { color: #ffd76a; }
+#cta { position: fixed; z-index: 30; right: 12px; top: calc(46px + env(safe-area-inset-top)); background: linear-gradient(#ffb347, #ff8c1a); color: #1a1000; border: 2px solid #ffd88a; border-radius: 30px; padding: 6px 14px; font-size: clamp(12px, 3.4vmin, 18px); box-shadow: 0 4px 14px rgba(0,0,0,.45); pointer-events: auto; cursor: pointer; }
+#banner { left: 0; right: 0; top: 24%; text-align: center; font-size: clamp(22px, 7vmin, 44px); color: #ffd76a; letter-spacing: 2px; opacity: 0; transition: opacity .25s; padding: 0 6vw; }
+#hint { left: 0; right: 0; top: 34%; text-align: center; font-size: clamp(15px, 4.4vmin, 26px); color: #fff; opacity: 0; transition: opacity .3s; padding: 0 8vw; }
+#hand { position: fixed; z-index: 25; font-size: clamp(38px, 11vmin, 66px); pointer-events: none; filter: drop-shadow(0 4px 6px rgba(0,0,0,.6)); transition: left .5s ease-in-out, top .5s ease-in-out; display: none; transform: translate(-30%, -20%); }
+#bossbar { left: 50%; top: calc(44px + env(safe-area-inset-top)); transform: translateX(-50%); width: min(62vw, 300px); display: none; text-align: center; font-size: clamp(11px, 3vmin, 15px); color: #ff9a7a; letter-spacing: 1px; }
+#bosshpw { height: 10px; border-radius: 6px; background: rgba(0,0,0,.55); border: 1px solid rgba(255,255,255,.35); overflow: hidden; margin-top: 3px; }
+#bosshp { height: 100%; width: 100%; background: linear-gradient(90deg, #ff3b2f, #ff9a3a); transition: width .15s; }
+.fl { position: fixed; z-index: 12; pointer-events: none; font-size: clamp(15px, 4.4vmin, 26px); color: #ffe86a; text-shadow: 0 2px 0 #000, 0 0 8px rgba(0,0,0,.8); transform: translate(-50%, -50%); animation: flup 1s ease-out forwards; white-space: nowrap; }
+@keyframes flup { 0% { opacity: 1; margin-top: 0; } 100% { opacity: 0; margin-top: -60px; } }
+#flash { position: fixed; inset: 0; z-index: 15; background: #fff; opacity: 0; pointer-events: none; }
+#stick { position: fixed; z-index: 20; left: calc(22px + env(safe-area-inset-left)); bottom: calc(26px + env(safe-area-inset-bottom)); width: clamp(110px, 30vmin, 160px); height: clamp(110px, 30vmin, 160px); border-radius: 50%; background: rgba(255,255,255,.08); border: 2px solid rgba(255,255,255,.3); touch-action: none; }
+#knob { position: absolute; left: 50%; top: 50%; width: 42%; height: 42%; transform: translate(-50%, -50%); border-radius: 50%; background: rgba(255,255,255,.4); box-shadow: 0 2px 12px rgba(0,0,0,.5); }
+#fire { position: fixed; z-index: 20; right: calc(26px + env(safe-area-inset-right)); bottom: calc(40px + env(safe-area-inset-bottom)); width: clamp(84px, 22vmin, 116px); height: clamp(84px, 22vmin, 116px); border-radius: 50%; background: radial-gradient(circle at 35% 30%, #ff8a5a, #c22a12); border: 3px solid rgba(255,255,255,.35); display: flex; align-items: center; justify-content: center; font-size: clamp(14px, 4vmin, 20px); color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.6); touch-action: none; }
+#fire.on { transform: scale(.92); }
+#end { position: fixed; inset: 0; z-index: 40; display: none; background: rgba(4,8,4,.72); text-align: center; color: #fff; cursor: pointer; }
+#end .t { margin-top: 26vh; font-size: clamp(26px, 9vmin, 60px); color: #ffd76a; letter-spacing: 3px; text-shadow: 0 4px 0 #6b4a00, 0 10px 30px rgba(0,0,0,.8); }
+#end .r { font-size: clamp(16px, 5vmin, 30px); margin-top: 2vh; color: #fff; text-shadow: 0 2px 8px #000; }
+#end .s { font-size: clamp(12px, 3.6vmin, 20px); margin-top: 1.4vh; color: #cfe6bf; letter-spacing: 1px; }
+#end .b { display: inline-block; margin-top: 4vh; background: linear-gradient(#ffb347, #ff8c1a); color: #1a1000; font-size: clamp(18px, 5.6vmin, 34px); padding: 3vmin 8vmin; border-radius: 60px; border: 3px solid #ffd88a; box-shadow: 0 10px 30px rgba(0,0,0,.5); animation: pulse .9s ease-in-out infinite; }
+@keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.06); } }
+#load { position: fixed; inset: 0; z-index: 50; background: #0d1409; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #ffd76a; letter-spacing: 4px; font-size: clamp(20px, 7vmin, 40px); }
+#load small { font-size: clamp(11px, 3vmin, 15px); color: #cfe6bf; letter-spacing: 2px; margin-top: 14px; font-family: "Courier New", monospace; }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="top" class="hud"><div><div id="hearts">❤❤❤❤❤</div><div id="wave">DALGA 1/2</div></div><div id="score">SKOR 0</div></div>
+<div id="cta">İNDİR</div>
+<div id="bossbar" class="hud"><div>☠ GENERAL KARA</div><div id="bosshpw"><div id="bosshp"></div></div></div>
+<div id="banner" class="hud"></div>
+<div id="hint" class="hud"></div>
+<div id="hand">👆</div>
+<div id="flash"></div>
+<div id="stick"><div id="knob"></div></div>
+<div id="fire">ATEŞ</div>
+<div id="end"><div class="t">TANK SAVAŞI 3D</div><div class="r" id="endr"></div><div class="s">15 TANK · 12 HARİTA · SANDIKLAR</div><div><div class="b">▶ ÜCRETSİZ İNDİR</div></div></div>
+<div id="load">TANK SAVAŞI 3D<small>YÜKLENİYOR…</small></div>
+<script>window.__PA = { player: "%%GLB_PLAYER%%", enemy: "%%GLB_ENEMY%%", boss: "%%GLB_BOSS%%", url: "%%STORE_URL%%" };</script>
+<script>%%JS%%</script>
+</body>
+</html>
