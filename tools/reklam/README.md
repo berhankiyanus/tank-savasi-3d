@@ -57,6 +57,11 @@ Kod tarafında KALICI değişiklik yok; her şey geçici kanca + enjekte edilen 
 - Çalıştırma: kanca main.js'te, `cp tools/reklam/rec-lib.js assets/_reclib.js`, `python3 -m http.server 8734`, sonra `NODE_PATH=<playwright-core dizini> node tools/reklam/real.js <outdir> <map> <sn> <seed> <başlangıç dalgası>`; 3-4 farklı seed çek, en iyisini seç (stats: shots/kills/mega/hp). Seçilen: Stadyum (map 1) seed 4 dalga 3, 13 sn + kapanış.
 - Ders: `page.evaluate(dize)` fonksiyonu çağırmaz (dizeye `(args)` ekle); zsh'ta `set -- $cfg` sözcük bölmez; Chrome standart zoom'da getBoundingClientRect kök px (offsetWidth ile tespit).
 
+## v5 (2026-09-20): 3 SAHNELİ gerçek oynanış (`real2.js`) — yayındaki sürüm
+- Kullanıcı v4'ü "daha ilgi çekici olsun" dedi → aynı gerçek kayıt tekniği, 3 gerçek sahne + kapanış: **S1 Kar dalga 3** — kayıt dışı gerçek mermiyle 2 sekmeli yol bulunur, iniş noktasına düşman konur, otomatik oyuncu o yöne dönüp ateş eder → oyunun KENDİ ağır çekimi + "MEGA SEKME!" yazısı (altyazı "Bu atışı yapabilir misin? 👀", DOM `#advcap`); **S2 Stadyum dalga 4** kalabalık çatışma; **S3 Kanyon dalga 5 BOSS** — boss oyuncunun önünde görüş içinde başlatılır (`pointInWall`+`losClear` ile açık nokta), hp 9, otomatik oyuncu 1 sn sonra ateşe başlar (`preferBoss`), gerçek can barı/telegraf/"SAVUNMASIZ!"/x2 patlama; son 2,3 sn DOM kapanış kartı (HUD gizlenir).
+- Sahneler ayrı mp4 (ses hizalı) → concat → müzik yatağı (`/tmp/v2-music.wav` 0.42) + oyun SFX → `loudnorm I=-14`. `SCENES=S3` ile yalnız bir sahne yeniden çekilir (diğer mp4'ler korunur; sonuç rastgele → 2-3 deneme, iyisini seç).
+- Oyun düzeltmesi: `#wave { white-space: nowrap }` (4 haneli skorda "DALGA 5/10" alt satıra kayıp runcoins ile çakışıyordu; kayıtta fark edildi).
+
 ## Mağaza ekran görüntüleri (`shots.js`)
 Headless Chromium (playwright-core + ~/Library/Caches/ms-playwright/chromium-1208) ile STORE.md §9'daki 6 kare, 3 boyut × TR/EN:
 iPhone 6.7" 1290×2796 (430×932@3), iPhone 6.5" 1284×2778 (428×926@3), Android 1080×1920 (405×720@2.667).
