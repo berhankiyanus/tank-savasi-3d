@@ -49,6 +49,11 @@ const L = {
     seasonWord: 'Sezon', seasonTier: 'Kademe', seasonTierUp: (n, r) => `🎟️ Sezon ${n}. kademe: ${r}`, seasonClosed: (id, t) => `🎟️ Sezon ${id} kapandı — ${t}. kademeye ulaştın. Yeni sezon başladı!`, firstWinXp: '🎉 İlk zafer bonusu +40 XP',
     chestMsg: '📦 Günlük sandık açıldı! +🪙120 +🎰2', streakLabel: n => `🔥 ${n} günlük seri`, chestReady: '📦 Tüm görevleri bitir → günlük sandık', chestDone: '📦 Günlük sandık alındı ✓',
     tmTitle: '🎰 Jeton Makinesi', tmCount: 'Jetonların', tmSpin: '🎲 ÇEVİR · 1 🎰', tmNeed: 'Jeton kazanmak için görev tamamla / seviye atla',
+    // KOZMETİK 2.0 (K1/K2): sandıklar, palet, efekt, unvan
+    tabTracks: 'PALET', tabFx: 'EFEKT', chestsTitle: '🎁 SANDIKLAR', chestOpen: n => `AÇ · ${n} 🎰`, chestPool: 'HAVUZ', chestItems: 'öğe', chestOwned: (a, b) => `Sahip ${a}/${b}`,
+    chestNew: '✨ YENİ!', chestDup: c => `🔁 Kopya → +🪙${c}`, chestAgain: n => `TEKRAR AÇ · ${n} 🎰`, closeBtn: 'KAPAT', chestDone: '✓ Set tamamlandı', chestLeft: (a, b) => `Kalan ${a}/${b} · her açılışta yeni öğe garantili`,
+    setReward: s => `🏆 Set tamamlandı! Unvan kazandın: ${s}`, fxTrails: '🔥 MERMİ İZİ', fxExpl: '💥 YOK ETME PATLAMASI', fxTitles: '🏷️ UNVAN', noTitle: 'Unvan yok — bir seti tamamla', titleNone: 'Unvansız',
+    trackNote: 'ℹ️ Hover Tank paletsizdir — palet kaplaması diğer tanklarda görünür', chestGo: '🎁 SANDIKLARI AÇ', noTokens: '🎰 Jeton yok — görev, sezon ve seviye ile kazan', setTag: 'SET',
     buildTitle: 'YÜKSELTME SEÇ',
     gachaNew: s => `🎁 YENİ KAPLAMA! ${s}`, gachaDup: (s, c) => `🔁 ${s} zaten var → +🪙${c}`, tokenGot: n => `🎰 +${n} jeton!`,
     ftueGift: s => `🎁 İlk düşmanını yok ettin! "${s}" kaplaması kazandın — Garaj → Kaplamalar'dan tak`,
@@ -136,6 +141,10 @@ const L = {
     seasonWord: 'Season', seasonTier: 'Tier', seasonTierUp: (n, r) => `🎟️ Season tier ${n}: ${r}`, seasonClosed: (id, t) => `🎟️ Season ${id} ended — you reached tier ${t}. New season is live!`, firstWinXp: '🎉 First victory bonus +40 XP',
     chestMsg: '📦 Daily chest opened! +🪙120 +🎰2', streakLabel: n => `🔥 ${n}-day streak`, chestReady: '📦 Finish all quests → daily chest', chestDone: '📦 Daily chest claimed ✓',
     tmTitle: '🎰 Token Machine', tmCount: 'Your tokens', tmSpin: '🎲 SPIN · 1 🎰', tmNeed: 'Complete quests / level up to earn tokens',
+    tabTracks: 'TRACKS', tabFx: 'EFFECTS', chestsTitle: '🎁 CHESTS', chestOpen: n => `OPEN · ${n} 🎰`, chestPool: 'POOL', chestItems: 'items', chestOwned: (a, b) => `Owned ${a}/${b}`,
+    chestNew: '✨ NEW!', chestDup: c => `🔁 Duplicate → +🪙${c}`, chestAgain: n => `OPEN AGAIN · ${n} 🎰`, closeBtn: 'CLOSE', chestDone: '✓ Set complete', chestLeft: (a, b) => `${a}/${b} left · every opening is a new item`,
+    setReward: s => `🏆 Set complete! Title earned: ${s}`, fxTrails: '🔥 SHOT TRAIL', fxExpl: '💥 KILL BLAST', fxTitles: '🏷️ TITLE', noTitle: 'No title yet — complete a set', titleNone: 'No title',
+    trackNote: 'ℹ️ Hover Tank has no tracks — track skins show on other tanks', chestGo: '🎁 OPEN CHESTS', noTokens: '🎰 No tokens — earn them from quests, season and levels', setTag: 'SET',
     buildTitle: 'CHOOSE UPGRADE',
     gachaNew: s => `🎁 NEW SKIN! ${s}`, gachaDup: (s, c) => `🔁 ${s} already owned → +🪙${c}`, tokenGot: n => `🎰 +${n} tokens!`,
     ftueGift: s => `🎁 First enemy down! You earned the "${s}" skin — equip it in Garage → Skins`,
@@ -183,8 +192,8 @@ let lang = (() => { try { return localStorage.getItem('tanklang'); } catch (e) {
 const T = () => L[lang];
 
 // ---------------------------------------------------------------- kalıcı profil
-const DEFAULT_PROFILE = { coins: 0, owned: ['recruit'], selected: 'recruit', bestWave: 1, upgrades: {}, kills: 0, wins: 0, games: 0, skins: ['default'], skin: 'default', achieved: [], lastDaily: '', streak: 0, name: '', gift1: false, level: 1, xp: 0, tokens: 0, gems: 0, accessories: [], accessory: '' };
-const PROFILE_V = 3; // şema sürümü — migrateProfile() eski kayıtları yeni alanlarla tamamlar
+const DEFAULT_PROFILE = { coins: 0, owned: ['recruit'], selected: 'recruit', bestWave: 1, upgrades: {}, kills: 0, wins: 0, games: 0, skins: ['default'], skin: 'default', achieved: [], lastDaily: '', streak: 0, name: '', gift1: false, level: 1, xp: 0, tokens: 0, gems: 0, accessories: [], accessory: '', tracks: ['default'], track: 'default', trails: ['default'], trail: 'default', explosions: ['default'], explosion: 'default', titles: [], title: '', chestPity: {} };
+const PROFILE_V = 4; // şema sürümü — migrateProfile() eski kayıtları yeni alanlarla tamamlar
 let profile;
 try {
   profile = Object.assign({}, DEFAULT_PROFILE, JSON.parse(localStorage.getItem('tankprofile') || '{}'));
@@ -212,7 +221,10 @@ try {
 // FAZ0: şema taşıma — v3 alanları (kitler, ustalık, reklam günlüğü, bölümler, sezon geçmişi, arkadaş kodu) eksikse tamamlanır
 function migrateProfile(p) {
   const obj = k => { if (!p[k] || typeof p[k] !== 'object' || Array.isArray(p[k])) p[k] = {}; };
-  obj('kits'); obj('mastery'); obj('chapters'); obj('seasonHistory'); obj('mapWins'); obj('dyes'); obj('dye');
+  obj('kits'); obj('mastery'); obj('chapters'); obj('seasonHistory'); obj('mapWins'); obj('dyes'); obj('dye'); obj('chestPity');
+  for (const k of ['tracks', 'trails', 'explosions']) if (!Array.isArray(p[k])) p[k] = ['default']; // KOZMETİK 2.0 (v4)
+  for (const k of ['track', 'trail', 'explosion']) if (typeof p[k] !== 'string') p[k] = 'default';
+  if (!Array.isArray(p.titles)) p.titles = []; if (typeof p.title !== 'string') p.title = '';
   if (!Array.isArray(p.rewardedLog)) p.rewardedLog = [];
   if (typeof p.code !== 'string') p.code = '';
   p.v = PROFILE_V;
@@ -558,6 +570,8 @@ const SKINS = [
   { id: 'digital', name: { tr: 'Dijital Kamuflaj', en: 'Digital Camo' }, price: 1200, color: 0xf2f2f2, rough: 0.8, r: 'e', camo: 'digital' },
   { id: 'tiger', name: { tr: 'Kaplan Çizgisi', en: 'Tiger Stripes' }, price: 1200, color: 0xf2f2f2, rough: 0.75, r: 'e', camo: 'tiger' },
   { id: 'plates', name: { tr: 'Perçinli Zırh', en: 'Riveted Armor' }, price: 1200, color: 0xf2f2f2, metal: 0.5, rough: 0.4, r: 'e', camo: 'plate' },
+  // KOZMETİK 2.0 (K1): EJDERHA SETİ kaplaması — elmasla doğrudan ya da Ejderha Seti sandığından; animasyonlu pul deseni
+  { id: 'dragon', name: { tr: 'Ejderha Pulu', en: 'Dragon Scale' }, price: 0, gem: 30, color: 0xffffff, rough: 0.5, metal: 0.25, r: 'e', camo: 'dragon', anim: 1, set: 'dragon' },
   // etkinlik ödülü (Toplama): satılmaz, gacha havuzunda değil
   { id: 'relic', name: { tr: 'Kalıntı (Etkinlik)', en: 'Relic (Event)' }, price: 0, color: 0xff2a6a, glow: 0.6, metal: 0.5, r: 'e', event: true },
 ];
@@ -597,12 +611,24 @@ const CAMO_PATTERNS = { // kind: blob (eşikli gürültü) / pixel (bloklu gür�
   digital: { kind: 'pixel', pal: ['#3c5a3a', '#6b7d55', '#9aa47a', '#22301f'], seed: 53, px: 8 },
   tiger: { kind: 'stripe', pal: ['#d9772a', '#1c1a18'], seed: 67 },
   plate: { kind: 'plate', pal: ['#6a727c', '#2b3036', '#a8b0ba', '#59616b'], seed: 71 },
+  dragon: { kind: 'scale', pal: ['#7a1410', '#b8281c', '#e0a030', '#3a0806'], seed: 83 }, // pul: üst üste binen daireler, altın vurgu
 };
 function camoCanvas(kind) {
   if (camoTexCache[kind]) return camoTexCache[kind].canvas;
   const p = CAMO_PATTERNS[kind] || CAMO_PATTERNS.woodland, S = 256;
   const cv = document.createElement('canvas'); cv.width = cv.height = S;
   const ctx = cv.getContext('2d'), img = ctx.createImageData(S, S), d = img.data;
+  if (p.kind === 'scale') { // pul deseni: alt satırdan üste çizilen daireler birbirini örter (16 px periyot → döşenebilir)
+    ctx.fillStyle = p.pal[3]; ctx.fillRect(0, 0, S, S);
+    const st = 16;
+    for (let r = S / st; r >= -1; r--) for (let c = -1; c <= S / st; c++) {
+      const x = c * st + ((r & 1) ? st / 2 : 0), y = r * st, gold = ((r * 7 + c * 13 + 400) % 11) === 0;
+      ctx.beginPath(); ctx.arc(x, y, st * 0.62, 0, Math.PI * 2);
+      ctx.fillStyle = gold ? p.pal[2] : ((r + c) & 1 ? p.pal[0] : p.pal[1]); ctx.fill();
+      ctx.lineWidth = 1.5; ctx.strokeStyle = p.pal[3]; ctx.stroke();
+    }
+    camoTexCache[kind] = { canvas: cv, tex: null, url: null }; return cv;
+  }
   const pal = p.pal.map(h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)]);
   const n1 = camoNoise(p.seed), n2 = camoNoise(p.seed * 7 + 3);
   for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
@@ -630,14 +656,24 @@ const CAMO_FRAG = `
 	{ vec3 cw = abs(normalize(cross(dFdx(vCamoPos), dFdy(vCamoPos)))); cw = pow(cw, vec3(3.0)); cw /= (cw.x + cw.y + cw.z + 1e-4);
 	vec3 cc = texture2D(camoMap, vCamoPos.yz * camoScale).rgb * cw.x + texture2D(camoMap, vCamoPos.xz * camoScale).rgb * cw.y + texture2D(camoMap, vCamoPos.xy * camoScale).rgb * cw.z;
 	diffuseColor.rgb *= cc; }`;
-function applyCamo(mat, kind, scale) { // MeshStandardMaterial klonuna tri-planar desen enjekte eder (klon örneğe özel → onBeforeCompile güvenli)
+const CAMO_ANIM = `
+	diffuseColor.rgb *= 0.85 + 0.35 * (0.5 + 0.5 * sin(camoTime * 2.2 + (vCamoPos.x + vCamoPos.y + vCamoPos.z) * 2.5));`; // animasyonlu desen: yüzeyde gezen parıltı dalgası
+const camoAnimMats = new Set(); // her kare camoTime alan malzemeler (disposeTank temizler)
+function tickCamoAnim() { // arena ve vitrin render'ından önce çağrılır
+  if (!camoAnimMats.size) return;
+  const ct = clock.elapsedTime;
+  for (const m of camoAnimMats) { const sh = m.userData.shader; if (sh) sh.uniforms.camoTime.value = ct; }
+}
+function applyCamo(mat, kind, scale, anim) { // MeshStandardMaterial klonuna tri-planar desen enjekte eder (klon örneğe özel → onBeforeCompile güvenli)
   const tex = camoTexture(kind);
   mat.onBeforeCompile = sh => {
-    sh.uniforms.camoMap = { value: tex }; sh.uniforms.camoScale = { value: scale || 0.55 };
+    sh.uniforms.camoMap = { value: tex }; sh.uniforms.camoScale = { value: scale || 0.55 }; sh.uniforms.camoTime = { value: 0 };
     sh.vertexShader = 'varying vec3 vCamoPos;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n\tvCamoPos = transformed;');
-    sh.fragmentShader = 'varying vec3 vCamoPos;\nuniform sampler2D camoMap;\nuniform float camoScale;\n' + sh.fragmentShader.replace('#include <map_fragment>', '#include <map_fragment>' + CAMO_FRAG);
+    sh.fragmentShader = 'varying vec3 vCamoPos;\nuniform sampler2D camoMap;\nuniform float camoScale;\nuniform float camoTime;\n' + sh.fragmentShader.replace('#include <map_fragment>', '#include <map_fragment>' + CAMO_FRAG + (anim ? CAMO_ANIM : ''));
+    mat.userData.shader = sh;
   };
-  mat.customProgramCacheKey = () => 'camo';
+  mat.customProgramCacheKey = () => (anim ? 'camo-anim' : 'camo');
+  if (anim) camoAnimMats.add(mat);
   mat.needsUpdate = true;
 }
 const RARITY = { c: { w: 100, coin: 40, tr: 'Yaygın', en: 'Common', col: '#c8d0d8' }, r: { w: 34, coin: 120, tr: 'Nadir', en: 'Rare', col: '#5ad0ff' }, e: { w: 10, coin: 260, tr: 'Efsanevi', en: 'Epic', col: '#ffcc33' } };
@@ -1536,7 +1572,7 @@ function destroyCover(cv, fromNet) {
 function damageEnemy(e, dmg) {
   e.hp -= dmg;
   if (e.hp <= 0) {
-    e.alive = false; explode(e.x, 1.0, e.z, true); scene.remove(e.mesh); disposeTank(e.mesh);
+    e.alive = false; explode(e.x, 1.0, e.z, true, playerExplPal); scene.remove(e.mesh); disposeTank(e.mesh);
     popFloater(e.x, 2.2, e.z, '+' + e.score, isBoss(e.type) ? '#ff7a3a' : '#ffe86a');
     popFloater(e.x, 3.1, e.z, '+🪙' + killCoins(e), '#ffd76a');
     if (mode === 'coop') netSend({ t: 'ekill', id: e.id });
@@ -1791,6 +1827,20 @@ function buildWings() {
   }
   return g;
 }
+function buildDragonWings() { // KOZMETİK 2.0 (Ejderha Seti): yarasa formlu kanat zarı + üç parmak kemiği, geriye ve yukarı açılı
+  const g = new THREE.Group();
+  const mem = accMat(0x8c1c28, { rough: 0.6 }); mem.side = THREE.DoubleSide; mem.emissive.setHex(0x3a0810); mem.emissiveIntensity = 0.6;
+  const bone = accMat(0x2c1e1e, { rough: 0.7 });
+  const shp = new THREE.Shape();
+  shp.moveTo(0, 0); shp.lineTo(0.55, 0.62); shp.lineTo(1.15, 0.95); shp.lineTo(1.05, 0.62); shp.lineTo(1.35, 0.35); shp.lineTo(1.0, 0.28); shp.lineTo(1.1, -0.05); shp.lineTo(0.7, 0.02); shp.lineTo(0.45, -0.25); shp.lineTo(0.15, -0.05); shp.lineTo(0, 0);
+  const geo = new THREE.ShapeGeometry(shp);
+  for (const sgn of [1, -1]) {
+    const w = new THREE.Mesh(geo, mem); w.castShadow = true; w.scale.x = sgn; w.rotation.y = sgn * 0.6; w.rotation.z = sgn * 0.12; w.position.set(sgn * 0.14, 0.12, 0.1); g.add(w);
+    for (const [tx, ty] of [[1.15, 0.95], [1.35, 0.35], [1.1, -0.05]]) { const len = Math.hypot(tx, ty); const b = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.018, len, 6), bone); b.position.set(tx / 2, ty / 2, 0.012); b.rotation.z = Math.atan2(ty, tx) - Math.PI / 2; w.add(b); }
+  }
+  g.add(new THREE.Mesh(new THREE.SphereGeometry(0.12, 10, 8), bone)); // omurga kökü
+  return g;
+}
 function buildJetpack() {
   const g = new THREE.Group();
   const body = accMat(0xb8c0cc, { metal: 0.7, rough: 0.35 });
@@ -1821,6 +1871,7 @@ const ACCESSORIES = [
   { id: 'xmas', name: { tr: 'Yılbaşı Ağacı', en: 'Holiday Tree' }, icon: '🎄', price: 1500, r: 'r', glb: 'assets/acc_xmas.glb', mount: { x: 0, y: 1.5, z: 0.12 } },
   { id: 'rover', name: { tr: 'Mini Rover', en: 'Mini Rover' }, icon: '🛞', gem: 25, r: 'e', glb: 'assets/acc_rover.glb', mount: { x: 0, y: 0.72, z: 1.2 } },
   { id: 'speeder', name: { tr: 'Uzay Kızağı', en: 'Speeder' }, icon: '🛸', gem: 45, r: 'e', glb: 'assets/acc_speeder.glb', mount: { x: 0, y: 1.8, z: 0.12 } },
+  { id: 'dragonwings', name: { tr: 'Ejderha Kanadı', en: 'Dragon Wings' }, icon: '🐉', gem: 30, r: 'e', build: buildDragonWings, mount: { x: 0, y: 0.78, z: 0.3 }, set: 'dragon' }, // KOZMETİK 2.0 Ejderha Seti
 ];
 function buildRadar() {
   const g = new THREE.Group();
@@ -1854,9 +1905,12 @@ function disposeSubtree(o) { o.traverse(n => { if (n.isMesh && !n.userData.share
 // ownGeo işaretli geometriler — boss halkaları). Paylaşılan glTF geometri/malzemesine dokunmak diğer klonları bozar.
 function disposeTank(root) {
   if (!root) return;
+  // KOZMETİK 2.0: prosedürel aksesuar alt ağacı (geometri+malzeme) her yeniden kuruluşta serbest bırakılır; paylaşılan GLB klonları (userData.shared) atlanır
+  if (root.userData.accMesh) disposeSubtree(root.userData.accMesh);
+  if (root.userData.accMesh2) disposeSubtree(root.userData.accMesh2);
   root.traverse(o => {
     if (o.isMesh) {
-      (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => { if (m && m.userData && m.userData.owned) m.dispose(); });
+      (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => { if (m && m.userData && m.userData.owned) { m.dispose(); camoAnimMats.delete(m); } });
       if (o.userData.ownGeo && o.geometry) o.geometry.dispose();
     }
   });
@@ -2131,13 +2185,14 @@ function updateFlashes(dt) {
 const particles = [];
 const partGeo = new THREE.BoxGeometry(0.22, 0.22, 0.22);
 let shake = 0;
-function explode(x, y, z, big = false) {
+function explode(x, y, z, big = false, pal = null) { // pal: KOZMETİK 2.0 patlama paleti {hot:[..], ring, big}
   const heavy = particles.length > 130; // çok parçacık varsa yenilerini üretme (aşırı yüklenmeyi önler)
-  const n = heavy ? 0 : (big ? 18 : 8);
+  const n = heavy ? 0 : Math.round((big ? 18 : 8) * (pal && pal.big ? pal.big : 1));
+  const hotCols = pal && pal.hot;
   for (let i = 0; i < n; i++) {
     const hot = Math.random() < 0.6;
     const mat = new THREE.MeshBasicMaterial({
-      color: hot ? (Math.random() < 0.5 ? 0xffa028 : 0xff5a1e) : 0x2a2a2a, transparent: true,
+      color: hot ? (hotCols ? hotCols[Math.floor(Math.random() * hotCols.length)] : (Math.random() < 0.5 ? 0xffa028 : 0xff5a1e)) : 0x2a2a2a, transparent: true,
     });
     const p = new THREE.Mesh(partGeo, mat);
     p.position.set(x, y, z);
@@ -2149,12 +2204,12 @@ function explode(x, y, z, big = false) {
   }
   if (!heavy) {
     const ring = new THREE.Mesh(new THREE.RingGeometry(0.3, 0.55, 24),
-      new THREE.MeshBasicMaterial({ color: 0xffc060, transparent: true, side: THREE.DoubleSide }));
+      new THREE.MeshBasicMaterial({ color: pal && pal.ring ? pal.ring : 0xffc060, transparent: true, side: THREE.DoubleSide }));
     ring.rotation.x = -Math.PI / 2; ring.position.set(x, 0.15, z);
     ring.userData = { ring: true, life: 0.5, vy: 0, vx: 0, vz: 0 };
     scene.add(ring); particles.push(ring);
   }
-  popFlash(x, y + 0.5, z, 0xffa040, big ? 55 : 24, big ? 22 : 12, big ? 0.32 : 0.22);
+  popFlash(x, y + 0.5, z, pal && pal.ring ? pal.ring : 0xffa040, big ? 55 : 24, big ? 22 : 12, big ? 0.32 : 0.22);
   if (big) shake = Math.min(1.2, shake + 0.5); // sadece tank patlamaları ekranı sarssın
   sfxBoom(big);
 }
@@ -2283,10 +2338,54 @@ function applySkin(mesh, skinId) {
       o.material.roughness = s.rough != null ? s.rough : 0.55;
       if (s.glow) { o.material.emissive.setHex(col); o.material.emissiveIntensity = s.glow; }
       else o.material.emissiveIntensity = 0;
-      if (s.camo) applyCamo(o.material, s.camo); // desenli kaplama (VARLIK FAZ 5)
-    } else if (o.isMesh && o.material && o.material.name === 'TankLight') { tintLight(o, col, s.metal != null ? Math.min(0.6, s.metal) : undefined); if (s.camo) applyCamo(o.material, s.camo); }
+      if (s.camo) applyCamo(o.material, s.camo, s.camoScale, s.anim); // desenli kaplama (VARLIK FAZ 5; anim: KOZMETİK 2.0)
+    } else if (o.isMesh && o.material && o.material.name === 'TankLight') { tintLight(o, col, s.metal != null ? Math.min(0.6, s.metal) : undefined); if (s.camo) applyCamo(o.material, s.camo, s.camoScale, s.anim); }
   });
 }
+// ---------------------------------------------------------------- KOZMETİK 2.0 (K2): PALET KAPLAMALARI — TankWheel/Tracks malzemesi (palet + tekerlek), tanktan bağımsız
+const TRACKS = [
+  { id: 'default', name: { tr: 'Standart Palet', en: 'Standard Tracks' }, price: 0 },
+  { id: 'tr_rust', name: { tr: 'Paslı Palet', en: 'Rusty Tracks' }, price: 500, color: 0x7a4a2a, rough: 0.95, r: 'c' },
+  { id: 'tr_sand', name: { tr: 'Çöl Paleti', en: 'Desert Tracks' }, price: 500, color: 0xb59a68, rough: 0.9, r: 'c' },
+  { id: 'tr_carbon', name: { tr: 'Karbon Palet', en: 'Carbon Tracks' }, price: 600, color: 0x1a1c20, metal: 0.4, rough: 0.5, r: 'c' },
+  { id: 'tr_arctic', name: { tr: 'Kutup Paleti', en: 'Arctic Tracks' }, price: 600, color: 0xe6edf3, rough: 0.7, r: 'c' },
+  { id: 'tr_gold', name: { tr: 'Altın Palet', en: 'Gold Tracks' }, price: 900, color: 0xffcc33, metal: 0.85, rough: 0.25, r: 'r' },
+  { id: 'tr_chrome', name: { tr: 'Krom Palet', en: 'Chrome Tracks' }, price: 900, color: 0xcfd6e0, metal: 0.95, rough: 0.12, r: 'r' },
+  { id: 'tr_camo', name: { tr: 'Kamuflaj Palet', en: 'Camo Tracks' }, price: 900, color: 0xf2f2f2, rough: 0.9, r: 'r', camo: 'woodland' },
+  { id: 'tr_neon', name: { tr: 'Neon Palet', en: 'Neon Tracks' }, price: 1200, color: 0x18e0ff, glow: 0.7, r: 'e' },
+  { id: 'tr_lava', name: { tr: 'Lav Paleti', en: 'Lava Tracks' }, price: 1200, color: 0xff5a1e, glow: 0.6, r: 'e' },
+  { id: 'tr_plasma', name: { tr: 'Plazma Palet', en: 'Plasma Tracks' }, price: 1200, color: 0xff3aa0, glow: 0.6, r: 'e' },
+];
+const trackById = id => TRACKS.find(x => x.id === id) || TRACKS[0];
+function applyTracks(mesh, trackId) {
+  const s = trackById(trackId); if (s.id === 'default') return;
+  mesh.traverse(o => {
+    if (!o.isMesh || !o.material || (o.material.name !== 'TankWheel' && o.material.name !== 'Tracks')) return;
+    o.material = o.material.clone(); o.material.userData.owned = true;
+    o.material.color.setHex(s.color); o.material.metalness = s.metal != null ? s.metal : 0.1; o.material.roughness = s.rough != null ? s.rough : 0.7;
+    if (s.glow) { o.material.emissive.setHex(s.color); o.material.emissiveIntensity = s.glow; } else o.material.emissiveIntensity = 0;
+    if (s.camo) applyCamo(o.material, s.camo, 0.9);
+  });
+}
+// KOZMETİK 2.0 (K1 set altyapısı): EFEKTLER — mermi izi (tank kimlik renginin önüne geçer) ve yok etme patlaması paleti; unvanlar. Tamamen kozmetik.
+const TRAILS = [
+  { id: 'default', name: { tr: 'Standart İz', en: 'Standard Trail' }, price: 0 },
+  { id: 'goldshot', name: { tr: 'Altın Mermi', en: 'Gold Shot' }, price: 900, r: 'r', color: 0xffd24a, tail: 0xffb020 },
+  { id: 'frostbeam', name: { tr: 'Buz Işını', en: 'Frost Beam' }, price: 900, r: 'r', color: 0x9fe8ff, tail: 0x5ab0ff },
+  { id: 'toxictrail', name: { tr: 'Zehir İzi', en: 'Toxic Trail' }, price: 1200, r: 'e', color: 0x8aff2a, tail: 0x2aff8a },
+  { id: 'dragonfire', name: { tr: 'Ejderha Ateşi', en: 'Dragon Fire' }, price: 0, gem: 30, r: 'e', color: 0xff6a1e, tail: 0xb03aff, set: 'dragon' },
+];
+const EXPLOSIONS = [
+  { id: 'default', name: { tr: 'Standart Patlama', en: 'Standard Blast' }, price: 0 },
+  { id: 'frostblast', name: { tr: 'Buz Patlaması', en: 'Frost Blast' }, price: 900, r: 'r', hot: [0xbfeeff, 0x6ab8ff], ring: 0xbfeeff },
+  { id: 'confetti', name: { tr: 'Konfeti', en: 'Confetti' }, price: 1200, r: 'e', hot: [0xff4a8a, 0x4aff8a, 0xffd24a, 0x4a9aff], ring: 0xffffff, big: 1.3 },
+  { id: 'dragonblast', name: { tr: 'Ejderha Patlaması', en: 'Dragon Blast' }, price: 0, gem: 30, r: 'e', hot: [0xff6a1e, 0xb03aff], ring: 0xff8a3a, big: 1.5, set: 'dragon' },
+];
+const TITLES = [{ id: 'dragonlord', name: { tr: 'Ejderha Efendisi', en: 'Dragon Lord' }, col: '#ff7a3a' }];
+const trailById = id => TRAILS.find(x => x.id === id) || TRAILS[0];
+const explosionById = id => EXPLOSIONS.find(x => x.id === id) || EXPLOSIONS[0];
+const titleById = id => TITLES.find(x => x.id === id);
+let playerExplPal = null; // oyuncunun seçili patlama paleti (explode'a geçer)
 // 1v1'de (düello + top maçı) herkes bu standart tankı kullanır → adil + tutarlı vuruş algılama.
 // (Garaj seçimi/yükseltmeler sadece tek oyunculu + kooperatifte geçerli. İleride "rekabetçi" mod seçime açılabilir.)
 const DUEL_TANK = { ...TANKS[0] };
@@ -2295,6 +2394,7 @@ function setPlayerTank(overrideDef) {
   if (player.mesh) { scene.remove(player.mesh); disposeTank(player.mesh); }
   player.mesh = buildTank(def);
   applySkin(player.mesh, profile.skin);
+  applyTracks(player.mesh, profile.track); // KOZMETİK 2.0: palet kaplaması
   applyAccessory(player.mesh, profile.accessory, def);
   if (profile.accSlot2 && profile.accessory2 && accSlotType(profile.accessory2) !== accSlotType(profile.accessory)) applyAccessory(player.mesh, profile.accessory2, def, 2); // 2. yuva
   player.mesh.position.set(player.x, 0, player.z);
@@ -2308,6 +2408,9 @@ function setPlayerTank(overrideDef) {
   // tank kimlik mermisi (görsel premium): def.shot varsa yerel atışlar o renkte
   playerShotCustom = !!def.shot;
   if (def.shot) { customShotMat.color.setHex(def.shot); customShotTailMat.color.setHex(def.shot); }
+  const trl = trailById(profile.trail); // KOZMETİK 2.0: iz kozmetiği tank kimlik renginin önüne geçer
+  if (trl.id !== 'default') { playerShotCustom = true; customShotMat.color.setHex(trl.color); customShotTailMat.color.setHex(trl.tail || trl.color); }
+  playerExplPal = explosionById(profile.explosion); if (playerExplPal.id === 'default') playerExplPal = null;
 }
 await ensureModel(tankById(profile.selected).model); // seçili tank özel modelliyse açılışta yükle
 await Promise.all([ensureAcc(profile.accessory), ensureAcc(profile.accessory2)]); // takılı GLB aksesuarlar açılışta hazır (VARLIK FAZ 5)
@@ -2592,56 +2695,144 @@ function grantTokens(n, silent) {
   saveProfile(); updateTokenBar();
   if (!silent) showToast(T().tokenGot(n), 2600); // silent: çağıran kendi birleşik mesajını gösteriyorsa
 }
-// jeton makinesi (gacha) — ağırlıklı rastgele kaplama; kopya çıkarsa coin'e döner (GDD kuralı)
-function tokenOdds() {
-  const pool = SKINS.filter(s => s.id !== 'default' && !s.event);
-  const sum = { c: 0, r: 0, e: 0 }; let total = 0;
-  for (const s of pool) { sum[s.r] += RARITY[s.r].w; total += RARITY[s.r].w; }
-  return { c: sum.c / total * 100, r: sum.r / total * 100, e: sum.e / total * 100 };
-}
-function spinToken(free) {
-  if (!free) { if ((profile.tokens || 0) < 1) return; profile.tokens--; }
-  const pity = (profile.pity || 0) + 1; // P1: 30 çekilişte garanti Efsanevi (kötü-şans koruması)
-  let pool = SKINS.filter(s => s.id !== 'default' && !s.event);
-  if (pity >= 30) { const ep = pool.filter(s => s.r === 'e'); if (ep.length) pool = ep; }
-  let total = 0; for (const s of pool) total += RARITY[s.r].w;
-  let roll = Math.random() * total, pick = pool[pool.length - 1];
-  for (const s of pool) { roll -= RARITY[s.r].w; if (roll <= 0) { pick = s; break; } }
-  profile.pity = pick.r === 'e' ? 0 : pity;
-  const t = T();
-  if (profile.skins.includes(pick.id)) {
-    const coins = RARITY[pick.r].coin;
-    addCoins(coins); saveProfile();
-    banner(t.gachaDup(pick.name[lang], coins)); sfxCoin();
-    track('gacha', { result: 'dup', rarity: pick.r });
-  } else {
-    profile.skins.push(pick.id); saveProfile();
-    banner(t.gachaNew(pick.name[lang])); sfxPower(); haptic('HEAVY');
-    track('gacha', { result: 'new', rarity: pick.r });
+// ---------------------------------------------------------------- KOZMETİK 2.0 (K1): SANDIK AİLESİ
+// Jeton makinesi (tek havuzlu gacha) → kategori sandıkları + tema seti sandığı. Havuz ve oranlar görünür (RL Sideswipe modeli),
+// kopya → coin (salvage), kategori sandıklarında 30'da garanti Efsanevi, set sandığında her açılış yeni öğe (kopya yok). Yalnız jeton ile açılır.
+const KINDS = {
+  skin: { list: () => SKINS, owned: () => profile.skins, icon: '🎨' },
+  acc: { list: () => ACCESSORIES, owned: () => (profile.accessories = profile.accessories || []), icon: '🎩' },
+  track: { list: () => TRACKS, owned: () => profile.tracks, icon: '⚙️' },
+  trail: { list: () => TRAILS, owned: () => profile.trails, icon: '🔥' },
+  explosion: { list: () => EXPLOSIONS, owned: () => profile.explosions, icon: '💥' },
+};
+const SETS = { dragon: { name: { tr: 'Ejderha Seti', en: 'Dragon Set' }, icon: '🐉', items: [{ kind: 'skin', id: 'dragon' }, { kind: 'acc', id: 'dragonwings' }, { kind: 'trail', id: 'dragonfire' }, { kind: 'explosion', id: 'dragonblast' }], title: 'dragonlord' } };
+const itemOf = (kind, id) => KINDS[kind].list().find(x => x.id === id);
+const ownsItem = (kind, id) => KINDS[kind].owned().includes(id);
+function setProgress(setId) { const st = SETS[setId]; const have = st.items.filter(it => ownsItem(it.kind, it.id)).length; return { have, total: st.items.length }; }
+function checkSets() { // set tamamlanınca unvan (bir kez); satın alma ve sandık sonrası çağrılır
+  for (const [id, st] of Object.entries(SETS)) {
+    const pr = setProgress(id); if (pr.have < pr.total || (profile.titles || []).includes(st.title)) continue;
+    profile.titles = profile.titles || []; profile.titles.push(st.title); if (!profile.title) profile.title = st.title; saveProfile();
+    const tt = titleById(st.title); showToast(T().setReward(tt ? tt.name[lang] : st.title), 4200); sfxPower(); haptic('HEAVY'); track('set_complete', { id });
+    if (typeof updateStats === 'function') updateStats();
   }
-  updateCoinBar();
-  if ($('panel-garage').classList.contains('show')) renderSkins();
 }
-function renderMachine() {
-  const t = T(), o = tokenOdds();
-  $('tokenmachine').innerHTML = `<div class="tm-box">
-    <div class="tm-title">${t.tmTitle}</div>
-    <div class="tm-count">${t.tmCount}: <b>${profile.tokens || 0}</b></div>
-    <button id="tm-spin" class="mbtn"${(profile.tokens || 0) < 1 ? ' disabled' : ''}>${t.tmSpin}</button>
-    <div class="tm-odds">${RARITY.c[lang]} %${o.c.toFixed(0)} · ${RARITY.r[lang]} %${o.r.toFixed(0)} · ${RARITY.e[lang]} %${o.e.toFixed(0)}</div>
-    <div class="tm-odds" style="color:#ffd76a">${t.pityLine(Math.max(1, 30 - (profile.pity || 0)))}</div>
-    ${profile.freeSpinDay === todayKey() ? `<div class="tm-odds">${t.freeSpinDone}</div>` : (canOfferRewarded() ? `<button id="tm-free" class="mbtn small" style="margin-top:6px">${t.freeSpin}</button>` : '')}
-  </div>`;
-  const sp = $('tm-spin'); if (sp) sp.onclick = () => spinToken(false);
-  const fs = $('tm-free'); if (fs) fs.onclick = async () => { // FAZ1 C-6 #5: günde 1 ücretsiz çekiliş (reklam)
-    fs.disabled = true; fs.textContent = t.adLoading;
-    const ok = await watchRewarded('spin');
-    if (ok) { profile.freeSpinDay = todayKey(); saveProfile(); spinToken(true); } else renderMachine();
-  };
+const CHESTS = [
+  { id: 'skin', icon: '🎨', name: { tr: 'Kaplama Sandığı', en: 'Skin Chest' }, cost: 1, pool: () => SKINS.filter(x => x.id !== 'default' && !x.event && !x.set).map(x => ({ kind: 'skin', it: x })) },
+  { id: 'acc', icon: '🎩', name: { tr: 'Aksesuar Sandığı', en: 'Accessory Chest' }, cost: 1, pool: () => ACCESSORIES.filter(x => !x.set).map(x => ({ kind: 'acc', it: x })) },
+  { id: 'track', icon: '⚙️', name: { tr: 'Palet Sandığı', en: 'Track Chest' }, cost: 1, pool: () => TRACKS.filter(x => x.id !== 'default').map(x => ({ kind: 'track', it: x })) },
+  { id: 'dragon', icon: '🐉', name: { tr: 'Ejderha Seti', en: 'Dragon Set' }, cost: 2, set: 'dragon', pool: () => SETS.dragon.items.filter(x => !ownsItem(x.kind, x.id)).map(x => ({ kind: x.kind, it: itemOf(x.kind, x.id) })) },
+];
+const CHEST_PITY = 30;
+function chestOdds(ch) {
+  const pool = ch.pool(), sum = { c: 0, r: 0, e: 0 }; let total = 0;
+  for (const p of pool) { const w = ch.set ? 1 : RARITY[p.it.r].w; sum[p.it.r] += w; total += w; }
+  return { n: pool.length, c: total ? sum.c / total * 100 : 0, r: total ? sum.r / total * 100 : 0, e: total ? sum.e / total * 100 : 0 };
+}
+function openChest(ch, free) {
+  const pool = ch.pool(); if (!pool.length) return null;
+  if (!free) { if ((profile.tokens || 0) < ch.cost) { showToast(T().noTokens); return null; } profile.tokens -= ch.cost; track('token_spend', { sink: 'chest:' + ch.id, n: ch.cost }); }
+  profile.chestPity = profile.chestPity || {};
+  const pity = (profile.chestPity[ch.id] || 0) + 1;
+  let cand = pool;
+  if (!ch.set && pity >= CHEST_PITY) { const ep = pool.filter(p => p.it.r === 'e'); if (ep.length) cand = ep; }
+  const wOf = p => (ch.set ? 1 : RARITY[p.it.r].w);
+  let total = 0; for (const p of cand) total += wOf(p);
+  let roll = Math.random() * total, pick = cand[cand.length - 1];
+  for (const p of cand) { roll -= wOf(p); if (roll <= 0) { pick = p; break; } }
+  if (!ch.set) profile.chestPity[ch.id] = pick.it.r === 'e' ? 0 : pity;
+  const dup = ownsItem(pick.kind, pick.it.id); let coins = 0;
+  if (dup) { coins = RARITY[pick.it.r].coin; addCoins(coins); }
+  else KINDS[pick.kind].owned().push(pick.it.id);
+  track('chest_open', { id: ch.id, kind: pick.kind, rarity: pick.it.r, dup: dup ? 1 : 0, free: free ? 1 : 0 });
+  saveProfile(); updateCoinBar(); updateTokenBar();
+  if (!dup) checkSets();
+  return { pick, dup, coins };
+}
+function chestSwatch(kind, it) { // açılış kartı görseli: aksesuar → 3B thumb, kaplama/palet → renk/desen, efekt → gradyan
+  const hex = v => '#' + (v || 0).toString(16).padStart(6, '0');
+  if (kind === 'acc') { const u = renderAccThumb(it); return u ? `<img class="tankthumb" src="${u}" alt="">` : `<span style="font-size:44px">${it.icon}</span>`; }
+  if (kind === 'skin' || kind === 'track') {
+    const h = hex(it.color != null ? it.color : 0x5a6b3a);
+    const bg = it.camo ? `url(${camoSwatchUrl(it.camo)}) center/110px repeat` : (it.metal ? `linear-gradient(135deg,rgba(255,255,255,.5),${h},rgba(0,0,0,.4))` : `linear-gradient(135deg,${h},#161616)`);
+    return `<div style="width:100%;height:100%;border-radius:8px;background:${bg};${it.glow ? `box-shadow:inset 0 0 26px ${h}` : ''}"></div>`;
+  }
+  const c1 = hex(it.color || (it.hot && it.hot[0]) || 0xffa028), c2 = hex(it.tail || (it.hot && it.hot[1]) || it.ring || 0x2a2a2a);
+  return `<div style="width:100%;height:100%;border-radius:8px;background:linear-gradient(90deg,${c1},${c2});display:flex;align-items:center;justify-content:center;font-size:34px">${kind === 'trail' ? '🔥' : '💥'}</div>`;
+}
+const waitMs = ms => new Promise(r => setTimeout(r, ms));
+let chestBusy = false;
+async function runChest(ch, free) { // açılış ritüeli: sandık sallanır → nadirlik rengiyle patlar → öğe kartı belirir
+  if (chestBusy) return; const t = T();
+  const res = openChest(ch, free); if (!res) return;
+  chestBusy = true;
+  const ov = $('chestopen'), box = $('co-box'), card = $('co-card'), btns = $('co-btns');
+  ov.classList.add('show'); box.textContent = ch.icon; box.className = 'co-box shake'; card.className = 'card co-card'; card.innerHTML = ''; btns.innerHTML = '';
+  sfxUI(); haptic('LIGHT');
+  await waitMs(650);
+  const rar = RARITY[res.pick.it.r]; box.style.setProperty('--rc', rar.col); box.className = 'co-box burst';
+  await waitMs(330);
+  box.className = 'co-box hide';
+  card.innerHTML = `<div class="cname" style="color:${rar.col}">${res.pick.it.name[lang]}</div><div class="cswatch has-thumb" style="height:84px">${chestSwatch(res.pick.kind, res.pick.it)}</div>` +
+    `<div class="cstat" style="text-align:center;color:${rar.col};font-weight:bold">${KINDS[res.pick.kind].icon} ${rar[lang]}${res.pick.it.set ? ' · ' + t.setTag : ''}</div>` +
+    `<div class="cstat" style="text-align:center;font-size:15px;color:#fff">${res.dup ? iconize(t.chestDup(res.coins)) : t.chestNew}</div>`;
+  card.className = 'card co-card pop';
+  if (res.dup) sfxCoin(); else { sfxPower(); haptic('HEAVY'); }
+  const again = document.createElement('button'); again.className = 'mbtn small gold'; again.innerHTML = iconize(t.chestAgain(ch.cost));
+  again.disabled = !(ch.pool().length && (profile.tokens || 0) >= ch.cost);
+  again.onclick = () => { chestBusy = false; runChest(ch, false); };
+  const close = document.createElement('button'); close.className = 'mbtn small'; close.textContent = t.closeBtn;
+  close.onclick = () => { ov.classList.remove('show'); chestBusy = false; refreshAfterChest(); };
+  btns.appendChild(again); btns.appendChild(close);
+  chestBusy = false;
+}
+function refreshAfterChest() {
+  if ($('panel-shop').classList.contains('show')) renderShop();
+  if ($('panel-garage').classList.contains('show')) renderGarageTabs();
+  setPlayerTank(); // yeni öğe otomatik takılmaz; seçili kozmetikler tazelenir
+}
+function renderChests(wrap) {
+  const t = T();
+  const head = document.createElement('div'); head.className = 'cname'; head.style.cssText = 'width:100%;text-align:center;color:#ffd76a;margin:4px 0'; head.innerHTML = iconize(`${t.chestsTitle} · 🎰 ${profile.tokens || 0}`); wrap.appendChild(head);
+  for (const ch of CHESTS) {
+    const o = chestOdds(ch), pool = ch.pool(), pr = ch.set ? setProgress(ch.set) : null, done = !!(ch.set && pr.have >= pr.total);
+    const ownedN = pool.filter(p => ownsItem(p.kind, p.it.id)).length;
+    const card = document.createElement('div'); card.className = 'card chest' + (ch.set ? ' sel' : '');
+    card.innerHTML = `<div class="cname">${ch.icon} ${ch.name[lang]}</div><div class="cswatch" style="height:64px;display:flex;align-items:center;justify-content:center;font-size:44px;background:radial-gradient(circle at 50% 40%,#3a3016,#12100a)">${ch.icon}</div>` +
+      `<div class="cstat" style="text-align:center">${ch.set ? (done ? t.chestDone : t.chestLeft(pr.total - pr.have, pr.total)) : `${o.n} ${t.chestItems} · ${RARITY.c[lang]} %${o.c.toFixed(0)} · ${RARITY.r[lang]} %${o.r.toFixed(0)} · ${RARITY.e[lang]} %${o.e.toFixed(0)}`}</div>` +
+      (ch.set ? '' : `<div class="cstat" style="text-align:center;color:#9fd">${t.chestOwned(ownedN, o.n)} · ${t.pityLine(Math.max(1, CHEST_PITY - ((profile.chestPity || {})[ch.id] || 0)))}</div>`);
+    const btn = document.createElement('button'); btn.className = 'mbtn small gold'; btn.innerHTML = iconize(t.chestOpen(ch.cost));
+    btn.disabled = done || (profile.tokens || 0) < ch.cost; btn.onclick = () => runChest(ch, false);
+    card.appendChild(btn);
+    const pb = document.createElement('button'); pb.className = 'mbtn small'; pb.style.marginTop = '4px'; pb.textContent = t.chestPool;
+    pb.onclick = () => { // havuz listesi (şeffaflık): sahip olunanlar ✓, nadirlik rengiyle
+      let list = card.querySelector('.chest-pool'); if (list) { list.remove(); return; }
+      list = document.createElement('div'); list.className = 'chest-pool';
+      const all = ch.set ? SETS[ch.set].items.map(x => ({ kind: x.kind, it: itemOf(x.kind, x.id) })) : pool;
+      list.innerHTML = all.map(p => `<span style="color:${RARITY[p.it.r].col}">${ownsItem(p.kind, p.it.id) ? '✓ ' : ''}${p.it.name[lang]}</span>`).join(' · ');
+      card.appendChild(list);
+    };
+    card.appendChild(pb);
+    if (ch.id === 'skin') { // günde 1 ücretsiz açılış (reklam) — jeton makinesinden taşındı (FAZ1 C-6 #5)
+      if (profile.freeSpinDay === todayKey()) { const d = document.createElement('div'); d.className = 'cstat'; d.style.textAlign = 'center'; d.textContent = t.freeSpinDone; card.appendChild(d); }
+      else if (canOfferRewarded()) {
+        const fb = document.createElement('button'); fb.className = 'mbtn small'; fb.style.marginTop = '4px'; fb.textContent = t.freeSpin;
+        fb.onclick = async () => { fb.disabled = true; fb.textContent = t.adLoading; const ok = await watchRewarded('spin'); if (ok) { profile.freeSpinDay = todayKey(); saveProfile(); runChest(ch, true); } else renderShop(); };
+        card.appendChild(fb);
+      }
+    }
+    wrap.appendChild(card);
+  }
+}
+function renderMachine() { // garaj kaplama sekmesi: sandıklara kısa yol (eski makine kutusu)
+  const t = T();
+  $('tokenmachine').innerHTML = `<div class="tm-box"><div class="tm-count">${t.tmCount}: <b>${profile.tokens || 0}</b> 🎰</div><button id="tm-go" class="mbtn small gold">${t.chestGo}</button></div>`;
+  $('tm-go').onclick = () => openShop();
 }
 function updateStats() {
   const brt = profile.bestRunTime ? ` &nbsp;·&nbsp; ⏱ ${fmtTime(profile.bestRunTime)}` : ''; // en hızlı zafer (rekor vitrini)
-  $('statsline').innerHTML = `🏆 D.${profile.bestWave}${brt} &nbsp;·&nbsp; ⚔️ ${profile.kills} &nbsp;·&nbsp; 🥇 ${profile.wins} &nbsp;·&nbsp; 🏅`;
+  const tt = profile.title ? titleById(profile.title) : null; // KOZMETİK 2.0: unvan
+  $('statsline').innerHTML = (tt ? `<span style="color:${tt.col}">🏷️ ${tt.name[lang]}</span> &nbsp;·&nbsp; ` : '') + `🏆 D.${profile.bestWave}${brt} &nbsp;·&nbsp; ⚔️ ${profile.kills} &nbsp;·&nbsp; 🥇 ${profile.wins} &nbsp;·&nbsp; 🏅`;
 }
 let toastT = 0, statsCheckT = 2;
 // TOAST KUYRUĞU (denetim bulgusu: tek #toast elementinde bildirimler birbirini eziyordu —
@@ -3342,6 +3533,7 @@ function applyLang() {
   $('gt-tanks').textContent = t.tabTanks;
   $('gt-skins').textContent = t.tabSkins + gateSuffix('skins');
   $('gt-acc').textContent = t.accTab + gateSuffix('acc'); // ölü anahtar bağlandı (EN'de 'AKSESUAR' kalıyordu)
+  $('gt-tracks').textContent = t.tabTracks; $('gt-fx').textContent = t.tabFx; // KOZMETİK 2.0
   $('btn-back-maps').textContent = t.back;
   $('btn-back-garage').textContent = t.back;
   $('btn-back-profile').textContent = t.back;
@@ -3414,6 +3606,7 @@ function buildShowroomTank() {
   const m = buildTank(def);
   // seçili tankta oyuncunun kaplaması, diğerlerinde varsayılan görünüm
   applySkin(m, showroom.tankId === profile.selected ? profile.skin : 'default');
+  if (showroom.tankId === profile.selected) applyTracks(m, profile.track); // KOZMETİK 2.0
   applyAccessory(m, showroom.accId, def); // önizlenen/takılı aksesuar
   if (showroom.mode === 'tank' && showroom.tankId === profile.selected && profile.accSlot2 && profile.accessory2) applyAccessory(m, profile.accessory2, def, 2); // 2. yuva vitrinde
   // glow malzemelerini KLONLA (paylaşılan glTF malzemesinde nabız oyun-içi tanklara sızmasın) → vitrinde nabız atsın
@@ -3508,7 +3701,7 @@ function renderShowroomAcc(t, act) {
     if (a.gem) act.className += ' breath';
     act.onclick = () => {
       if (a.gem) { if ((profile.gems || 0) < a.gem) return showToast(T().noMoney); profile.gems -= a.gem; } else { if (profile.coins < a.price) return showToast(T().noMoney); profile.coins -= a.price; }
-      profile.accessories = profile.accessories || []; profile.accessories.push(a.id); profile.accessory = a.id;
+      profile.accessories = profile.accessories || []; profile.accessories.push(a.id); checkSets(); profile.accessory = a.id;
       track('soft_purchase', { t: 'acc', id: a.id, cur: a.gem ? 'g' : 'c', amt: a.gem || a.price });
       saveProfile(); sfxCoin(); updateCoinBar(); setPlayerTank(); renderShowroomUI();
     };
@@ -3633,10 +3826,8 @@ function renderGarage() {
 }
 let garageTab = 'tanks';
 function renderGarageTabs() {
-  $('gt-tanks').classList.toggle('on', garageTab === 'tanks');
-  $('gt-skins').classList.toggle('on', garageTab === 'skins');
-  $('gt-acc').classList.toggle('on', garageTab === 'acc');
-  if (garageTab === 'tanks') renderGarage(); else if (garageTab === 'skins') renderSkins(); else renderAccessories();
+  for (const [id, tab] of [['gt-tanks', 'tanks'], ['gt-skins', 'skins'], ['gt-acc', 'acc'], ['gt-tracks', 'tracks'], ['gt-fx', 'fx']]) $(id).classList.toggle('on', garageTab === tab);
+  if (garageTab === 'tanks') renderGarage(); else if (garageTab === 'skins') renderSkins(); else if (garageTab === 'tracks') renderTracks(); else if (garageTab === 'fx') renderFx(); else renderAccessories();
 }
 function openGarage() {
   $('title').textContent = T().garage;
@@ -3659,7 +3850,7 @@ function renderSkins() {
     const glow = s.glow ? `box-shadow:inset 0 0 26px ${hex};` : '';
     const grad = s.metal ? `linear-gradient(135deg,rgba(255,255,255,.5),${hex},rgba(0,0,0,.4))` : `linear-gradient(135deg,${hex},#161616)`;
     const bg = s.camo ? `url(${camoSwatchUrl(s.camo)}) center/110px repeat` : grad; // desenli kaplama: gerçek desen (VARLIK FAZ 5)
-    card.innerHTML = `<div class="cname">${s.name[lang]}</div><div class="cswatch" style="background:${bg};${glow}"></div>`;
+    card.innerHTML = `<div class="cname">${s.set ? SETS[s.set].icon + ' ' : ''}${s.name[lang]}</div><div class="cswatch" style="background:${bg};${glow}"></div>`;
     if (owned && s.id !== 'default') { // FAZ3: boya satırı (3 ton, 250🪙; sahipse tıkla=uygula/kaldır)
       const ownedD = (profile.dyes && profile.dyes[s.id]) || [], active = (profile.dye && profile.dye[s.id]) || '';
       const row = document.createElement('div'); row.style.cssText = 'display:flex;justify-content:center;gap:4px;margin:4px 0';
@@ -3677,13 +3868,13 @@ function renderSkins() {
       }
       card.appendChild(row);
     }
-    const btn = document.createElement('button'); btn.className = 'mbtn small' + (s.glow || s.metal ? ' gold' : '');
+    const btn = document.createElement('button'); btn.className = 'mbtn small' + (s.glow || s.metal || s.gem ? ' gold' : '');
     if (equipped) { btn.textContent = t.selected; btn.disabled = true; }
     else if (owned) { btn.textContent = t.owned; btn.onclick = () => { profile.skin = s.id; saveProfile(); setPlayerTank(); renderSkins(); }; }
     else {
-      btn.innerHTML = iconize(`${t.buy} · 🪙${s.price}`);
-      btn.classList.toggle('cant', profile.coins < s.price);
-      btn.onclick = () => { if (profile.coins < s.price) return showToast(T().noMoney); profile.coins -= s.price; profile.skins.push(s.id); profile.skin = s.id; track('soft_purchase', { t: 'skin', id: s.id, cur: 'c', amt: s.price }); saveProfile(); sfxCoin(); setPlayerTank(); updateCoinBar(); renderSkins(); };
+      btn.innerHTML = iconize(`${t.buy} · ${s.gem ? '💎' + s.gem : '🪙' + s.price}`);
+      btn.classList.toggle('cant', s.gem ? (profile.gems || 0) < s.gem : profile.coins < s.price);
+      btn.onclick = () => { if (s.gem) { if ((profile.gems || 0) < s.gem) return showToast(T().noMoney); profile.gems -= s.gem; } else { if (profile.coins < s.price) return showToast(T().noMoney); profile.coins -= s.price; } profile.skins.push(s.id); checkSets(); profile.skin = s.id; track('soft_purchase', { t: 'skin', id: s.id, cur: s.gem ? 'g' : 'c', amt: s.gem || s.price }); saveProfile(); sfxCoin(); setPlayerTank(); updateCoinBar(); renderSkins(); };
     }
     card.appendChild(btn); wrap.appendChild(card);
   }
@@ -3730,13 +3921,58 @@ function renderAccessories() {
       btn.classList.toggle('cant', a.gem ? (profile.gems || 0) < a.gem : profile.coins < a.price);
       btn.onclick = () => {
         if (a.gem) { if ((profile.gems || 0) < a.gem) return showToast(T().noMoney); profile.gems -= a.gem; } else { if (profile.coins < a.price) return showToast(T().noMoney); profile.coins -= a.price; }
-        profile.accessories = profile.accessories || []; profile.accessories.push(a.id);
+        profile.accessories = profile.accessories || []; profile.accessories.push(a.id); checkSets();
         track('soft_purchase', { t: 'acc', id: a.id, cur: a.gem ? 'g' : 'c', amt: a.gem || a.price });
         equipAccessory(a.id); sfxCoin(); updateCoinBar(); renderAccessories();
       };
     }
     card.appendChild(btn); wrap.appendChild(card);
   }
+}
+// ---------------------------------------------------------------- KOZMETİK 2.0: PALET sekmesi + EFEKT sekmesi (iz / patlama / unvan)
+function cosmeticCard(kind, it, key, rerender) { // ortak kart: swatch + SEÇ / SATIN AL (coin ya da elmas); default satırı ücretsiz
+  const t = T(), owned = it.id === 'default' || KINDS[kind].owned().includes(it.id), equipped = profile[key] === it.id;
+  const card = document.createElement('div'); card.className = 'card' + (equipped ? ' sel' : '');
+  const rar = it.r ? RARITY[it.r] : null;
+  card.innerHTML = `<div class="cname"${rar ? ` style="color:${rar.col}"` : ''}>${it.set ? SETS[it.set].icon + ' ' : ''}${it.name[lang]}</div><div class="cswatch has-thumb" style="height:56px">${chestSwatch(kind, it)}</div>`;
+  const btn = document.createElement('button'); btn.className = 'mbtn small' + (it.gem || it.r === 'e' ? ' gold' : '');
+  if (equipped) { btn.textContent = t.selected; btn.disabled = true; }
+  else if (owned) { btn.textContent = t.owned; btn.onclick = () => { profile[key] = it.id; saveProfile(); setPlayerTank(); rerender(); }; }
+  else {
+    btn.innerHTML = iconize(`${t.buy} · ${it.gem ? '💎' + it.gem : '🪙' + it.price}`);
+    btn.classList.toggle('cant', it.gem ? (profile.gems || 0) < it.gem : profile.coins < it.price);
+    btn.onclick = () => {
+      if (it.gem) { if ((profile.gems || 0) < it.gem) return showToast(T().noMoney); profile.gems -= it.gem; } else { if (profile.coins < it.price) return showToast(T().noMoney); profile.coins -= it.price; }
+      KINDS[kind].owned().push(it.id); profile[key] = it.id;
+      track('soft_purchase', { t: kind, id: it.id, cur: it.gem ? 'g' : 'c', amt: it.gem || it.price }); if (!it.gem) track('coin_spend', { sink: kind, n: it.price });
+      saveProfile(); setPlayerTank(); sfxCoin(); updateCoinBar(); checkSets(); rerender();
+    };
+  }
+  card.appendChild(btn); return card;
+}
+function renderTracks() {
+  const t = T(); $('tokenmachine').innerHTML = '';
+  const wrap = $('cardwrap-garage'); wrap.style.cssText = 'display:flex;flex-wrap:wrap;justify-content:center;gap:12px;margin:12px 8px'; wrap.innerHTML = '';
+  if (effTank(profile.selected).id === 'hover') { const n = document.createElement('div'); n.className = 'shop-note'; n.style.width = '100%'; n.textContent = t.trackNote; wrap.appendChild(n); }
+  for (const it of TRACKS) wrap.appendChild(cosmeticCard('track', it, 'track', renderTracks));
+}
+function renderFx() {
+  const t = T(); $('tokenmachine').innerHTML = '';
+  const wrap = $('cardwrap-garage'); wrap.style.cssText = 'display:flex;flex-wrap:wrap;justify-content:center;gap:12px;margin:12px 8px'; wrap.innerHTML = '';
+  const section = label => { const h = document.createElement('div'); h.className = 'cname'; h.style.cssText = 'width:100%;text-align:center;color:#ffd76a;margin:6px 0 0'; h.textContent = label; wrap.appendChild(h); };
+  section(t.fxTrails); for (const it of TRAILS) wrap.appendChild(cosmeticCard('trail', it, 'trail', renderFx));
+  section(t.fxExpl); for (const it of EXPLOSIONS) wrap.appendChild(cosmeticCard('explosion', it, 'explosion', renderFx));
+  section(t.fxTitles);
+  const titles = profile.titles || [];
+  if (!titles.length) { const n = document.createElement('div'); n.className = 'shop-note'; n.style.width = '100%'; n.textContent = t.noTitle; wrap.appendChild(n); return; }
+  const mk = (id, name, col) => {
+    const card = document.createElement('div'); card.className = 'card' + (profile.title === id ? ' sel' : '');
+    card.innerHTML = `<div class="cname" style="color:${col}">${name}</div>`;
+    const b = document.createElement('button'); b.className = 'mbtn small'; if (profile.title === id) { b.textContent = t.selected; b.disabled = true; } else { b.textContent = t.owned; b.onclick = () => { profile.title = id; saveProfile(); updateStats(); renderFx(); }; }
+    card.appendChild(b); wrap.appendChild(card);
+  };
+  mk('', t.titleNone, '#c8d0d8');
+  for (const id of titles) { const tt = titleById(id); if (tt) mk(id, tt.name[lang], tt.col); }
 }
 // ---------------------------------------------------------------- elmas dükkânı (IAP)
 const GEM_PACKS = [
@@ -3767,10 +4003,11 @@ async function buyStarter(btn) {
   } else { btn.disabled = false; btn.textContent = old; showToast(T().shopSoon, 2800); }
 }
 function renderShop() {
-  $('submsg').textContent = `💎 ${profile.gems || 0}`;
+  $('submsg').textContent = `💎 ${profile.gems || 0} · 🎰 ${profile.tokens || 0}`;
   const wrap = $('shoplist');
   wrap.style.cssText = 'display:flex;flex-wrap:wrap;justify-content:center;gap:12px;margin:12px 8px';
   wrap.innerHTML = '';
+  renderChests(wrap); // KOZMETİK 2.0 (K1): sandık ailesi rafın başında
   if (starterVisible()) { // başlangıç paketi kartı (raf başı, altın çerçeve)
     const t = T(), card = document.createElement('div'); card.className = 'card sel'; card.style.width = '100%'; card.style.maxWidth = '440px';
     card.innerHTML = `<div class="cname" style="color:#ffd76a">${t.starterTitle}</div><div class="cstat" style="text-align:center;font-size:15px;color:#fff">${t.starterDesc}</div><div class="cstat" style="text-align:center;color:#7dff9b">${t.starterOnce}</div>`;
@@ -4995,6 +5232,8 @@ $('btn-garage').addEventListener('click', openGarage);
 $('gt-tanks').addEventListener('click', () => { garageTab = 'tanks'; renderGarageTabs(); });
 $('gt-skins').addEventListener('click', () => { if (!gateOk('skins')) return showToast(T().lockedLv(LEVEL_GATES.skins)); garageTab = 'skins'; renderGarageTabs(); });
 $('gt-acc').addEventListener('click', () => { if (!gateOk('acc')) return showToast(T().lockedLv(LEVEL_GATES.acc)); garageTab = 'acc'; renderGarageTabs(); });
+$('gt-tracks').addEventListener('click', () => { garageTab = 'tracks'; renderGarageTabs(); }); // KOZMETİK 2.0
+$('gt-fx').addEventListener('click', () => { garageTab = 'fx'; renderGarageTabs(); });
 $('statsline').addEventListener('click', openProfile);
 $('playername').value = profile.name;
 $('playername').addEventListener('input', e => {
@@ -5354,7 +5593,7 @@ function soloDamage(e, dmg, b) {
   e.hp -= dmg * (vuln ? 2 : 1);
   if (vuln && b) popFloater(b.mesh.position.x, 2.6, b.mesh.position.z, 'x2!', '#54ff7a');
   if (e.hp <= 0) {
-    e.alive = false; explode(e.x, 1.0, e.z, true); scene.remove(e.mesh); disposeTank(e.mesh);
+    e.alive = false; explode(e.x, 1.0, e.z, true, playerExplPal); scene.remove(e.mesh); disposeTank(e.mesh);
     popFloater(e.x, 2.2, e.z, '+' + e.score, isBoss(e.type) ? '#ff7a3a' : '#ffe86a');
     popFloater(e.x, 3.1, e.z, '+🪙' + killCoins(e), '#ffd76a');
     onEnemyKilled(e);
@@ -5452,7 +5691,7 @@ function tick() {
   monitorPerf(dt, state === 'play' && !paused);
   trackTransitions();
 
-  if (showroom.active) { updateShowroom(dt); renderer.render(showroomScene, showroomCam); return; }
+  if (showroom.active) { updateShowroom(dt); tickCamoAnim(); renderer.render(showroomScene, showroomCam); return; }
 
   if (state === 'play' && !paused && !buildChoosing) {
     if (player.alive) {
@@ -5624,7 +5863,7 @@ function tick() {
                 e.hp -= (1 + bDmg()) * (vuln ? 2 : 1);
                 if (vuln) popFloater(b.mesh.position.x, 2.6, b.mesh.position.z, 'x2!', '#54ff7a');
                 if (e.hp <= 0) {
-                  e.alive = false; explode(e.x, 1.0, e.z, true); scene.remove(e.mesh); disposeTank(e.mesh);
+                  e.alive = false; explode(e.x, 1.0, e.z, true, playerExplPal); scene.remove(e.mesh); disposeTank(e.mesh);
                   popFloater(e.x, 2.2, e.z, '+' + e.score, isBoss(e.type) ? '#ff7a3a' : '#ffe86a');
                 popFloater(e.x, 3.1, e.z, '+🪙' + killCoins(e), '#ffd76a'); // denetim: en büyük musluk görünmezdi — kill parası artık ekranda
                   netSend({ t: 'ekill', id: e.id });
@@ -5778,6 +6017,7 @@ function tick() {
   const ahead = portrait ? 7 : 6;
   camera.lookAt(player.x + fwdX(player.a) * ahead, 1.0, player.z + fwdZ(player.a) * ahead);
 
+  tickCamoAnim(); // animasyonlu desen (KOZMETİK 2.0)
   renderer.render(scene, camera);
   if (snapshotCb) { const f = snapshotCb; snapshotCb = null; try { f(); } catch (e) {} } // paylaşım kartı: render sonrası aynı karede canvas okunur
 }
