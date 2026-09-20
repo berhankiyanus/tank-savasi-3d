@@ -22,6 +22,28 @@ const MIME = {
 const ALLOW_FILES = new Set(['/index.html', '/main.js', '/sw.js', '/manifest.json', '/privacy.html', '/CREDITS.md', '/playable.html']); // playable.html: oynanabilir reklam demosu (tools/playable/dist kopyası)
 const ALLOW_DIRS = ['/assets/', '/libs/'];
 
+// ---- LANSMAN P0-12: koruma katmanı ----
+// /stats yalnız STATS_KEY ile (env yoksa kapalı) — KPI panosu herkese açık olmasın
+const STATS_KEY = process.env.STATS_KEY || '';
+if (!STATS_KEY) console.warn('[server] STATS_KEY yok: /stats kapalı (Render ortam değişkeni ekle)');
+// IP başına dakikalık istek sınırı (bellek içi; /ev 60, /lb 10) — lider tablosu/KPI kirletmesine karşı basit kapı
+const rl = new Map();
+function clientIp(req) { return String((req.headers['x-forwarded-for'] || '').split(',')[0].trim() || (req.socket && req.socket.remoteAddress) || '?'); }
+function rateOk(req, key, limit) {
+  const k = key + ':' + clientIp(req), now = Date.now(); let e = rl.get(k);
+  if (!e || now - e.t > 60000) { e = { t: now, n: 0 }; rl.set(k, e); }
+  return ++e.n <= limit;
+}
+setInterval(() => { const now = Date.now(); for (const [k, e] of rl) if (now - e.t > 120000) rl.delete(k); }, 300000).unref();
+// takma ad: tek temizleyici (kontrol karakteri/HTML işareti yok, boşluklar tek, 14 karakter) + küçük küfür listesi → 'Oyuncu'
+const BAD_ROOTS = ['amk', 'amq', 'aq', 'sik', 'got', 'pic', 'orospu', 'oruspu', 'yarrak', 'yarak', 'ibne', 'pezevenk', 'kahpe', 'serefsiz', 'gavat', 'tasak', 'sikik', 'sikim', 'sikt', 'fuck', 'shit', 'bitch', 'cunt', 'dick', 'pussy', 'nigg', 'faggot', 'whore', 'slut', 'asshole', 'cock', 'porn', 'sex'];
+const normName = n => String(n).toLowerCase().replace(/ı/g, 'i').replace(/ş/g, 's').replace(/ç/g, 'c').replace(/ğ/g, 'g').replace(/ö/g, 'o').replace(/ü/g, 'u').replace(/0/g, 'o').replace(/1/g, 'i').replace(/3/g, 'e').replace(/4/g, 'a').replace(/5/g, 's').replace(/7/g, 't').replace(/[^a-z]+/g, ' ').trim();
+function isBadName(n) { const t = normName(n), toks = t.split(' '); return BAD_ROOTS.some(r => r.length <= 3 ? toks.includes(r) : t.includes(r)); }
+function cleanName(name, fallback = 'Oyuncu') {
+  const n = String(name || '').normalize('NFKC').replace(/[\x00-\x1f<>&"']/g, '').replace(/\s+/g, ' ').trim().slice(0, 14);
+  return (!n || isBadName(n)) ? fallback : n;
+}
+
 // ---- opsiyonel KALICI depo (P1): Render'da PostgreSQL oluşturup DATABASE_URL bağlanırsa
 // lider tablosu + günlük tekil oyuncular (D1/D7) restart'a dayanıklı olur; yoksa in-memory sürer ----
 let pgPool = null;
@@ -94,7 +116,7 @@ function lbSubmitSpeed(cid, name, time, v) {
   if (!cid || typeof cid !== 'string' || cid.length > 40) return;
   lbRoll();
   time = time | 0; if (time < 60 || time > 3600) return;
-  name = String(name || 'Oyuncu').replace(/[<>&"' -]/g, '').slice(0, 14) || 'Oyuncu';
+  name = cleanName(name);
   v = v || { av: '', ti: '' };
   const e = lb.speed.m[cid]; if (!e || time < e.score) lb.speed.m[cid] = { name, score: time, av: v.av, ti: v.ti };
   if (pgPool) {
@@ -107,7 +129,7 @@ function lbSubmit(cid, name, score, v) {
   lbRoll();
   // makul üst sınır: dalga skoru gerçekçi aralıkta kalsın (istemci doğrulaması yok — tam çözüm sunucu-otoriteli koşu)
   score = Math.max(0, Math.min(200, score | 0));
-  name = String(name || 'Oyuncu').replace(/[<>&"'\x00-\x1f]/g, '').slice(0, 14) || 'Oyuncu';
+  name = cleanName(name);
   v = v || { av: '', ti: '' };
   for (const b of [lb.day, lb.week]) { const e = b.m[cid]; if (!e || score > e.score) b.m[cid] = { name, score, av: v.av, ti: v.ti }; }
   if (pgPool) {
@@ -164,9 +186,10 @@ function handleReq(req, res) {
   }
   // lider tablosu gönderimi
   if (req.method === 'POST' && (req.url || '').startsWith('/lb')) {
+    if (!rateOk(req, 'lb', 10)) { res.writeHead(429, cors()); return res.end(); }
     let body = '';
     req.on('data', c => { body += c; if (body.length > 2000) req.destroy(); });
-    req.on('end', () => { try { const m = JSON.parse(body); if (m.time) lbSubmitSpeed(m.cid, m.name, m.time, vanity(m)); else lbSubmit(m.cid, m.name, m.score, vanity(m)); } catch {} res.writeHead(204, cors()); res.end(); });
+    req.on('end', () => { try { const m = JSON.parse(body); if (typeof m.cid !== 'string' || !/^[A-Za-z0-9_-]{6,40}$/.test(m.cid)) throw 0; if (m.time) lbSubmitSpeed(m.cid, m.name, m.time, vanity(m)); else lbSubmit(m.cid, m.name, m.score, vanity(m)); } catch {} res.writeHead(204, cors()); res.end(); });
     return;
   }
   // lider tablosu okuma (?p=day|week)
@@ -180,9 +203,10 @@ function handleReq(req, res) {
   }
   // analitik olay alımı (sendBeacon POST)
   if (req.method === 'POST' && (req.url || '').startsWith('/ev')) {
+    if (!rateOk(req, 'ev', 60)) { res.writeHead(429, cors()); return res.end(); }
     let body = '';
     req.on('data', c => { body += c; if (body.length > 8000) req.destroy(); });
-    req.on('end', () => { try { trackEvent(JSON.parse(body)); } catch {} res.writeHead(204, cors()); res.end(); });
+    req.on('end', () => { try { const m = JSON.parse(body); if (m && typeof m.ev === 'string' && m.ev.length <= 40) trackEvent(m); } catch {} res.writeHead(204, cors()); res.end(); });
     return;
   }
   // aktif etkinlik (istemci fetch edemezse aynı formülü yerelde uygular) — sunucu bayrağı = sürümsüz canlı-ops
@@ -192,6 +216,7 @@ function handleReq(req, res) {
   }
   // basit dashboard (JSON huni)
   if (req.method === 'GET' && (req.url || '').startsWith('/stats')) {
+    { const k = ((req.url || '').match(/[?&]k=([^&]+)/) || [])[1]; if (!STATS_KEY || decodeURIComponent(k || '') !== STATS_KEY) { res.writeHead(404); return res.end('not found'); } }
     const now = Date.now();
     const active5m = Object.values(stats.sessions).filter(t => now - t < 300000).length;
     const base = {

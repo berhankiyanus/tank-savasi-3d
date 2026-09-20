@@ -8,3 +8,7 @@ services:
     envVars:
       - key: NODE_VERSION
         value: "20"
+      - key: STATS_KEY   # /stats için gizli anahtar (Render panelinden gir)
+        sync: false
+      - key: DATABASE_URL # Render/Neon Postgres bağlantısı (yoksa lider tablosu bellekte, uykuda sıfırlanır)
+        sync: false

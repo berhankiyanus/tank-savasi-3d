@@ -46,6 +46,7 @@ const L = {
     againBtn: '↻ TEKRAR OYNA', rewardedBtn: '📺 Reklam izle → x2 ödül', rewardedGot: '🎉 x2 ödül alındı!', adLoading: '📺 Yükleniyor...',
     questsTitle: 'GÜNLÜK GÖREVLER', questsSub: 'Her gece yenilenir',
     lbTitle: 'LİDER TABLOSU', lbDaily: 'BUGÜN', lbWeekly: 'BU HAFTA', lbEmpty: 'Henüz skor yok — ilk sen ol!', lbLoad: 'Yükleniyor...',
+    defaultName: 'Oyuncu', nameBad: '🚫 Bu isim kullanılamaz', lbReport: '🚩 Uygunsuz isim bildir',
     gpuLost: '⚠️ Grafik sürücüsü sıfırlandı, bekleyin…', gpuReload: '↻ Grafik geri gelmedi — yeniden yüklemek için dokun',
     seasonWord: 'Sezon', seasonTier: 'Kademe', seasonTierUp: (n, r) => `🎟️ Sezon ${n}. kademe: ${r}`, seasonClosed: (id, t) => `🎟️ Sezon ${id} kapandı — ${t}. kademeye ulaştın. Yeni sezon başladı!`, firstWinXp: '🎉 İlk zafer bonusu +40 XP',
     chestMsg: '📦 Günlük sandık açıldı! +🪙120 +🎰2', streakLabel: n => `🔥 ${n} günlük seri`, chestReady: '📦 Tüm görevleri bitir → günlük sandık', chestDone: '📦 Günlük sandık alındı ✓',
@@ -149,6 +150,7 @@ const L = {
     againBtn: '↻ PLAY AGAIN', rewardedBtn: '📺 Watch ad → 2x reward', rewardedGot: '🎉 2x reward claimed!', adLoading: '📺 Loading...',
     questsTitle: 'DAILY QUESTS', questsSub: 'Refreshes every night',
     lbTitle: 'LEADERBOARD', lbDaily: 'TODAY', lbWeekly: 'THIS WEEK', lbEmpty: 'No scores yet — be the first!', lbLoad: 'Loading...',
+    defaultName: 'Player', nameBad: '🚫 That name is not allowed', lbReport: '🚩 Report a name',
     gpuLost: '⚠️ Graphics driver reset, please wait…', gpuReload: '↻ Graphics did not recover — tap to reload',
     seasonWord: 'Season', seasonTier: 'Tier', seasonTierUp: (n, r) => `🎟️ Season tier ${n}: ${r}`, seasonClosed: (id, t) => `🎟️ Season ${id} ended — you reached tier ${t}. New season is live!`, firstWinXp: '🎉 First victory bonus +40 XP',
     chestMsg: '📦 Daily chest opened! +🪙120 +🎰2', streakLabel: n => `🔥 ${n}-day streak`, chestReady: '📦 Finish all quests → daily chest', chestDone: '📦 Daily chest claimed ✓',
@@ -3810,6 +3812,7 @@ function applyLang() {
   $('joincode').placeholder = t.codePh;
   $('hlabel').textContent = t.health;
   $('firebtn').textContent = t.fire;
+  { const fn = $('friendname'), fb = $('btn-friend'), lr = $('lb-report'); if (fn) fn.placeholder = t.friendPh; if (fb) fb.textContent = t.friendBtn; if (lr) lr.textContent = t.lbReport; } /* LANSMAN: EN'de Türkçe kalmıyordu */
   $('gt-tanks').textContent = t.tabTanks;
   $('gt-skins').textContent = t.tabSkins + gateSuffix('skins');
   $('gt-acc').textContent = t.accTab + gateSuffix('acc'); // ölü anahtar bağlandı (EN'de 'AKSESUAR' kalıyordu)
@@ -5523,11 +5526,18 @@ $('gt-fx').addEventListener('click', () => { garageTab = 'fx'; renderGarageTabs(
 $('gt-col').addEventListener('click', () => { garageTab = 'col'; renderGarageTabs(); });
 $('statsline').addEventListener('click', openProfile);
 $('playername').value = profile.name;
+const BAD_ROOTS = ['amk', 'amq', 'aq', 'sik', 'got', 'pic', 'orospu', 'oruspu', 'yarrak', 'yarak', 'ibne', 'pezevenk', 'kahpe', 'serefsiz', 'gavat', 'tasak', 'sikik', 'sikim', 'sikt', 'fuck', 'shit', 'bitch', 'cunt', 'dick', 'pussy', 'nigg', 'faggot', 'whore', 'slut', 'asshole', 'cock', 'porn', 'sex'];
+function isBadName(n) { // sunucudaki cleanName ile aynı kural (istemci tarafı erken uyarı)
+  const t = String(n).toLowerCase().replace(/ı/g, 'i').replace(/ş/g, 's').replace(/ç/g, 'c').replace(/ğ/g, 'g').replace(/ö/g, 'o').replace(/ü/g, 'u').replace(/0/g, 'o').replace(/1/g, 'i').replace(/3/g, 'e').replace(/4/g, 'a').replace(/5/g, 's').replace(/7/g, 't').replace(/[^a-z]+/g, ' ').trim();
+  const toks = t.split(' '); return BAD_ROOTS.some(r => r.length <= 3 ? toks.includes(r) : t.includes(r));
+}
 $('playername').addEventListener('input', e => {
-  const v = e.target.value.trim().slice(0, 12);
-  profile.name = v || ('Oyuncu' + Math.floor(Math.random() * 900 + 100));
+  const v = e.target.value.replace(/[\x00-\x1f<>&"']/g, '').replace(/\s+/g, ' ').trimStart().slice(0, 12);
+  if (v !== e.target.value) e.target.value = v;
+  profile.name = v.trim() || (T().defaultName + Math.floor(Math.random() * 900 + 100));
   saveProfile();
 });
+$('playername').addEventListener('change', e => { if (isBadName(e.target.value)) { e.target.value = ''; profile.name = T().defaultName + Math.floor(Math.random() * 900 + 100); saveProfile(); showToast(T().nameBad, 3000); } });
 $('btn-back-profile').addEventListener('click', openMenu);
 $('btn-back-maps').addEventListener('click', openMenu);
 $('btn-back-garage').addEventListener('click', openMenu);
