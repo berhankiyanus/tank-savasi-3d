@@ -37,7 +37,8 @@
          text-shadow: 0 2px 6px rgba(0,0,0,.8); user-select: none; pointer-events: none; }
   #topbar { top: calc(14px + env(safe-area-inset-top, 0px)); left: 0; right: 0; display: flex; justify-content: space-between;
             padding: 0 22px; font-size: 20px; font-weight: bold; letter-spacing: 1px; }
-  #healthwrap { display: flex; gap: 5px; align-items: center; flex-wrap: nowrap; max-width: 46%; } /* LANSMAN: can kutuları tek satır (genişlik --n ile daralır) */
+  #healthwrap { display: flex; gap: 5px; align-items: center; flex-wrap: nowrap; max-width: 46%; }
+  #health { display: inline-flex; flex-wrap: nowrap; align-items: center; gap: 4px; } /* LANSMAN: can kutuları tek satır (genişlik --n ile daralır) */
   #wave { white-space: nowrap; flex-shrink: 0; } /* dar ekranda 4 haneli skorla 'DALGA 5/10' alt satıra kaymasın (runcoins ile çakışıyordu) */
   .hp { width: 24px; height: 14px; background: #2aff5d; border: 1px solid rgba(0,0,0,.5);
         border-radius: 3px; box-shadow: 0 0 8px rgba(42,255,93,.6); }
@@ -261,7 +262,7 @@
   .bc-ic { font-size: 46px; }
   .bc-nm { font-size: 18px; font-weight: bold; letter-spacing: 1px; }
   .bc-ds { font-size: 13px; color: #cfe8cf; }
-  #errbox { bottom: 8px; left: 8px; right: 8px; background: rgba(160,20,20,.92); color: #fff;
+  #errbox { bottom: calc(8px + env(safe-area-inset-bottom, 0px)); left: 8px; right: 8px; background: rgba(160,20,20,.92); color: #fff; pointer-events: auto; cursor: pointer; border-radius: 10px;
             font-size: 13px; padding: 10px; border-radius: 8px; z-index: 99; display: none;
             word-break: break-all; }
   #flash { inset: 0; box-shadow: inset 0 0 120px 40px rgba(255,30,30,.9); opacity: 0; }
@@ -660,14 +661,21 @@
 <div id="errbox" class="hud"></div>
 
 <script>
-  window.addEventListener('error', function (e) { window.__showErr(e.message || 'Script error'); }, true);
+  window.addEventListener('error', function (e) { // LANSMAN: kaynak (img/script 404) hataları bant açmaz — yalnız gerçek script hataları
+    if (!(e instanceof ErrorEvent) || (e.target && e.target !== window)) return;
+    window.__showErr(e.message || 'Script error');
+  }, true);
   window.addEventListener('unhandledrejection', function (e) {
     window.__showErr((e.reason && e.reason.message) || String(e.reason) || 'Promise error');
   });
   window.__showErr = function (m) {
-    var b = document.getElementById('errbox');
-    b.style.display = 'block';
-    b.textContent = 'HATA / ERROR: ' + m;
+    var b = document.getElementById('errbox'); if (!b) return;
+    var en = (document.documentElement.lang || 'tr') === 'en';
+    if (window.__gameLoaded) { // oyun açıldıysa: kısa, dokununca kapanan, 12 sn'de kendini kapatan kutu
+      b.textContent = (en ? 'Something went wrong: ' : 'Bir hata oluştu: ') + String(m).slice(0, 120) + (en ? '  (tap to close)' : '  (kapatmak için dokun)');
+      b.style.display = 'block'; b.onclick = function () { b.style.display = 'none'; };
+      clearTimeout(window.__errT); window.__errT = setTimeout(function () { b.style.display = 'none'; }, 12000);
+    } else { b.textContent = 'HATA / ERROR: ' + m; b.style.display = 'block'; }
   };
   setTimeout(function () {
     if (!window.__gameLoaded) window.__showErr('Oyun yüklenemedi — tarayıcı çok eski olabilir / Game failed to load.');

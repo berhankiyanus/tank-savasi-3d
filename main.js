@@ -46,6 +46,7 @@ const L = {
     againBtn: '↻ TEKRAR OYNA', rewardedBtn: '📺 Reklam izle → x2 ödül', rewardedGot: '🎉 x2 ödül alındı!', adLoading: '📺 Yükleniyor...',
     questsTitle: 'GÜNLÜK GÖREVLER', questsSub: 'Her gece yenilenir',
     lbTitle: 'LİDER TABLOSU', lbDaily: 'BUGÜN', lbWeekly: 'BU HAFTA', lbEmpty: 'Henüz skor yok — ilk sen ol!', lbLoad: 'Yükleniyor...',
+    gpuLost: '⚠️ Grafik sürücüsü sıfırlandı, bekleyin…', gpuReload: '↻ Grafik geri gelmedi — yeniden yüklemek için dokun',
     seasonWord: 'Sezon', seasonTier: 'Kademe', seasonTierUp: (n, r) => `🎟️ Sezon ${n}. kademe: ${r}`, seasonClosed: (id, t) => `🎟️ Sezon ${id} kapandı — ${t}. kademeye ulaştın. Yeni sezon başladı!`, firstWinXp: '🎉 İlk zafer bonusu +40 XP',
     chestMsg: '📦 Günlük sandık açıldı! +🪙120 +🎰2', streakLabel: n => `🔥 ${n} günlük seri`, chestReady: '📦 Tüm görevleri bitir → günlük sandık', chestDone: '📦 Günlük sandık alındı ✓',
     tmTitle: '🎰 Jeton Makinesi', tmCount: 'Jetonların', tmSpin: '🎲 ÇEVİR · 1 🎰', tmNeed: 'Jeton kazanmak için görev tamamla / seviye atla',
@@ -148,6 +149,7 @@ const L = {
     againBtn: '↻ PLAY AGAIN', rewardedBtn: '📺 Watch ad → 2x reward', rewardedGot: '🎉 2x reward claimed!', adLoading: '📺 Loading...',
     questsTitle: 'DAILY QUESTS', questsSub: 'Refreshes every night',
     lbTitle: 'LEADERBOARD', lbDaily: 'TODAY', lbWeekly: 'THIS WEEK', lbEmpty: 'No scores yet — be the first!', lbLoad: 'Loading...',
+    gpuLost: '⚠️ Graphics driver reset, please wait…', gpuReload: '↻ Graphics did not recover — tap to reload',
     seasonWord: 'Season', seasonTier: 'Tier', seasonTierUp: (n, r) => `🎟️ Season tier ${n}: ${r}`, seasonClosed: (id, t) => `🎟️ Season ${id} ended — you reached tier ${t}. New season is live!`, firstWinXp: '🎉 First victory bonus +40 XP',
     chestMsg: '📦 Daily chest opened! +🪙120 +🎰2', streakLabel: n => `🔥 ${n}-day streak`, chestReady: '📦 Finish all quests → daily chest', chestDone: '📦 Daily chest claimed ✓',
     tmTitle: '🎰 Token Machine', tmCount: 'Your tokens', tmSpin: '🎲 SPIN · 1 🎰', tmNeed: 'Complete quests / level up to earn tokens',
@@ -320,6 +322,22 @@ async function setupNotifs() {
     await LN.schedule({ notifications: list.map(n => ({ id: n.id, title: n.title, body: n.body, extra: { type: n.type }, schedule: { at: n.at, allowWhileIdle: true } })) });
   } catch (e) {}
 }
+// LANSMAN P0-11: geri tuşu / Escape katman sırası — sandık ritüeli → diriliş → ayarlar → vitrin → panel → (oyunda) duraklat → menü kökünde arka plana al
+let backExitT = 0;
+function handleBack() {
+  const P = capPlugins();
+  const chest = $('chestopen');
+  if (chest && getComputedStyle(chest).display !== 'none' && (chest.classList.contains('show') || chest.style.display === 'flex' || chest.style.display === 'block')) { const btns = $('co-btns'); const last = btns && btns.lastElementChild; if (last) last.click(); else { chest.classList.remove('show'); chest.style.display = 'none'; } return; }
+  const rv = $('reviveoffer'); if (rv && !rv.classList.contains('hidden')) { $('rv-no').click(); return; }
+  const st = $('settings'); if (st && !st.classList.contains('hidden')) { closeSettings(); return; }
+  if (state === 'menu' && showroom.active) { closeShowroom(); return; }
+  if (state !== 'menu') {
+    if (mode === 'solo' && state === 'play') { openSettings(); return; } // duraklat; ANA MENÜ ayarlardan
+    closeNet(); clearBallMode(); clearCoop(); clearTeam(); buildArena(0); openMenu(); return;
+  }
+  if (!$('panel-main').classList.contains('show')) { openMenu(); return; }
+  if (P.App && P.App.minimizeApp) { P.App.minimizeApp(); }
+}
 function nativeInit() {
   if (!isNativeApp()) return;
   const P = capPlugins();
@@ -327,10 +345,7 @@ function nativeInit() {
   try { P.SplashScreen && P.SplashScreen.hide(); } catch {}
   try { P.StatusBar && P.StatusBar.hide(); } catch {}          // tam ekran
   try {
-    P.App && P.App.addListener('backButton', () => {           // Android geri tuşu → menüye dön (uygulamadan çıkma)
-      if (state !== 'menu') { closeNet(); clearBallMode(); clearCoop(); clearTeam(); buildArena(0); openMenu(); }
-      else if (P.App.minimizeApp) P.App.minimizeApp();
-    });
+    P.App && P.App.addListener('backButton', handleBack); // Android geri tuşu: katman sırası (bkz. handleBack)
   } catch {}
 }
 
@@ -995,6 +1010,19 @@ const IS_TOUCH = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 const canvas = document.getElementById('game');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 renderer.setSize(innerWidth, innerHeight);
+// LANSMAN P0-10: WebGL bağlamı kaybı (arka plan/bellek baskısı) → siyah ekranda asılı kalma yok; geri gelirse malzemeler tazelenir, gelmezse yeniden yükle
+let glLost = false;
+canvas.addEventListener('webglcontextlost', e => {
+  e.preventDefault(); glLost = true;
+  try { if (state === 'play' && mode === 'solo' && !paused) openSettings(); } catch (err) {}
+  try { showToast(T().gpuLost, 4000); } catch (err) {}
+  setTimeout(() => { if (!glLost) return; const b = document.getElementById('errbox'); if (b) { b.textContent = T().gpuReload; b.style.display = 'block'; b.onclick = () => location.reload(); } }, 6000);
+});
+canvas.addEventListener('webglcontextrestored', () => {
+  glLost = false; renderer.shadowMap.needsUpdate = true;
+  try { scene.traverse(o => { if (o.material) for (const mt of (Array.isArray(o.material) ? o.material : [o.material])) mt.needsUpdate = true; }); } catch (err) {}
+  const b = document.getElementById('errbox'); if (b && b.textContent === T().gpuReload) b.style.display = 'none';
+});
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 // Düşük preset: yarı-çözünürlük render + upscale + gölgesiz (zayıf cihazlarda akıcılık)
 const LOW_PR = 0.7;
@@ -3406,9 +3434,9 @@ const SEASON_REWARDS = Array.from({ length: SEASON_LEN }, (_, i) => {
 function seasonId() {
   const epoch = Date.UTC(2026, 0, 1);
   const weeks = Math.floor((Date.now() - epoch) / (7 * 86400000));
-  return Math.floor(weeks / 6) + 1; // 6 haftalık sezonlar
+  return Math.max(1, Math.floor(weeks / 6) + 1); // 6 haftalık sezonlar; saat 2026 öncesine çekilse bile en az 1 (LANSMAN: negatif indeks çökmesi yok)
 }
-function seasonName(id) { const th = SEASON_THEMES[(id - 1) % SEASON_THEMES.length]; return `${T().seasonWord} ${id} · ${th[lang]}`; }
+function seasonName(id) { const n = SEASON_THEMES.length, th = SEASON_THEMES[(((id - 1) % n) + n) % n]; return `${T().seasonWord} ${id} · ${th[lang]}`; }
 function ensureSeason() {
   const id = seasonId();
   if (!profile.season || profile.season.id !== id) {
@@ -3417,8 +3445,9 @@ function ensureSeason() {
       profile.seasonHistory[profile.season.id] = { tier: profile.season.tier || 0 };
       showToast(T().seasonClosed(profile.season.id, profile.season.tier || 0), 4200);
     }
-    profile.season = { id, xp: 0, tier: 0 }; saveProfile();
+    profile.season = { id, xp: 0, tier: 0, joined: Date.now() }; saveProfile();
   }
+  if (!profile.season.joined) { profile.season.joined = Date.now(); saveProfile(); }
   return profile.season;
 }
 function rewardText(r) { return r.coins ? `🪙 ${r.coins}` : r.tokens ? `🎰 ${r.tokens}` : r.gems ? `💎 ${r.gems}` : r.skin ? `🎨 ${skinById(r.skin).name[lang]}` : ''; }
@@ -3655,7 +3684,6 @@ function renderHealth() {
   for (let i = 0; i < player.maxHealth; i++) {
     const d = document.createElement('span');
     d.className = 'hp' + (i < player.health ? '' : ' off');
-    d.style.display = 'inline-block'; d.style.marginLeft = '4px';
     healthEl.appendChild(d);
   }
 }
@@ -5622,10 +5650,8 @@ $('btn-join').addEventListener('click', () => {
 addEventListener('keydown', e => {
   if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
   if (e.target && e.target.tagName === 'INPUT') { keys[e.code] = false; return; }
-  if (e.code === 'Escape' || e.code === 'KeyP') {
-    if ($('settings').classList.contains('hidden')) openSettings(); else closeSettings();
-    return;
-  }
+  if (e.code === 'KeyP') { if ($('settings').classList.contains('hidden')) openSettings(); else closeSettings(); return; }
+  if (e.code === 'Escape') { handleBack(); return; } /* web'de geri tuşu ile aynı katman sırası */
   keys[e.code] = true;
 });
 addEventListener('keyup', e => { keys[e.code] = false; });
@@ -5945,6 +5971,7 @@ function trackTransitions() {
 
 function tick() {
   requestAnimationFrame(tick);
+  if (glLost) { clock.getDelta(); return; } /* bağlam kayıpken çizme (hata seli yok) */
   let dt = Math.min(clock.getDelta(), 0.05);
   if (slowmoT > 0) { slowmoT -= dt; dt *= 0.35; } // MEGA SEKME slow-mo (gerçek zamanla söner, sim yavaşlar)
   monitorPerf(dt, state === 'play' && !paused);
