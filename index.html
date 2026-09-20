@@ -270,6 +270,7 @@
                  justify-content: center; gap: 14px; background: rgba(6, 10, 4, .8); z-index: 45; }
   #reviveoffer.hidden { display: none; }
   #rv-title { font-size: 34px; font-weight: bold; color: #ffdd55; letter-spacing: 2px; text-shadow: 0 2px 8px #000; }
+  #rv-timer { width: min(70vw, 280px); height: 6px; border-radius: 4px; background: rgba(255,255,255,.16); overflow: hidden; margin: 6px 0 2px; } #rv-timer i { display: block; height: 100%; width: 100%; background: var(--gold); } /* P1-6 */
   #rv-sub { color: #d6ffde; font-size: 16px; text-align: center; max-width: 320px; padding: 0 14px; text-shadow: 0 1px 4px #000; }
   #build-title { font-size: 30px; font-weight: bold; color: #ffdd55; letter-spacing: 2px; text-shadow: 0 2px 8px #000; }
   #build-cards { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; padding: 0 14px; }
@@ -449,6 +450,7 @@
 <div id="reviveoffer" class="hidden">
   <div id="rv-title">💥 NEREDEYSE!</div>
   <div id="rv-sub"></div>
+  <div id="rv-timer"><i></i></div>
   <button class="mbtn play" id="rv-yes">⚡ DEVAM ET</button>
   <button class="mbtn small" id="rv-no">Vazgeç</button>
 </div>
@@ -673,6 +675,7 @@
     </div>
     <div style="font-size:10px;color:#8aa08c;margin-top:10px;max-width:230px;text-align:center">Icons: Lorc, Delapouite &amp; contributors — game-icons.net (CC BY 3.0) · HDRI/dokular: Poly Haven (CC0) · Modeller: Quaternius, Kenney (CC0); Zsky, KolosStudios (CC BY 3.0, değiştirildi) · Font: Russo One (OFL) · <a href="CREDITS.md" target="_blank" style="color:#9fb8a4">tüm krediler</a></div>
     <div style="font-size:11px;color:#8aa08c;margin-top:6px"><a id="set-privacy" href="privacy.html" style="color:#7dd8a0">Gizlilik</a> &nbsp;·&nbsp; <span id="set-ver">v0.9.0</span></div>
+    <button class="mbtn small" id="set-how">❓ Nasıl Oynanır</button>
     <button class="mbtn small" id="set-close">KAPAT</button>
   </div>
 </div>

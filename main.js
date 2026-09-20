@@ -47,6 +47,7 @@ const L = {
     questsTitle: 'GÜNLÜK GÖREVLER', questsSub: 'Her gece yenilenir',
     lbTitle: 'LİDER TABLOSU', lbDaily: 'BUGÜN', lbWeekly: 'BU HAFTA', lbEmpty: 'Henüz skor yok — ilk sen ol!', lbLoad: 'Yükleniyor...',
     appName: 'Tank Savaşı 3D', appNameUp: 'TANK SAVAŞI 3D', privacyClose: 'KAPAT',
+    howBtn: '❓ Nasıl Oynanır', howTitle: 'Nasıl oynanır', howBody: '<ul><li><b>Kontroller:</b> sol joystick sür ve dön, sağ buton ateş (Oto Ateş ayarlardan açılır).</li><li><b>Sekme:</b> mermin duvardan 2 kez seker — köşedeki düşmanı görmeden vur. İki sekmeli vuruş = <b>MEGA SEKME</b> bonusu.</li><li><b>Boss:</b> her 5. dalga. Kırmızı halka = saldırı hazırlığı, ardından kısa <b>savunmasız</b> an (yeşil halka) — o an vur.</li><li><b>Yükseltme:</b> 2/4/6/8/10. dalgada kart seç; 10. dalgayı geç → zafer, altın ve elmas.</li><li><b>Sefer kitleri:</b> kalkan/mıknatıs/tamir, koşu öncesi harita ekranından.</li><li><b>Garaj:</b> altınla tank ve yükseltme, jetonla sandık, elmasla premium tank/aksesuar.</li></ul>',
     defaultName: 'Oyuncu', nameBad: '🚫 Bu isim kullanılamaz', lbReport: '🚩 Uygunsuz isim bildir',
     gpuLost: '⚠️ Grafik sürücüsü sıfırlandı, bekleyin…', gpuReload: '↻ Grafik geri gelmedi — yeniden yüklemek için dokun',
     seasonWord: 'Sezon', seasonTier: 'Kademe', seasonTierUp: (n, r) => `🎟️ Sezon ${n}. kademe: ${r}`, seasonClosed: (id, t) => `🎟️ Sezon ${id} kapandı — ${t}. kademeye ulaştın. Yeni sezon başladı!`, firstWinXp: '🎉 İlk zafer bonusu +40 XP',
@@ -152,6 +153,7 @@ const L = {
     questsTitle: 'DAILY QUESTS', questsSub: 'Refreshes every night',
     lbTitle: 'LEADERBOARD', lbDaily: 'TODAY', lbWeekly: 'THIS WEEK', lbEmpty: 'No scores yet — be the first!', lbLoad: 'Loading...',
     appName: 'Tank Battle 3D', appNameUp: 'TANK BATTLE 3D', privacyClose: 'CLOSE',
+    howBtn: '❓ How to play', howTitle: 'How to play', howBody: '<ul><li><b>Controls:</b> left joystick drives and turns, right button fires (Auto Fire in settings).</li><li><b>Bounce:</b> your shells bounce off walls twice — hit enemies around corners without seeing them. A double-bounce kill = <b>MEGA BOUNCE</b> bonus.</li><li><b>Boss:</b> every 5th wave. Red ring = attack wind-up, then a short <b>vulnerable</b> moment (green ring) — strike then.</li><li><b>Upgrades:</b> pick a card on waves 2/4/6/8/10; clear wave 10 → victory, coins and gems.</li><li><b>Kits:</b> shield/magnet/repair from the map screen before a run.</li><li><b>Garage:</b> coins buy tanks and upgrades, tokens open chests, gems buy premium tanks/accessories.</li></ul>',
     defaultName: 'Player', nameBad: '🚫 That name is not allowed', lbReport: '🚩 Report a name',
     gpuLost: '⚠️ Graphics driver reset, please wait…', gpuReload: '↻ Graphics did not recover — tap to reload',
     seasonWord: 'Season', seasonTier: 'Tier', seasonTierUp: (n, r) => `🎟️ Season tier ${n}: ${r}`, seasonClosed: (id, t) => `🎟️ Season ${id} ended — you reached tier ${t}. New season is live!`, firstWinXp: '🎉 First victory bonus +40 XP',
@@ -337,6 +339,7 @@ async function openPrivacy(ev) { // LANSMAN P0-3: gizlilik metni uygulama içind
   $('privacyclose').textContent = T().privacyClose; box.classList.remove('hidden'); body.scrollTop = 0;
 }
 function closePrivacy() { $('privacybox').classList.add('hidden'); }
+function openHow() { const t = T(); $('privacybody').innerHTML = `<h1>${t.howTitle}</h1>${t.howBody}`; privacyLoaded = false; $('privacyclose').textContent = t.privacyClose; $('privacybox').classList.remove('hidden'); $('privacybody').scrollTop = 0; } /* U12: Nasıl oynanır */
 function handleBack() {
   const P = capPlugins();
   const pb = $('privacybox'); if (pb && !pb.classList.contains('hidden')) { closePrivacy(); return; }
@@ -475,7 +478,7 @@ function submitTime(sec) {
   } catch {}
 }
 async function fetchLeaderboard(period) {
-  try { const r = await fetch(apiBase() + '/lb?p=' + period, { cache: 'no-store' }); return await r.json(); }
+  try { const r = await fetch(apiBase() + '/lb?p=' + period, { cache: 'no-store', signal: AbortSignal.timeout ? AbortSignal.timeout(8000) : undefined }); return await r.json(); } /* P1-2: uyuyan sunucuda 8 sn'de vazgeç */
   catch { return null; } // null = ağ hatası (boş liste "henüz skor yok" ile karışmasın — denetim)
 }
 let paused = false;
@@ -861,7 +864,7 @@ const MAPS = [
     '#....#.#....#','#..#.....#..#','#....#.#....#','#.#......##.#','#....##.....#',
     '#..#....##..#','#...........#','#############' ] },
   // SEZON 2 (FAZ3): FABRİKA — bant koridorları + orta atölye (city teması yeniden kullanım)
-  { name: { tr: 'Fabrika', en: 'Factory' }, req: 12, theme: 'city', grid: [
+  { name: { tr: 'Fabrika', en: 'Factory' }, req: 11, theme: 'city', grid: [ // P1-7: 10 dalgalık koşuda ulaşılabilir (bestWave 11)
     '#############','#...#.....#.#','#.#.#.###.#.#','#.#...#...#.#','#.###.#.###.#',
     '#.....#.....#','#.##.###.##.#','#.....#.....#','#.###.#.###.#','#.#...#...#.#',
     '#.#.###.#.#.#','#.#.....#...#','#############' ] },
@@ -978,8 +981,8 @@ function isDoubleGold() { return eventLive() && activeEvent.type === 'doubleGold
 async function fetchEvent(force) {
   if (!force && Date.now() - eventFetchedAt < 5 * 60e3) return;
   eventFetchedAt = Date.now();
-  activeEvent = eventSpec();
-  try { const r = await fetch(apiBase() + '/events', { cache: 'no-store' }); const j = await r.json(); if (j && typeof j.active === 'boolean') activeEvent = j; } catch {}
+  activeEvent = eventSpec(); renderEventBtn(); /* P1-2: yerel formül hemen görünür; sunucu cevabı gelince tazelenir */
+  try { const r = await fetch(apiBase() + '/events', { cache: 'no-store', signal: AbortSignal.timeout ? AbortSignal.timeout(8000) : undefined }); const j = await r.json(); if (j && typeof j.active === 'boolean') activeEvent = j; } catch {}
   renderEventBtn();
 }
 function eventKey() { return 'e' + (activeEvent.endsAt || 0); }
@@ -1637,6 +1640,7 @@ function showReviveOffer(ms) {
   $('rv-yes').disabled = false;
   $('rv-no').textContent = '‹ ' + t.reviveNo;
   $('reviveoffer').classList.remove('hidden');
+  { const bar = $('rv-timer') && $('rv-timer').firstElementChild; if (bar) { bar.style.transition = 'none'; bar.style.width = '100%'; requestAnimationFrame(() => requestAnimationFrame(() => { bar.style.transition = 'width 8s linear'; bar.style.width = '0%'; })); } } /* P1-6: görünür 8 sn sayaç */
   track('revive_offer', { tier, wave });
   setTimeout(() => { // cevapsız kalırsa normal sonuç ekranı (8 sn — dürüst sayaç)
     if (ms === matchSeq && !$('reviveoffer').classList.contains('hidden')) { $('reviveoffer').classList.add('hidden'); track('revive_declined', { tier, wave }); gameOver(); }
@@ -3307,7 +3311,7 @@ function showHarvest(opts) {
   state = 'over';
   abortTutorial();
   lastMatch = { title: opts.title, won: opts.won === true, wave, dur: Math.max(1, Math.round(clock.elapsedTime - matchStartT)), kills: Math.max(0, (profile.kills || 0) - (matchStartKills || 0)) };
-  { const sb = $('res-share'); if (sb) { sb.style.display = mode === 'solo' ? '' : 'none'; sb.textContent = T().shareBtn; } }
+  { const sb = $('res-share'); if (sb) { sb.style.display = mode === 'solo' ? '' : 'none'; sb.innerHTML = iconize(T().shareBtn); } }
   if (isNativeApp()) setupNotifs(); // bildirim planı seri/sezon durumuna göre tazelenir
   const t = T();
   const preLvl = profile.level || 1, prePct = ((profile.xp || 0) / xpForLevel(preLvl)) * 100;
@@ -3787,7 +3791,7 @@ function applyLang() {
   document.title = t.title;
   $('keys').innerHTML = IS_TOUCH ? t.keysTouch : t.keysDesk;
   $('btn-single').innerHTML = gi('crosshair') + ' ' + t.single;
-  $('btn-duel').innerHTML = gi('swords') + ' ' + t.duel + gateSuffix('duel');
+  $('btn-duel').innerHTML = iconize(gi('swords') + ' ' + t.duel + gateSuffix('duel'));
   $('duel-fair').textContent = t.fairNote;
   $('btn-bot-rookie').textContent = t.botRookie;
   $('btn-bot-pro').textContent = t.botPro;
@@ -3828,6 +3832,7 @@ function applyLang() {
   $('firebtn').textContent = t.fire;
   { const fn = $('friendname'), fb = $('btn-friend'), lr = $('lb-report'); if (fn) fn.placeholder = t.friendPh; if (fb) fb.textContent = t.friendBtn; if (lr) lr.textContent = t.lbReport; } /* LANSMAN: EN'de Türkçe kalmıyordu */
   { const al = (id, v) => { const e = $(id); if (e) e.setAttribute('aria-label', v); }; al('btn-settings', t.setTitle || 'Ayarlar'); al('btn-settings-menu', t.setTitle || 'Ayarlar'); al('firebtn', t.fire || 'ATEŞ'); al('gembar', '💎'); const lt = $('lang-tr'), le = $('lang-en'); if (lt) lt.setAttribute('aria-pressed', lang === 'tr'); if (le) le.setAttribute('aria-pressed', lang === 'en'); const mm = $('minimap'); if (mm) mm.setAttribute('aria-hidden', 'true'); } /* U8: erişilebilirlik etiketleri */
+  $('set-how').textContent = t.howBtn;
   $('gt-tanks').textContent = t.tabTanks;
   $('gt-skins').textContent = t.tabSkins + gateSuffix('skins');
   $('gt-acc').textContent = t.accTab + gateSuffix('acc'); // ölü anahtar bağlandı (EN'de 'AKSESUAR' kalıyordu)
@@ -4733,7 +4738,7 @@ function botName() { return BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.lengt
 // FAZ0 (büyüme planı B-7): eski {3,4,6} aksesuarı ~3,5 saate itiyordu (L6=2.324 XP ≈ 30 zafer). Yeni hedef:
 // düello L2 (100 XP ≈ 8-10 dk), kaplama L3 (355 XP ≈ 25 dk), aksesuar L4 (796 XP ≈ 45-50 dk).
 const LEVEL_GATES = { duel: 2, skins: 3, acc: 4 };
-const gateOk = k => (profile.prestige || 0) > 0 || (profile.level || 1) >= LEVEL_GATES[k]; // K6: prestij kapıları açık tutar
+const gateOk = k => (profile.prestige || 0) > 0 || (k === 'skins' && !!profile.gift1) || (profile.level || 1) >= LEVEL_GATES[k]; // K6: prestij kapıları açık tutar; P1-1: ilk kill hediyesi (kaplama) alındıysa kaplama sekmesi hemen açık
 const gateSuffix = k => (gateOk(k) ? '' : ` 🔒${LEVEL_GATES[k]}`);
 // bot zorluk kademeleri — inceleme: tek ayarlı bot yeni oyuncuyu 5-1 eziyordu; Çaylak yenilebilir olmalı,
 // Efsane ustalara meydan okumalı. Galibiyet ödülü kademeyle artar (rekabet motivasyonu).
@@ -5641,7 +5646,7 @@ function openSettings() {
 }
 function closeSettings() {
   musicDuck = 1; updateMusicGain(); paused = false; $('settings').classList.add('hidden'); }
-$('set-privacy').addEventListener('click', openPrivacy); $('privacyclose').addEventListener('click', closePrivacy);
+$('set-privacy').addEventListener('click', openPrivacy); $('set-how').addEventListener('click', openHow); $('privacyclose').addEventListener('click', closePrivacy);
 $('btn-settings').addEventListener('click', openSettings);
 $('btn-settings-menu').addEventListener('click', openSettings);
 $('set-sound').addEventListener('click', () => { // 3 kademe: AÇIK → KISIK → KAPALI
