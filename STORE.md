@@ -81,6 +81,8 @@ Android Studio'da:
 - `android/app/src/main/AndroidManifest.xml` → `<activity … android:screenOrientation="portrait">` (dikey kilit; UI yalnız dikey tasarlandı).
 - `android/app/build.gradle` → `versionName "1.0.0"` (main.js `GAME_VER` ve package.json ile aynı), `versionCode` her yüklemede +1.
 - İmzalama: `android/keystore.properties` (git'te değil) + `signingConfigs.release` bloğu (bkz. §4).
+- Bildirim ikonu: `android/app/src/main/res/drawable-*/ic_stat_tank.png` (beyaz siluet; `capacitor.config.json` LocalNotifications.smallIcon) — yoksa beyaz kare görünür. `AndroidManifest.xml`'e `xmlns:tools` + `<uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" tools:node="remove" />` (eklenti bu izni birleştirir; inexact alarm yeterli).
+- Açılış görseli: `resources/splash.png` küçük logo + koyu zemin (139 KB); `npx capacitor-assets generate --android --splashBackgroundColor '#0d1409' --splashBackgroundColorDark '#0d1409'` → res ≈ 1 MB (eski 2732² fotoğraf 9,4 MB idi).
 
 ## 5. Zorunlu belgeler (ikisi için de)
 - **Gizlilik politikası** (bir URL gerekli). Basit bir sayfa yeter; analitik dışında veri

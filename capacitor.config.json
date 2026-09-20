@@ -8,9 +8,13 @@
   },
   "plugins": {
     "SplashScreen": {
-      "launchShowDuration": 800,
+      "launchShowDuration": 400,
       "backgroundColor": "#0d1409",
       "showSpinner": false
+    },
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_tank",
+      "iconColor": "#7dff9b"
     }
   }
 }

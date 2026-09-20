@@ -1,7 +1,7 @@
 // Service worker — uygulama kabuğu + boot'u bloklayan varlıklar önbellekte (kurulabilirlik, hızlı ve OFFLINE açılış).
 // SÜRÜM: her yayında el ile artır (web bu dosyayı repodan sunar); native pakette build-www.js
 // __BUILDSTAMP__ damgasını gerçek zamanla değiştirir → her native sürüm otomatik taze önbellek.
-const CACHE = 'tank3d-v3-__BUILDSTAMP__';
+const CACHE = 'tank3d-v1.0.0-__BUILDSTAMP__'; // web: sürüm adı her yayında değişir; native: build-www damgalar
 // Denetim fix'i: eski CORE tank.glb+env.hdr'ı içermiyordu → offline ilk açılış HEP retry ekranına düşüyordu.
 const CORE = [
   './',

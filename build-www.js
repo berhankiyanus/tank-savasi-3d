@@ -38,4 +38,17 @@ for (const it of items) {
   if (fs.existsSync(s)) copy(s, path.join(out, it));
   else console.warn('atlandı (yok):', it);
 }
-console.log('www/ oluşturuldu:', items.filter(i => fs.existsSync(path.join(root, i))).join(', '));
+// LANSMAN P1-5: üretim kopyasında JS küçültme (bundle değil → import yolları ve sw.js CORE aynı kalır; top-level await ESM'de desteklenir)
+try {
+  const { execFileSync } = require('child_process');
+  const esb = path.join(root, 'node_modules', '.bin', 'esbuild');
+  if (fs.existsSync(esb)) {
+    const walk = d => fs.readdirSync(d).flatMap(f => { const q = path.join(d, f); return fs.statSync(q).isDirectory() ? walk(q) : (q.endsWith('.js') ? [q] : []); });
+    const targets = [path.join(out, 'main.js'), ...walk(path.join(out, 'libs'))];
+    for (const f of targets) execFileSync(esb, [f, '--minify', '--format=esm', '--target=es2022', '--allow-overwrite', '--log-level=error', '--outfile=' + f]);
+    console.log('küçültüldü:', targets.length, 'dosya (esbuild)');
+  } else console.warn('esbuild yok (npm i -D esbuild) → küçültmesiz kopya');
+} catch (e) { console.warn('küçültme atlandı:', e.message); }
+const sizeOf = d => fs.readdirSync(d).reduce((a, f) => { const q = path.join(d, f); const st = fs.statSync(q); return a + (st.isDirectory() ? sizeOf(q) : st.size); }, 0);
+const mb = sizeOf(out) / 1048576;
+console.log('www/ oluşturuldu:', items.filter(i => fs.existsSync(path.join(root, i))).join(', '), '·', mb.toFixed(2), 'MB' + (mb > 7 ? '  ⚠ 7 MB hedefi aşıldı' : ''));

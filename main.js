@@ -292,7 +292,7 @@ function haptic(style) { try { if (!settings.haptics) return; const H = capPlugi
 // P1 + FAZ1 (plan B-3): yerel bildirim PLANLAYICI — günde EN FAZLA 1; sonraki 7 gün için öncelik:
 // sezon-bitiyor(105) > Cuma etkinlik(104) > seri riskte(103) > günlük görev(101); ayrıca devriye-dolu (102, +8sa, 09-22 arası).
 // Her planlama önce eskileri iptal eder (boot + her maç sonu). İzin FTUE sonrası (games>3). Server-push değil.
-const NOTIF_IDS = [101, 102, 103, 104, 105, 111, 112, 113, 114, 115, 116, 117];
+const NOTIF_IDS = [101, 102, 103, 104, 105, 111, 112, 113, 114, 115, 116, 117]; /* kullanılan: 102 (devriye) + 111-117 (günde 1, 7 gün); 101/103-105 eski kimlikler yalnız iptal için */
 let notifTapBound = false;
 async function setupNotifs() {
   try {
@@ -323,7 +323,8 @@ async function setupNotifs() {
       const at = new Date(day); at.setHours(n.h, n.m, 0, 0);
       list.push({ id: 110 + d, at, type: n.type, title: n.title, body: n.body });
     }
-    await LN.schedule({ notifications: list.map(n => ({ id: n.id, title: n.title, body: n.body, extra: { type: n.type }, schedule: { at: n.at, allowWhileIdle: true } })) });
+    try { await LN.createChannel({ id: 'reminders', name: lang === 'tr' ? 'Hatırlatmalar' : 'Reminders', description: lang === 'tr' ? 'Günlük görev, seri ve etkinlik hatırlatmaları' : 'Daily quest, streak and event reminders', importance: 3, visibility: 1 }); } catch (e) {} /* Android kanalı (iOS'ta yok → yutulur) */
+    await LN.schedule({ notifications: list.map(n => ({ id: n.id, title: n.title, body: n.body, extra: { type: n.type }, channelId: 'reminders', schedule: { at: n.at, allowWhileIdle: false } })) }); /* LANSMAN: inexact alarm yeterli → SCHEDULE_EXACT_ALARM izni listeye girmez */
   } catch (e) {}
 }
 // LANSMAN P0-11: geri tuşu / Escape katman sırası — sandık ritüeli → diriliş → ayarlar → vitrin → panel → (oyunda) duraklat → menü kökünde arka plana al

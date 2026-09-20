@@ -120,6 +120,7 @@
   #garagetabs { display: flex; justify-content: flex-start; width: 100%; box-sizing: border-box; gap: 8px; margin-bottom: 4px; overflow-x: auto; flex-wrap: nowrap; padding: 0 14px 4px; scrollbar-width: none; -webkit-overflow-scrolling: touch;
                 scroll-snap-type: x proximity; -webkit-mask-image: linear-gradient(90deg, #000 88%, transparent); mask-image: linear-gradient(90deg, #000 88%, transparent); } /* LANSMAN: soldan başlar, sağda solma = kaydırma ipucu */
   #garagetabs::-webkit-scrollbar { display: none; }
+  #updbar { display: none; position: fixed; left: 50%; bottom: calc(96px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 60; background: rgba(6,12,8,.92); color: #7dff9b; border: 1px solid rgba(125,255,155,.5); border-radius: 12px; padding: 8px 14px; font-size: 13px; font-family: 'Russo One', "Courier New", monospace; cursor: pointer; }
   #privacybox { position: fixed; inset: 0; z-index: 70; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.72); padding: 16px; box-sizing: border-box; }
   #privacybox.hidden { display: none; }
   .pbox { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%; max-width: 640px; max-height: calc(100vh - 32px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); background: #f6f8f4; color: #1c1c1c; border-radius: 14px; padding: 12px; box-sizing: border-box; }
@@ -668,6 +669,7 @@
 
 <div id="privacybox" class="hidden"><div class="pbox"><div id="privacybody"></div><button class="mbtn small" id="privacyclose">KAPAT</button></div></div>
 <div id="errbox" class="hud"></div>
+<div id="updbar"></div>
 
 <script>
   window.addEventListener('error', function (e) { // LANSMAN: kaynak (img/script 404) hataları bant açmaz — yalnız gerçek script hataları
@@ -693,6 +695,14 @@
   var __native = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
   if ('serviceWorker' in navigator && !__native) {
     window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });
+    // LANSMAN: yeni sürüm kabuğu devraldığında (controllerchange) sessizce değil, dokununca yenilenen küçük şeritle haber ver
+    var hadCtl = !!navigator.serviceWorker.controller;
+    navigator.serviceWorker.addEventListener('controllerchange', function () {
+      if (!hadCtl) { hadCtl = true; return; }
+      var b = document.getElementById('updbar'); if (!b) return;
+      b.textContent = (document.documentElement.lang === 'en') ? '↻ New version ready — tap to reload' : '↻ Yeni sürüm hazır — yenilemek için dokun';
+      b.style.display = 'block'; b.onclick = function () { location.reload(); };
+    });
   }
 </script>
 <script type="module" src="main.js"></script>
