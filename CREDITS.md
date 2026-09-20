@@ -12,6 +12,7 @@ Bu oyunda kullanılan üçüncü taraf varlıklar ve lisansları. Third-party as
 - `assets/tank_lynx.glb` (Vaşak): "Light Tank" — Zsky, CC BY 3.0 (Poly Pizza). https://poly.pizza/m/S1jUTRmAjD — modified (aynı işlem)
 - `assets/tank_boxer.glb` (Boksör): "Tank" — KolosStudios, CC BY 3.0 (Poly Pizza, Military Pack). https://poly.pizza/m/egcLMSGiuA — modified (aynı işlem)
   (Quaternius modellerinde yapılan değişiklikler: armature/animasyon kaldırıldı, kule `TankTurret` olarak ayrıldı, yeniden yönlendirme/ölçek, remove doubles + limited dissolve + decimate, düz Principled malzemeler `TankPaint/TankLight/TankDark/GunMetal/TankWheel`, normalsiz GLB export. Modified.)
+- `assets/hero.jpg`: oyunun kendi vitrininden alınmış render (bu proje için üretildi). Original screenshot of the game's own showroom.
 - Tanklar (tank.glb, tank_heavy/twin/arty/mamut/hover/titan.glb) ve dekor setleri (decor_city/harbor/canyon.glb): Blender'da bu proje için özgün üretildi. Original, made in Blender for this project.
 - `assets/decor_stadium.glb` (ağaçlar), `decor_desert.glb` (kaktüs, kaya, palmiye), `decor_lava.glb` (kaya): Kenney "Nature Kit" — CC0. https://kenney.nl/assets/nature-kit
 - `assets/decor_space.glb` (anten, kubbe, roket kulesi, kristal kaya, meteor): Kenney "Space Kit" — CC0. https://kenney.nl/assets/space-kit

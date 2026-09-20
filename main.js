@@ -46,6 +46,7 @@ const L = {
     againBtn: '↻ TEKRAR OYNA', rewardedBtn: '📺 Reklam izle → x2 ödül', rewardedGot: '🎉 x2 ödül alındı!', adLoading: '📺 Yükleniyor...',
     questsTitle: 'GÜNLÜK GÖREVLER', questsSub: 'Her gece yenilenir',
     lbTitle: 'LİDER TABLOSU', lbDaily: 'BUGÜN', lbWeekly: 'BU HAFTA', lbEmpty: 'Henüz skor yok — ilk sen ol!', lbLoad: 'Yükleniyor...',
+    appName: 'Tank Savaşı 3D', appNameUp: 'TANK SAVAŞI 3D', privacyClose: 'KAPAT',
     defaultName: 'Oyuncu', nameBad: '🚫 Bu isim kullanılamaz', lbReport: '🚩 Uygunsuz isim bildir',
     gpuLost: '⚠️ Grafik sürücüsü sıfırlandı, bekleyin…', gpuReload: '↻ Grafik geri gelmedi — yeniden yüklemek için dokun',
     seasonWord: 'Sezon', seasonTier: 'Kademe', seasonTierUp: (n, r) => `🎟️ Sezon ${n}. kademe: ${r}`, seasonClosed: (id, t) => `🎟️ Sezon ${id} kapandı — ${t}. kademeye ulaştın. Yeni sezon başladı!`, firstWinXp: '🎉 İlk zafer bonusu +40 XP',
@@ -150,6 +151,7 @@ const L = {
     againBtn: '↻ PLAY AGAIN', rewardedBtn: '📺 Watch ad → 2x reward', rewardedGot: '🎉 2x reward claimed!', adLoading: '📺 Loading...',
     questsTitle: 'DAILY QUESTS', questsSub: 'Refreshes every night',
     lbTitle: 'LEADERBOARD', lbDaily: 'TODAY', lbWeekly: 'THIS WEEK', lbEmpty: 'No scores yet — be the first!', lbLoad: 'Loading...',
+    appName: 'Tank Battle 3D', appNameUp: 'TANK BATTLE 3D', privacyClose: 'CLOSE',
     defaultName: 'Player', nameBad: '🚫 That name is not allowed', lbReport: '🚩 Report a name',
     gpuLost: '⚠️ Graphics driver reset, please wait…', gpuReload: '↻ Graphics did not recover — tap to reload',
     seasonWord: 'Season', seasonTier: 'Tier', seasonTierUp: (n, r) => `🎟️ Season tier ${n}: ${r}`, seasonClosed: (id, t) => `🎟️ Season ${id} ended — you reached tier ${t}. New season is live!`, firstWinXp: '🎉 First victory bonus +40 XP',
@@ -227,7 +229,7 @@ try {
   if (!Array.isArray(profile.achieved)) profile.achieved = [];
   profile.streak = profile.streak || 0;
   if (typeof profile.lastDaily !== 'string') profile.lastDaily = '';
-  if (!profile.name) profile.name = 'Oyuncu' + Math.floor(Math.random() * 900 + 100);
+  if (!profile.name) profile.name = ((localStorage.getItem('tanklang') || navigator.language || 'tr').toLowerCase().startsWith('tr') ? 'Oyuncu' : 'Player') + Math.floor(Math.random() * 900 + 100);
   // sayısal alan doğrulama: bozuk/NaN/negatif kayıt oyunu kilitleyemesin
   const num = (v, lo, hi, d) => (Number.isFinite(+v) ? Math.max(lo, Math.min(hi, Math.floor(+v))) : d);
   profile.coins = num(profile.coins, 0, 1e9, 0); profile.gems = num(profile.gems, 0, 1e6, 0);
@@ -326,8 +328,17 @@ async function setupNotifs() {
 }
 // LANSMAN P0-11: geri tuşu / Escape katman sırası — sandık ritüeli → diriliş → ayarlar → vitrin → panel → (oyunda) duraklat → menü kökünde arka plana al
 let backExitT = 0;
+let privacyLoaded = false;
+async function openPrivacy(ev) { // LANSMAN P0-3: gizlilik metni uygulama içinde (WebView'da yeni sekme yok, çevrimdışı da çalışır)
+  if (ev) ev.preventDefault();
+  const box = $('privacybox'), body = $('privacybody');
+  if (!privacyLoaded) { try { const html = await (await fetch('privacy.html', { cache: 'no-store' })).text(); const i = html.indexOf('<body>'), j = html.lastIndexOf('</body>'); body.innerHTML = i >= 0 && j > i ? html.slice(i + 6, j) : html; privacyLoaded = true; } catch (e) { body.innerHTML = '<p>privacy.html</p>'; } }
+  $('privacyclose').textContent = T().privacyClose; box.classList.remove('hidden'); body.scrollTop = 0;
+}
+function closePrivacy() { $('privacybox').classList.add('hidden'); }
 function handleBack() {
   const P = capPlugins();
+  const pb = $('privacybox'); if (pb && !pb.classList.contains('hidden')) { closePrivacy(); return; }
   const chest = $('chestopen');
   if (chest && getComputedStyle(chest).display !== 'none' && (chest.classList.contains('show') || chest.style.display === 'flex' || chest.style.display === 'block')) { const btns = $('co-btns'); const last = btns && btns.lastElementChild; if (last) last.click(); else { chest.classList.remove('show'); chest.style.display = 'none'; } return; }
   const rv = $('reviveoffer'); if (rv && !rv.classList.contains('hidden')) { $('rv-no').click(); return; }
@@ -447,7 +458,7 @@ const CLIENT_ID = (() => {
 function submitScore(score) {
   if (!score || score < 1) return;
   try {
-    const payload = JSON.stringify({ cid: CLIENT_ID, name: profile.name || 'Oyuncu', score: score | 0, av: avatarIcon(), ti: profile.title || '' }); // KOZMETİK 2.0: vanity
+    const payload = JSON.stringify({ cid: CLIENT_ID, name: profile.name || T().defaultName, score: score | 0, av: avatarIcon(), ti: profile.title || '' }); // KOZMETİK 2.0: vanity
     const url = apiBase() + '/lb';
     if (navigator.sendBeacon) navigator.sendBeacon(url, payload);
     else fetch(url, { method: 'POST', body: payload, keepalive: true }).catch(() => {});
@@ -456,7 +467,7 @@ function submitScore(score) {
 function submitTime(sec) {
   if (!sec || sec < 60) return;
   try {
-    const payload = JSON.stringify({ cid: CLIENT_ID, name: profile.name || 'Oyuncu', time: sec | 0, av: avatarIcon(), ti: profile.title || '' });
+    const payload = JSON.stringify({ cid: CLIENT_ID, name: profile.name || T().defaultName, time: sec | 0, av: avatarIcon(), ti: profile.title || '' });
     const url = apiBase() + '/lb';
     if (navigator.sendBeacon) navigator.sendBeacon(url, payload);
     else fetch(url, { method: 'POST', body: payload, keepalive: true }).catch(() => {});
@@ -3009,7 +3020,7 @@ function renderChests(wrap) {
     const card = document.createElement('div'); card.className = 'card chest' + (ch.set ? ' sel' : '');
     card.innerHTML = `<div class="cname">${ch.icon} ${ch.nameFn ? ch.nameFn() : ch.name[lang]}</div><div class="cswatch" style="height:64px;display:flex;align-items:center;justify-content:center;font-size:44px;background:radial-gradient(circle at 50% 40%,${ch.season ? '#1c2a4a,#0a0e1c' : '#3a3016,#12100a'})">${ch.icon}</div>` +
       (ch.season ? `<div class="cstat" style="text-align:center;color:#9fd">${t.seasonChestDesc}</div>` : '') +
-      `<div class="cstat" style="text-align:center">${ch.set ? (done ? t.chestDone : t.chestLeft(pr.total - pr.have, pr.total)) : `${o.n} ${t.chestItems} · ${RARITY.c[lang]} %${o.c.toFixed(0)} · ${RARITY.r[lang]} %${o.r.toFixed(0)} · ${RARITY.e[lang]} %${o.e.toFixed(0)}`}</div>` +
+      `<div class="cstat" style="text-align:center">${ch.set ? (done ? t.chestDone : t.chestLeft(pr.total - pr.have, pr.total)) : `${o.n} ${t.chestItems} · ${RARITY.c[lang]} ${pct(o.c)} · ${RARITY.r[lang]} ${pct(o.r)} · ${RARITY.e[lang]} ${pct(o.e)}`}</div>` +
       (ch.set ? '' : `<div class="cstat" style="text-align:center;color:#9fd">${t.chestOwned(ownedN, o.n)} · ${t.pityLine(Math.max(1, (ch.pity || CHEST_PITY) - ((profile.chestPity || {})[ch.id] || 0)))}</div>`);
     const btn = document.createElement('button'); btn.className = 'mbtn small gold'; btn.innerHTML = iconize(t.chestOpen(ch.cost));
     btn.disabled = done || (profile.tokens || 0) < ch.cost; btn.onclick = () => runChest(ch, false);
@@ -3087,7 +3098,7 @@ function renderMystery(wrap) {
   const t = T(), pool = MYSTERY_CHEST.pool(), o = chestOdds(MYSTERY_CHEST), today = profile.mysteryDay === todayKey();
   const card = document.createElement('div'); card.className = 'card';
   card.innerHTML = `<div class="cname">${t.mysteryTitle}</div><div class="cswatch" style="height:64px;display:flex;align-items:center;justify-content:center;font-size:44px;background:radial-gradient(circle at 50% 40%,#2a1c4a,#0e0a1c)">❓</div>` +
-    `<div class="cstat" style="text-align:center">${t.mysteryDesc}</div><div class="cstat" style="text-align:center;color:#9fd">${o.n} ${t.chestItems} · ${RARITY.c[lang]} %${o.c.toFixed(0)} · ${RARITY.r[lang]} %${o.r.toFixed(0)} · ${RARITY.e[lang]} %${o.e.toFixed(0)}</div>`;
+    `<div class="cstat" style="text-align:center">${t.mysteryDesc}</div><div class="cstat" style="text-align:center;color:#9fd">${o.n} ${t.chestItems} · ${RARITY.c[lang]} ${pct(o.c)} · ${RARITY.r[lang]} ${pct(o.r)} · ${RARITY.e[lang]} ${pct(o.e)}</div>`;
   const btn = document.createElement('button'); btn.className = 'mbtn small gold';
   if (today || !pool.length) { btn.textContent = t.mysteryDone; btn.disabled = true; }
   else { btn.innerHTML = iconize(t.mysteryBuy(MYSTERY_COST)); btn.classList.toggle('cant', profile.coins < MYSTERY_COST); btn.onclick = () => runChest(MYSTERY_CHEST, false); }
@@ -3266,7 +3277,7 @@ async function makeShareCard(m) {
     if (src) { const sw = src.width, sh = src.height, sc = Math.max(W / sw, 900 / sh), dw = sw * sc, dh = sh * sc; g.save(); g.beginPath(); g.roundRect(0, 0, W, 900, [0, 0, 36, 36]); g.clip(); g.drawImage(src, (W - dw) / 2, (900 - dh) / 2, dw, dh); const vg = g.createLinearGradient(0, 560, 0, 900); vg.addColorStop(0, 'rgba(13,20,9,0)'); vg.addColorStop(1, 'rgba(13,20,9,1)'); g.fillStyle = vg; g.fillRect(0, 560, W, 340); g.restore(); }
   } catch (e) {}
   const txt = (str, x, y, size, col, align = 'center') => { g.font = `${size}px "Russo One", "Courier New", monospace`; g.textAlign = align; g.textBaseline = 'middle'; g.lineWidth = size * 0.14; g.lineJoin = 'round'; g.strokeStyle = '#0b0f08'; g.strokeText(str, x, y); g.fillStyle = col; g.fillText(str, x, y); };
-  txt('TANK SAVAŞI 3D', W / 2, 70, 54, '#ffd76a');
+  txt(T().appNameUp, W / 2, 70, 54, '#ffd76a');
   txt(m.title, W / 2, 800, 110, m.won ? '#7dff9b' : '#ffb04a');
   const stats = `🌊 ${T().wave} ${m.wave}   ·   ⏱ ${fmtTime(m.dur)}   ·   ⚔️ ${m.kills}`;
   txt(stats, W / 2, 960, 46, '#fff');
@@ -3285,7 +3296,7 @@ async function shareCard(ctx) {
     const file = new File([blob], 'tank-savasi.png', { type: 'image/png' });
     const text = t.shareText(m.wave, m.won ? fmtTime(m.dur) : '');
     let method = 'download';
-    if (navigator.canShare && navigator.canShare({ files: [file] })) { method = 'share'; await navigator.share({ files: [file], title: 'Tank Savaşı 3D', text }); }
+    if (navigator.canShare && navigator.canShare({ files: [file] })) { method = 'share'; await navigator.share({ files: [file], title: T().appName, text }); }
     else { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'tank-savasi.png'; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000); showToast(t.shareSaved, 3000); }
     track('share_card', { ctx: ctx || 'harvest', method });
   } catch (e) { if (!/abort/i.test(String(e && e.name))) showToast(t.shareFail, 2400); }
@@ -3521,7 +3532,7 @@ async function renderLeaderboard(period) {
   if (lbPeriod !== period) return; // sekme değiştiyse iptal
   if (rows === null) { $('lblist').innerHTML = `<div class="lbempty">${navigator.onLine === false ? t.offlineMsg : t.connFail}</div>`; return; }
   if (!rows.length) { $('lblist').innerHTML = `<div class="lbempty">${t.lbEmpty}</div>`; return; }
-  const myName = profile.name || 'Oyuncu';
+  const myName = profile.name || T().defaultName;
   $('lblist').innerHTML = rows.map((r, i) => {
     const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1) + '.';
     const me = r.name === myName ? ' me' : '';
@@ -3598,7 +3609,7 @@ function updateCoopRoster() {
   if (mode !== 'coop' || !coop || state !== 'play') { if (el.style.display !== 'none') { el.style.display = 'none'; el.innerHTML = ''; } return; }
   el.style.display = 'block';
   const rows = [{ name: profile.name, alive: player.alive, pid: coop.you }];
-  for (const [pid, rm] of coop.remotes) rows.push({ name: rm.name || ('Oyuncu' + pid), alive: rm.alive, pid });
+  for (const [pid, rm] of coop.remotes) rows.push({ name: rm.name || (T().defaultName + pid), alive: rm.alive, pid });
   rows.sort((a, b) => a.pid - b.pid);
   el.innerHTML = rows.map(r => `<div class="crow">${r.alive ? '🟢' : '⚫'} ${esc(r.name)}</div>`).join('');
 }
@@ -4529,7 +4540,7 @@ function shareLink() {
   const url = `${base}/?j=${myRoomCode}&m=${pendingMode}`;
   const t = T();
   track('share_click', { mode: pendingMode });
-  if (navigator.share) navigator.share({ title: 'Tank Savaşı 3D', text: t.shareText, url }).catch(() => {});
+  if (navigator.share) navigator.share({ title: T().appName, text: t.shareText, url }).catch(() => {});
   else if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(() => showToast(t.linkCopied)).catch(() => prompt('', url));
   else prompt('', url);
 }
@@ -5137,7 +5148,7 @@ function coopHitPlayer(pid) {
     if ((rm.inv || 0) > 0) return;                                                        // çifte vuruş koruması
     if (rm.shieldOn) { rm.inv = 0.3; explode(rm.x, 1, rm.z, false); sfxBounce(); return; } // KALKANLI misafire hasar yok (host tarafı)
     rm.inv = 1.0; rm.hp--; explode(rm.x, 1, rm.z, false);
-    if (rm.hp <= 0) { rm.alive = false; rm.mesh.visible = false; explode(rm.x, 1.2, rm.z, true); downed = true; nm = rm.name || ('Oyuncu' + pid); }
+    if (rm.hp <= 0) { rm.alive = false; rm.mesh.visible = false; explode(rm.x, 1.2, rm.z, true); downed = true; nm = rm.name || (T().defaultName + pid); }
     netSend({ t: 'phealth', pid, hp: rm.hp, alive: rm.alive });
   }
   if (downed) { killFeed(`☠️ <b>${esc(nm)}</b>`); netSend({ t: 'down', name: nm }); updateCoopRoster(); }
@@ -5186,7 +5197,7 @@ function handleCoopNet(m) {
   if (!coop) return;
   if (m.t === 'pinfo') {
     const rm = coop.remotes.get(m.from);
-    if (rm) { rm.name = m.name || ('Oyuncu' + m.from); setLabelText(rm.nameLabel, rm.name); if (m.acc) applyAccessory(rm.mesh, m.acc); updateCoopRoster(); }
+    if (rm) { rm.name = m.name || (T().defaultName + m.from); setLabelText(rm.nameLabel, rm.name); if (m.acc) applyAccessory(rm.mesh, m.acc); updateCoopRoster(); }
   }
   else if (m.t === 'state') {
     const rm = coop.remotes.get(m.from);
@@ -5342,7 +5353,7 @@ function updateTeam(dt) {
 function teamNameOf(pid) {
   if (pid === team.you) return profile.name;
   const rm = team.remotes.get(pid);
-  return rm ? (rm.name || ('Oyuncu' + pid)) : '?';
+  return rm ? (rm.name || (T().defaultName + pid)) : '?';
 }
 // bir ölüm işlenir (skoru herkeste bir kez sayar; kurban lokalde, diğerleri 'tdie' mesajında)
 function onTeamKill(byPid, diedPid) {
@@ -5403,7 +5414,7 @@ function updateTeamRoster() {
   if (mode !== 'team' || !team || state !== 'play') { if (el.style.display !== 'none') { el.style.display = 'none'; el.innerHTML = ''; } return; }
   el.style.display = 'block';
   const rows = [{ name: profile.name, alive: player.alive, team: team.mine, pid: team.you }];
-  for (const [pid, rm] of team.remotes) rows.push({ name: rm.name || ('Oyuncu' + pid), alive: rm.alive, team: rm.team, pid });
+  for (const [pid, rm] of team.remotes) rows.push({ name: rm.name || (T().defaultName + pid), alive: rm.alive, team: rm.team, pid });
   rows.sort((a, b) => a.team - b.team || a.pid - b.pid);
   el.innerHTML = rows.map(r => `<div class="crow" style="color:${TEAM_COLOR_HEX[r.team]}">${r.alive ? '🟢' : '⚫'} ${esc(r.name)}${r.pid === team.you ? ' •' : ''}</div>`).join('');
 }
@@ -5411,7 +5422,7 @@ function handleTeamNet(m) {
   if (!team) return;
   if (m.t === 'pinfo') {
     const rm = team.remotes.get(m.from);
-    if (rm) { rm.name = m.name || ('Oyuncu' + m.from); setLabelText(rm.nameLabel, rm.name); updateTeamRoster(); }
+    if (rm) { rm.name = m.name || (T().defaultName + m.from); setLabelText(rm.nameLabel, rm.name); updateTeamRoster(); }
   } else if (m.t === 'state') {
     const rm = team.remotes.get(m.from);
     if (rm) { const was = rm.alive; rm.tx = m.x; rm.tz = m.z; rm.ta = m.a; rm.shieldOn = m.sh; rm.alive = m.alive; if (was !== m.alive) { rm.mesh.visible = m.alive; updateTeamRoster(); } }
@@ -5487,7 +5498,7 @@ $('btn-friend').addEventListener('click', async () => { // FAZ2 (plan B-5-lite):
   const res = $('friendres'); res.textContent = t.lbLoad;
   const [wk, sp] = await Promise.all([fetchLeaderboard('week'), fetchLeaderboard('speed')]);
   const find = (rows, n) => (rows || []).find(r => String(r.name).toLowerCase() === n.toLowerCase());
-  const me = profile.name || 'Oyuncu', mw = find(wk, me), ms = find(sp, me), fw = find(wk, name), fs = find(sp, name);
+  const me = profile.name || T().defaultName, mw = find(wk, me), ms = find(sp, me), fw = find(wk, name), fs = find(sp, name);
   const line = (nm, w2, s2) => `<b>${esc(nm)}</b>: 🌊 ${w2 ? w2.score : '—'} · ⏱ ${s2 ? fmtTime(s2.score) : '—'}`;
   res.innerHTML = (fw || fs) ? `${line(t.youWord, mw, ms)}<br>${line(name, fw, fs)}` : t.friendNone;
   track('friend_compare', { found: !!(fw || fs) });
@@ -5527,6 +5538,7 @@ $('gt-col').addEventListener('click', () => { garageTab = 'col'; renderGarageTab
 $('statsline').addEventListener('click', openProfile);
 $('playername').value = profile.name;
 const BAD_ROOTS = ['amk', 'amq', 'aq', 'sik', 'got', 'pic', 'orospu', 'oruspu', 'yarrak', 'yarak', 'ibne', 'pezevenk', 'kahpe', 'serefsiz', 'gavat', 'tasak', 'sikik', 'sikim', 'sikt', 'fuck', 'shit', 'bitch', 'cunt', 'dick', 'pussy', 'nigg', 'faggot', 'whore', 'slut', 'asshole', 'cock', 'porn', 'sex'];
+const pct = v => (lang === 'tr' ? '%' + (+v).toFixed(0) : (+v).toFixed(0) + '%'); /* yüzde yazımı dile göre */
 function isBadName(n) { // sunucudaki cleanName ile aynı kural (istemci tarafı erken uyarı)
   const t = String(n).toLowerCase().replace(/ı/g, 'i').replace(/ş/g, 's').replace(/ç/g, 'c').replace(/ğ/g, 'g').replace(/ö/g, 'o').replace(/ü/g, 'u').replace(/0/g, 'o').replace(/1/g, 'i').replace(/3/g, 'e').replace(/4/g, 'a').replace(/5/g, 's').replace(/7/g, 't').replace(/[^a-z]+/g, ' ').trim();
   const toks = t.split(' '); return BAD_ROOTS.some(r => r.length <= 3 ? toks.includes(r) : t.includes(r));
@@ -5610,7 +5622,7 @@ function updateSettingsLabels() {
   const nb2 = $('set-notifs'); nb2.style.display = isNativeApp() ? '' : 'none';
   nb2.textContent = `${t.setNotifs}: ${settings.notifs ? t.onW : t.offW}`;
   $('set-privacy').textContent = t.privacyLbl;
-  $('set-privacy').href = isNativeApp() ? 'https://' + REMOTE_HOST + '/privacy' : 'privacy.html'; // privacy.html native pakette yok — canlıya git
+  $('set-privacy').href = 'privacy.html'; // LANSMAN: privacy.html pakette (build-www items) → uygulama içi kutuda açılır (openPrivacy)
   $('set-ver').textContent = 'v' + GAME_VER;
   $('set-resume').textContent = t.resumeW;
   $('set-quit').textContent = t.toMenuW;
@@ -5626,6 +5638,7 @@ function openSettings() {
 }
 function closeSettings() {
   musicDuck = 1; updateMusicGain(); paused = false; $('settings').classList.add('hidden'); }
+$('set-privacy').addEventListener('click', openPrivacy); $('privacyclose').addEventListener('click', closePrivacy);
 $('btn-settings').addEventListener('click', openSettings);
 $('btn-settings-menu').addEventListener('click', openSettings);
 $('set-sound').addEventListener('click', () => { // 3 kademe: AÇIK → KISIK → KAPALI

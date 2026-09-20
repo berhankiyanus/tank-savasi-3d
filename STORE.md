@@ -157,7 +157,7 @@ and put your victory on the clock. Short matches, fast action, one-hand controls
 
 ## 8. Gizlilik beyanları (Data Safety / Nutrition Label cevap anahtarı)
 
-Oyunun topladığı HER ŞEY şu üçü (hesap yok, e-posta yok, konum yok, reklam SDK'sı yok):
+Oyunun topladığı HER ŞEY şu üçü (hesap yok, e-posta yok, konum yok, reklam SDK'sı yok) — privacy.html bu metinle birebir uyumlu (20 Eylül 2026):
 1. **Anonim analitik olayları** (oyun açıldı, mod başladı, maç bitti+nedeni, süre) → sunucuda
    yalnız SAYAÇ olarak tutulur, Render restart'ında silinir (kalıcı DB yok).
 2. **Rastgele cihaz-içi kimlik** (`tankcid` — uygulamanın ürettiği rastgele dizi; kişiyle
@@ -187,8 +187,8 @@ Oyunun topladığı HER ŞEY şu üçü (hesap yok, e-posta yok, konum yok, rekl
 ## 9. Ekran görüntüsü çekim planı (mağaza görselleri)
 Önerilen 6 kare (telefonu yatay değil DİKEY tut; oyun portrait'te şık):
 1. Aksiyon: lav haritasında patlama anı, 2. Garaj vitrini (Titan altın halkalı),
-3. Garaj kart listesi (11 tank görselli), 4. Zafer ekranı (🏆 ZAFER! + süre rekoru),
-5. Düello bot seçimi (Çaylak/Usta/Efsane), 6. Harita seçimi (12 harita).
+3. Garaj kart listesi (15 tank görselli), 4. Zafer ekranı (🏆 ZAFER! + süre rekoru),
+5. Düello bot seçimi (Çaylak/Usta/Efsane), 6. Harita seçimi (13 harita).
 iPhone: 6.7" (1290×2796) + 6.5" (1284×2778) setleri; Android: min 2 adet 16:9 veya 9:16.
 ✅ 2026-09-19: 6 kare × 3 boyut × TR/EN üretildi → Masaüstü `tank-magaza-ss/` (iphone-6.7 / iphone-6.5 / android klasörleri, `genel-bakis.png`). Yeniden üretim: `tools/reklam/shots.js` (README'de adımlar).
 
