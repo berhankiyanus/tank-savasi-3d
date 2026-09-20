@@ -115,7 +115,9 @@
   #statsline { margin-top: 16px; font-size: 15px; color: #cfe6bf; letter-spacing: 1px; cursor: pointer; pointer-events: auto;
                display: inline-block; padding: 6px 14px; background: rgba(10,16,8,.55); border: 1px solid rgba(150,255,170,.28); border-radius: 12px; } /* başarımlar paneli gömülüydü — buton görünümü (P1) */
   #statsline:active { transform: scale(.96); }
-  #garagetabs { display: flex; gap: 8px; margin-bottom: 4px; }
+  #garagetabs { display: flex; gap: 8px; margin-bottom: 4px; overflow-x: auto; flex-wrap: nowrap; padding-bottom: 4px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  #garagetabs::-webkit-scrollbar { display: none; }
+  #garagetabs .mbtn { flex: 0 0 auto; }
   #achlist { display: flex; flex-direction: column; gap: 8px; width: 100%; max-width: 460px; margin: 10px 0; }
   .achrow { background: rgba(30,40,22,.7); border: 1px solid #4a6b3a; border-radius: 10px; padding: 8px 12px; text-align: left; }
   .achrow.done { border-color: #ffd76a; }
@@ -486,6 +488,7 @@
       <button class="mbtn small" id="gt-acc">AKSESUAR</button>
       <button class="mbtn small" id="gt-tracks">PALET</button>
       <button class="mbtn small" id="gt-fx">EFEKT</button>
+      <button class="mbtn small" id="gt-col">KOLEKSİYON</button>
     </div>
     <div id="tokenmachine"></div>
     <div id="cardwrap-garage" class="card-list"></div>
