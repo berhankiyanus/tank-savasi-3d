@@ -51,6 +51,12 @@ Kod tarafında KALICI değişiklik yok; her şey geçici kanca + enjekte edilen 
 - Çekim: `E.prep(3)` (Kar; koni probu bulamazsa eski prob — Stadyum'da iç duvar az, sekme yolu çıkmaz) → `E.s1..s5`. javascript_tool 45 sn sınırı: zinciri arka planda başlat (`window.__runP = (async()=>{...})()`), 38 sn'lik poll ile bekle; prep+E1 ≈ 20 sn, E3-E5 ≈ 9 sn.
 - Kurgu: `build2.sh ~/Desktop/tank-reklam-2026/TankSavasi3D-reklam.mp4 E1 E2 E3 E4 E5` (−14,6 LUFS). Türev gerekirse `build2.sh --deriv`.
 
+## v4 (2026-09-20): GERÇEK OYNANIŞ kaydı (`real.js`) — yayındaki sürüm
+- Neden: v1-v3 kurgu (senaryolu düşmanlar, sahte HUD, her yerde yazı) kullanıcıya "yapay, gerçek hissi yok" geldi. v4 oyunun KENDİ arayüzüyle (kalpler, DALGA/skor, mini harita, joystick + ATEŞ) gerçek bir tur: otomatik ama kusurlu "başparmak" oyuncusu (yumuşak joystick, ıskalama, geri çekilme, mermiden kaçış, görüş yoksa duvara sekme denemesi, yükseltme kartını ~0,7 sn sonra seçer), joystick üstünde yarı saydam başparmak + ateşte dokunma halkası, sonda 2,3 sn DOM kapanış kartı (logo + ÜCRETSİZ OYNA).
+- Teknik: headless Chrome for Testing (GPU: `--use-angle=metal`, ANGLE Metal M3, oyun ~110 fps) + CDP `Page.startScreencast` (JPEG 92) → kareler + zaman damgası → concat demuxer → 30 fps. 1080×1920 için viewport 1080×1920 @DSF 1 + `body > *:not(#game) { zoom: 2 }` (DSF 2 ile screencast 540×960 veriyor). Ses: sayfada `MediaRecorder(S.adest.stream)` (SFX + `startMusic()` müziği), ilk kareyle hizalanır. Sonra `loudnorm I=-14`.
+- Çalıştırma: kanca main.js'te, `cp tools/reklam/rec-lib.js assets/_reclib.js`, `python3 -m http.server 8734`, sonra `NODE_PATH=<playwright-core dizini> node tools/reklam/real.js <outdir> <map> <sn> <seed> <başlangıç dalgası>`; 3-4 farklı seed çek, en iyisini seç (stats: shots/kills/mega/hp). Seçilen: Stadyum (map 1) seed 4 dalga 3, 13 sn + kapanış.
+- Ders: `page.evaluate(dize)` fonksiyonu çağırmaz (dizeye `(args)` ekle); zsh'ta `set -- $cfg` sözcük bölmez; Chrome standart zoom'da getBoundingClientRect kök px (offsetWidth ile tespit).
+
 ## Mağaza ekran görüntüleri (`shots.js`)
 Headless Chromium (playwright-core + ~/Library/Caches/ms-playwright/chromium-1208) ile STORE.md §9'daki 6 kare, 3 boyut × TR/EN:
 iPhone 6.7" 1290×2796 (430×932@3), iPhone 6.5" 1284×2778 (428×926@3), Android 1080×1920 (405×720@2.667).
