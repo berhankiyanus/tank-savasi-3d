@@ -35,9 +35,9 @@
   .ldtext { font-family: "Courier New", monospace; color: #cfe6bf; letter-spacing: 2px; font-size: 15px; }
   .hud { position: fixed; font-family: 'Russo One', "Courier New", monospace; color: #fff; z-index: 10;
          text-shadow: 0 2px 6px rgba(0,0,0,.8); user-select: none; pointer-events: none; }
-  #topbar { top: 14px; left: 0; right: 0; display: flex; justify-content: space-between;
+  #topbar { top: calc(14px + env(safe-area-inset-top, 0px)); left: 0; right: 0; display: flex; justify-content: space-between;
             padding: 0 22px; font-size: 20px; font-weight: bold; letter-spacing: 1px; }
-  #healthwrap { display: flex; gap: 5px; align-items: center; flex-wrap: wrap; max-width: 40%; }
+  #healthwrap { display: flex; gap: 5px; align-items: center; flex-wrap: nowrap; max-width: 46%; } /* LANSMAN: can kutuları tek satır (genişlik --n ile daralır) */
   #wave { white-space: nowrap; flex-shrink: 0; } /* dar ekranda 4 haneli skorla 'DALGA 5/10' alt satıra kaymasın (runcoins ile çakışıyordu) */
   .hp { width: 24px; height: 14px; background: #2aff5d; border: 1px solid rgba(0,0,0,.5);
         border-radius: 3px; box-shadow: 0 0 8px rgba(42,255,93,.6); }
@@ -116,9 +116,10 @@
   #statsline { margin-top: 16px; font-size: 15px; color: #cfe6bf; letter-spacing: 1px; cursor: pointer; pointer-events: auto;
                display: inline-block; padding: 6px 14px; background: rgba(10,16,8,.55); border: 1px solid rgba(150,255,170,.28); border-radius: 12px; } /* başarımlar paneli gömülüydü — buton görünümü (P1) */
   #statsline:active { transform: scale(.96); }
-  #garagetabs { display: flex; gap: 8px; margin-bottom: 4px; overflow-x: auto; flex-wrap: nowrap; padding-bottom: 4px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  #garagetabs { display: flex; justify-content: flex-start; width: 100%; box-sizing: border-box; gap: 8px; margin-bottom: 4px; overflow-x: auto; flex-wrap: nowrap; padding: 0 14px 4px; scrollbar-width: none; -webkit-overflow-scrolling: touch;
+                scroll-snap-type: x proximity; -webkit-mask-image: linear-gradient(90deg, #000 88%, transparent); mask-image: linear-gradient(90deg, #000 88%, transparent); } /* LANSMAN: soldan başlar, sağda solma = kaydırma ipucu */
   #garagetabs::-webkit-scrollbar { display: none; }
-  #garagetabs .mbtn { flex: 0 0 auto; }
+  #garagetabs .mbtn { flex: 0 0 auto; scroll-snap-align: start; }
   #achlist { display: flex; flex-direction: column; gap: 8px; width: 100%; max-width: 460px; margin: 10px 0; }
   .achrow { background: rgba(30,40,22,.7); border: 1px solid #4a6b3a; border-radius: 10px; padding: 8px 12px; text-align: left; }
   .achrow.done { border-color: #ffd76a; }
@@ -127,9 +128,11 @@
   .achdesc { font-size: 12px; color: #b8e6ff; margin: 2px 0 5px; }
   .abar { height: 8px; background: rgba(255,255,255,.15); border-radius: 4px; overflow: hidden; }
   .abar > i { display: block; height: 100%; background: #7dff9b; border-radius: 4px; }
-  #toast { top: 92px; left: 0; right: 0; text-align: center; font-family: "Courier New", monospace; font-weight: bold;
-           font-size: 19px; color: #ffe08a; opacity: 0; transition: opacity .4s; z-index: 45;
-           text-shadow: 0 2px 8px rgba(0,0,0,.9); }
+  #toast { top: calc(92px + env(safe-area-inset-top, 0px)); left: 50%; right: auto; transform: translateX(-50%); width: max-content; max-width: min(88vw, 420px);
+           box-sizing: border-box; padding: 8px 14px; border-radius: 12px; background: rgba(6,12,8,.86); border: 1px solid rgba(255,224,138,.35);
+           text-align: center; font-family: 'Russo One', "Courier New", monospace; font-weight: bold; line-height: 1.3;
+           font-size: 16px; color: #ffe08a; opacity: 0; transition: opacity .4s; z-index: 45;
+           text-shadow: 0 2px 8px rgba(0,0,0,.9); } /* LANSMAN: kutulu toast — mini harita/eğitim kartına binmez, uzun metin sarar */
   .gear { font-size: 19px; background: rgba(0,0,0,.35); border: 2px solid rgba(255,255,255,.4);
           color: #fff; border-radius: 8px; width: 40px; height: 34px; cursor: pointer; pointer-events: auto; }
   .gear:active { transform: scale(.92); }
@@ -233,7 +236,7 @@
   #buildchoice { inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
                  background: rgba(6,10,4,.82); z-index: 40; gap: 22px; pointer-events: auto; }
   /* oyun içi koşu-parası sayacı (denetim: kill geliri oyun sırasında görünmüyordu) */
-  #runcoins { display: none; position: fixed; top: 44px; left: 50%; transform: translateX(-50%);
+  #runcoins { display: none; position: fixed; top: calc(44px + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%);
               font-size: 15px; font-weight: bold; color: #ffd76a; letter-spacing: .5px;
               text-shadow: 0 1px 4px rgba(0,0,0,.85); z-index: 12; pointer-events: none; }
   #runcoins .gi { width: 14px; height: 14px; vertical-align: -2px; }
@@ -267,33 +270,33 @@
   #namerow { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 6px; font-size: 18px; color: #cfe6bf; }
   #playername { font-family: "Courier New", monospace; font-weight: bold; font-size: 17px; width: 150px; text-align: center;
                 background: rgba(255,255,255,.1); color: #ffd76a; border: 2px solid #7dff9b; border-radius: 8px; padding: 6px 8px; outline: none; }
-  #coophud { top: 78px; left: 22px; display: none; font-size: 14px; line-height: 1.5; }
+  #coophud { top: calc(78px + env(safe-area-inset-top, 0px)); left: 22px; display: none; font-size: 14px; line-height: 1.5; }
   #coophud .crow { color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.9); }
   #ftuehint { display: none; bottom: 15%; left: 0; right: 0; text-align: center; font-size: 17px; font-weight: bold;
               letter-spacing: 1px; color: #fff; text-shadow: 0 2px 6px #000; transition: opacity .5s;
               pointer-events: none; padding: 0 14px; }
   /* adım-adım eğitim kartı (ilk maç): hedef + ilerleme, tamamlanınca sıradaki adım */
-  #tutcard { display: none; top: calc(58px + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%);
+  #tutcard { display: none; top: calc(58px + env(safe-area-inset-top, 0px)); left: calc(12px + env(safe-area-inset-left, 0px)); transform: none; /* LANSMAN: mini haritanın (sağ 128px) soluna */
              background: rgba(8, 14, 6, 0.78); border: 1px solid rgba(125, 255, 155, 0.5); border-radius: 14px;
-             padding: 9px 16px; align-items: center; gap: 10px; pointer-events: none; max-width: 88vw;
+             padding: 9px 14px; align-items: center; gap: 10px; pointer-events: none; max-width: calc(100vw - 160px);
              box-shadow: 0 4px 18px rgba(0,0,0,.45); }
   #tutcard.on { display: flex; }
   #tut-step { font-size: 12px; font-weight: bold; opacity: .7; color: #d6ffde; }
   #tut-ic { font-size: 22px; line-height: 1; }
-  #tut-txt { font-size: 15px; font-weight: bold; color: #d6ffde; white-space: nowrap; }
+  #tut-txt { font-size: 15px; font-weight: bold; color: #d6ffde; white-space: normal; line-height: 1.25; text-align: left; }
   #tut-bar { height: 5px; background: rgba(255,255,255,.16); border-radius: 3px; margin-top: 5px; overflow: hidden; }
   #tut-fill { height: 100%; width: 0%; background: #7dff9b; border-radius: 3px; transition: width .25s; }
-  #killfeed { top: 182px; right: 12px; display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
+  #killfeed { top: calc(182px + env(safe-area-inset-top, 0px)); right: calc(12px + env(safe-area-inset-right, 0px)); display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
   .kfrow { font-size: 14px; color: #fff; background: rgba(0,0,0,.5); border-radius: 6px; padding: 3px 8px;
            transition: opacity .5s; text-shadow: 0 1px 2px #000; }
   .kfrow b { color: #ffd76a; }
-  #buffs { top: 50px; left: 22px; display: flex; gap: 6px; }
+  #buffs { top: calc(50px + env(safe-area-inset-top, 0px)); left: calc(22px + env(safe-area-inset-left, 0px)); display: flex; gap: 6px; }
   .buff { font-family: "Courier New", monospace; font-weight: bold; font-size: 15px; color: #fff;
           background: rgba(20,30,15,.7); border: 1px solid #7dff9b; border-radius: 7px; padding: 3px 8px;
           box-shadow: 0 0 8px rgba(125,255,155,.35); }
-  #minimap { top: 52px; right: 10px; width: 118px; height: 118px; border-radius: 8px;
+  #minimap { top: calc(52px + env(safe-area-inset-top, 0px)); right: calc(10px + env(safe-area-inset-right, 0px)); width: 118px; height: 118px; border-radius: 8px;
              border: 2px solid rgba(255,255,255,.35); background: rgba(0,0,0,.25); display: none; }
-  #bossbar { top: 58px; left: 0; right: 0; display: none; flex-direction: column; align-items: center; }
+  #bossbar { top: calc(58px + env(safe-area-inset-top, 0px)); left: 0; right: 0; display: none; flex-direction: column; align-items: center; }
   #bosslabel { color: #ff5a5a; font-weight: bold; letter-spacing: 4px; font-size: 15px; text-shadow: 0 0 10px rgba(255,40,40,.8); }
   #bosshpwrap { width: 60%; max-width: 420px; height: 14px; margin-top: 3px; background: rgba(0,0,0,.5);
                 border: 2px solid #ff5a5a; border-radius: 8px; overflow: hidden; }
@@ -376,7 +379,8 @@
   #firebtn:active { transform: scale(.92); }
 
   @media (max-width: 640px) {
-    #msg h1 { font-size: 30px; letter-spacing: 3px; }
+    #msg h1 { font-size: clamp(22px, 7vw, 30px); letter-spacing: 2px; max-width: 94vw; overflow-wrap: anywhere; line-height: 1.1; }
+    #msg { padding-top: calc(88px + env(safe-area-inset-top)); } /* LANSMAN: başlık cüzdan pill'lerinin (2 satır) altında başlar */
     #msg h2 { font-size: 15px; padding: 0 14px; }
     #msg .keys { font-size: 12px; }
     .mbtn { font-size: 16px; padding: 11px 18px; }
@@ -384,12 +388,12 @@
     #menubtns .mbtn { font-size: 13px; padding: 13px 6px; }
     #menubtns .mbtn.play { font-size: 21px; padding: 17px 8px; }
     #topbar { font-size: 13px; padding: 0 12px; top: calc(10px + env(safe-area-inset-top)); }
-    .hp { width: 15px; height: 10px; }
+    .hp { width: clamp(6px, calc(30vw / var(--n, 5)), 15px); height: 10px; }
     #wavebanner { font-size: 28px; }
     .card { width: 150px; }
     #langsw { font-size: 16px; }
     /* dar ekranda üst-sol para çubuğu langsw ile çakışmasın → kompakt sarmalanan pill yığını */
-    #coinbar { font-size: 13px; flex-wrap: wrap; max-width: 168px; gap: 4px 5px; }
+    #coinbar { font-size: 12px; flex-wrap: wrap; max-width: calc(100vw - 150px); gap: 4px 5px; }
     .pill { padding: 3px 9px; gap: 4px; }
     #lvlbar { width: 62px; }
     .navbtn .nlbl { font-size: 9.5px; letter-spacing: .5px; }

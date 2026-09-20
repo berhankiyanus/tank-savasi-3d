@@ -3651,7 +3651,7 @@ function drawMinimap() {
   }
 }
 function renderHealth() {
-  healthEl.innerHTML = '';
+  healthEl.innerHTML = ''; healthEl.style.setProperty('--n', player.maxHealth); /* LANSMAN: kutu genişliği can sayısına göre (tek satır) */
   for (let i = 0; i < player.maxHealth; i++) {
     const d = document.createElement('span');
     d.className = 'hp' + (i < player.health ? '' : ' off');
@@ -4079,6 +4079,7 @@ function renderGarage() {
 let garageTab = 'tanks';
 function renderGarageTabs() {
   for (const [id, tab] of [['gt-tanks', 'tanks'], ['gt-skins', 'skins'], ['gt-acc', 'acc'], ['gt-tracks', 'tracks'], ['gt-fx', 'fx'], ['gt-col', 'col']]) $(id).classList.toggle('on', garageTab === tab);
+  { const on = document.querySelector('#garagetabs .mbtn.on'); if (on && on.scrollIntoView) try { on.scrollIntoView({ inline: 'center', block: 'nearest' }); } catch (e) {} } /* LANSMAN: aktif sekme görünür */
   if (garageTab === 'tanks') renderGarage(); else if (garageTab === 'skins') renderSkins(); else if (garageTab === 'tracks') renderTracks(); else if (garageTab === 'fx') renderFx(); else if (garageTab === 'col') renderCollection(); else renderAccessories();
 }
 function openGarage() {
@@ -5901,7 +5902,7 @@ function offerBuildChoice(onDone) {
 }
 function pickBuild(id) {
   matchBuild[id] = (matchBuild[id] || 0) + 1;
-  if (id === 'armor') { player.maxHealth++; player.health++; renderHealth(); }
+  if (id === 'armor') { if (player.maxHealth < STAT_MAX.health) { player.maxHealth++; player.health++; } else player.health = Math.min(player.maxHealth, player.health + 2); renderHealth(); } /* tavan: STAT_MAX.health; tavanda +2 onarım */
   sfxPower(); haptic('LIGHT');
   $('buildchoice').classList.add('hidden');
   buildChoosing = false;
