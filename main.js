@@ -1929,15 +1929,18 @@ function renderTankThumb(base, outfit = false) {
     const R = Math.max(size.x, size.y, size.z);
     thumbCam.position.set(ctr.x + R * 0.9, ctr.y + R * 0.72, ctr.z + R * 1.3);
     thumbCam.lookAt(ctr.x, ctr.y - size.y * 0.06, ctr.z);
+    // The lobby portrait is displayed much larger than a catalog tile.
+    if (outfit) thumbGl.setSize(1120, 700);
     thumbGl.render(thumbScene, thumbCam);
     const url = thumbGl.domElement.toDataURL('image/png');
+    if (outfit) thumbGl.setSize(480, 300);
     thumbScene.remove(m);
     if (m.userData.accMesh) disposeSubtree(m.userData.accMesh);
     if (m.userData.accMesh2) disposeSubtree(m.userData.accMesh2);
     disposeTank(m);
     if (!outfit) tankThumbs[base.id] = url;
     return url;
-  } catch (e) { return null; } // thumbnail üretilemezse kart renk şeridiyle kalır (oyun etkilenmez)
+  } catch (e) { if (thumbGl) thumbGl.setSize(480, 300); return null; } // thumbnail üretilemezse kart renk şeridiyle kalır (oyun etkilenmez)
 }
 
 // ---------------------------------------------------------------- aksesuarlar (prosedürel; tanka takılır)
@@ -3857,13 +3860,26 @@ function updateHUD() {
 let homePortraitKey = '';
 function updateHome() {
   const tr = lang === 'tr', base = tankById(profile.selected);
+  const season = ensureSeason();
+  $('home-season-label').textContent = tr ? 'SEZON BİLETİ' : 'SEASON PASS';
+  $('home-season-name').textContent = seasonName(season.id).split(' · ').slice(1).join(' · ');
+  $('home-season-progress').textContent = `${tr ? 'Kademe' : 'Tier'} ${season.tier} / ${SEASON_LEN} · ${tr ? 'Ödülleri keşfet' : 'Explore rewards'}`;
+  $('home-season-fill').style.width = `${Math.min(100, (season.tier + season.xp / SEASON_TIER_XP) / SEASON_LEN * 100)}%`;
+  $('home-collection-label').textContent = tr ? 'GARAJ ATÖLYESİ' : 'GARAGE WORKSHOP';
+  $('home-collection-name').textContent = tr ? 'TARZINI KUŞAN.' : 'GEAR UP.';
+  $('home-collection-desc').textContent = tr ? '4 koleksiyon · Desenler & daha fazlası' : '4 collections · Decals & more';
+  $('launch-caption').textContent = tr ? 'SIRADAKİ ZAFER SENİN.' : 'YOUR NEXT VICTORY AWAITS.';
+  if (!$('home-crate-img').getAttribute('src')) {
+    const crate = WORKSHOP_SETS[0];
+    ensureAcc(crate).then(() => { const url = renderAccThumb(crate); if (url) { $('home-crate-img').src = url; $('home-crate-img').hidden = false; } });
+  }
   const claims = (profile.careerClaims || []).length;
   $('home-career').textContent = `${tr ? 'KOMUTAN YOLU' : 'COMMANDER PATH'} · ${claims}/${CAREER_STEPS.length} ${tr ? 'ödül' : 'rewards'} ↗`;
   $('home-career').style.display = claims < CAREER_STEPS.length ? '' : 'none';
-  $('hangar-kicker').textContent = tr ? 'HANGAR / GÖREVE HAZIR' : 'HANGAR / READY TO DEPLOY';
+  $('hangar-kicker').textContent = tr ? '● ARENAYA HAZIR' : '● ARENA READY';
   document.querySelector('.hangar-serial').textContent = `${String(TANKS.indexOf(base)+1).padStart(2,'0')} / ${TANKS.length}`;
   document.querySelector('.hangar-watermark').textContent = base.name[lang].toLocaleUpperCase(tr ? 'tr-TR' : 'en-US');
-  $('hangar-link').textContent = tr ? 'GARAJA GİT ↗' : 'OPEN GARAGE ↗';
+  $('hangar-link').textContent = tr ? 'ÖZELLEŞTİR ↗' : 'CUSTOMIZE ↗';
   $('home-tank').setAttribute('aria-label', `${base.name[lang]} · ${tr ? 'Garajı aç' : 'Open garage'}`);
   $('home-tank-name').textContent = base.name[lang];
   $('home-tank-role').textContent = `${tr ? 'Zırh' : 'Armor'} ${base.health} · ${tr ? 'Hız' : 'Speed'} ${base.speed}`;
@@ -3936,12 +3952,12 @@ const NAV_MAP = { 'panel-main': 'btn-home-nav', 'panel-garage': 'btn-garage', 'p
 function refreshMenuChrome(id = document.querySelector('.panel.show')?.id) {
   const tr = lang === 'tr';
   const sections = {
-    'panel-main':['00 / KOMUTA MERKEZİ','00 / COMMAND CENTRE',''],
-    'panel-garage':['01 / ENVANTER','01 / INVENTORY',tr ? 'Tankını seç. Kendi imzanı bırak.' : 'Choose your tank. Make it yours.'],
-    'panel-quests':['02 / OPERASYONLAR','02 / OPERATIONS',tr ? 'Bir sonraki hedefin, bir sonraki ödülün.' : 'Your next objective. Your next reward.'],
-    'panel-shop':['03 / İKMAL NOKTASI','03 / SUPPLY DEPOT',tr ? 'Yeni parçalar. Yeni kombinasyonlar.' : 'New gear. New combinations.'],
-    'panel-lb':['04 / REKABET','04 / COMPETITION',tr ? 'Rekorunu geliştir, sıralamada yüksel.' : 'Beat your best. Climb the ranks.'],
-    'panel-season':['05 / SEZON YOLCULUĞU','05 / SEASON JOURNEY',tr ? 'Her seferde ilerle. Ödülleri topla.' : 'Make every run count. Earn your rewards.'],
+    'panel-main':['ZIRHINI KUŞAN. ARENAYA ÇIK.','GEAR UP. OWN THE ARENA.',''],
+    'panel-garage':['SENİN TANKIN. SENİN TARZIN.','YOUR TANK. YOUR STYLE.',tr ? 'Filonu kur. Rengini seç. İmzanı bırak.' : 'Build your fleet. Pick your colors. Make your mark.'],
+    'panel-quests':['HER HEDEF YENİ BİR ÖDÜL','EVERY GOAL. A NEW REWARD.',tr ? 'Görevleri tamamla. Koleksiyonunu büyüt.' : 'Complete challenges. Grow your collection.'],
+    'panel-shop':['KOLEKSİYONUNU BÜYÜT','BUILD YOUR COLLECTION',tr ? 'Kendi tarzın için yeni parçalar keşfet.' : 'Discover new gear for your signature style.'],
+    'panel-lb':['ZİRVEYE OYNA','PLAY FOR THE TOP',tr ? 'Rekorunu geliştir, sıralamada yüksel.' : 'Beat your best. Climb the ranks.'],
+    'panel-season':['ZAFERE GİDEN YOL','THE ROAD TO VICTORY',tr ? 'Her seferde ilerle. Ödülleri topla.' : 'Make every run count. Earn your rewards.'],
     'panel-maps':['OPERASYON HARİTASI','OPERATION MAP',tr ? 'Arazini tanı. Rotanı belirle.' : 'Know the terrain. Plan your route.'],
     'panel-profile':['KOMUTAN DOSYASI','COMMANDER DOSSIER',tr ? 'Başarıların ve savaş kimliğin.' : 'Your achievements and combat identity.'],
     'panel-duel':['DÜELLO ARENASI','DUEL ARENA',tr ? 'Antrenman yap veya arkadaşına meydan oku.' : 'Train your skills or challenge a friend.'],
@@ -3951,7 +3967,7 @@ function refreshMenuChrome(id = document.querySelector('.panel.show')?.id) {
   $('menu-kicker').textContent = section ? section[tr ? 0 : 1] : '';
   $('menu-intro').textContent = section?.[2] || '';
   $('menu-intro').hidden = !section?.[2];
-  $('brand-label').textContent = tr ? 'KOMUTA MERKEZİ' : 'COMMAND CENTRE';
+  $('brand-label').textContent = tr ? 'TANK ARENASI' : 'TANK ARENA';
   $('btn-home-nav').querySelector('.nlbl').textContent = tr ? 'ÜS' : 'HOME';
   $('bottomnav').setAttribute('aria-label',tr ? 'Ana menü' : 'Main navigation');
 }
@@ -4103,19 +4119,29 @@ const SHOWROOM_PIVOT_Y = 0.5; // platform üstü — tank tabanı (y=0) buraya o
 function ensureShowroom() {
   if (showroomScene) return;
   showroomScene = new THREE.Scene();
-  showroomScene.background = new THREE.Color(0x0a0f16);
+  showroomScene.background = new THREE.Color(0x071630);
+  showroomScene.fog = new THREE.Fog(0x071630, 18, 48);
   showroomScene.environment = envTex; // metal/parlak kaplamalarda yansıma (stüdyo HDR inince değişir)
   new RGBELoader().loadAsync('assets/env_studio.hdr').then(t => { t.mapping = THREE.EquirectangularReflectionMapping; studioEnvTex = t; if (showroomScene) showroomScene.environment = t; }).catch(() => {}); // VARLIK FAZ1: Poly Haven studio_small_09 (CC0) 256×128 — ürün çekimi yansıması
   showroomCam = new THREE.PerspectiveCamera(42, innerWidth / innerHeight, 0.1, 120);
   // zemin (gölge alan koyu disk)
-  const floor = new THREE.Mesh(new THREE.CircleGeometry(16, 48), new THREE.MeshStandardMaterial({ color: 0x0e131a, roughness: 0.9, metalness: 0.1 }));
+  const floor = new THREE.Mesh(new THREE.CircleGeometry(28, 48), new THREE.MeshStandardMaterial({ color: 0x11294b, roughness: 0.55, metalness: 0.4 }));
   floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; showroomScene.add(floor);
   // döner platform + parlayan halka
-  const base = new THREE.Mesh(new THREE.CylinderGeometry(3.1, 3.4, 0.5, 56), new THREE.MeshStandardMaterial({ color: 0x1a222c, roughness: 0.45, metalness: 0.7 }));
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(3.1, 3.4, 0.5, 56), new THREE.MeshStandardMaterial({ color: 0x15345c, roughness: 0.35, metalness: 0.7 }));
   base.position.y = 0.25; base.castShadow = base.receiveShadow = true; showroomScene.add(base);
-  srRingMat = new THREE.MeshStandardMaterial({ color: 0x5d9c94, emissive: 0x5d9c94, emissiveIntensity: 0.65 });
+  srRingMat = new THREE.MeshStandardMaterial({ color: 0x50dfff, emissive: 0x50dfff, emissiveIntensity: 1.4 });
   const ring = new THREE.Mesh(new THREE.TorusGeometry(3.08, 0.05, 12, 64), srRingMat);
   ring.rotation.x = Math.PI / 2; ring.position.y = 0.5; showroomScene.add(ring);
+  // Low-cost physical light strips frame the rotating vehicle like an arena pit lane.
+  for (const side of [-1, 1]) {
+    const color = side < 0 ? 0x279bff : 0xffa029;
+    const railMat = new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 2 });
+    for (let i = 0; i < 3; i++) {
+      const rail = new THREE.Mesh(new THREE.BoxGeometry(.065, .025, 4), railMat);
+      rail.position.set(side * (4.3 + i * 1.3), .035, -1.5 - i * 1.8); showroomScene.add(rail);
+    }
+  }
   showroomTurn = new THREE.Group(); showroomTurn.position.y = SHOWROOM_PIVOT_Y; showroomScene.add(showroomTurn);
   // stüdyo ışıkları — hero aydınlatma
   srKey = new THREE.DirectionalLight(0xffffff, 3.0); srKey.position.set(4, 9, 6); srKey.castShadow = true;
@@ -4181,8 +4207,8 @@ function buildShowroomTank() {
   srRim.position.set(-6 * ls, 4 * ls, -7 * ls); srRim.intensity = 2.4 + (ls - 1) * 2.8;
   srAccent.position.set(-4 * ls, 2.6 * ls, 3.5 * ls); srAccent.distance = 20 * ls; srAccent.intensity = 26 * ls;
   const premium = !!tankById(showroom.tankId).gem;
-  srRingMat.color.setHex(premium ? 0xcda968 : 0x5d9c94);
-  srRingMat.emissive.setHex(premium ? 0xcda968 : 0x5d9c94);
+  srRingMat.color.setHex(premium ? 0xffbd38 : 0x50dfff);
+  srRingMat.emissive.setHex(premium ? 0xffbd38 : 0x50dfff);
 }
 function frameShowroomCam() {
   showroomCam.aspect = innerWidth / innerHeight; showroomCam.updateProjectionMatrix();
@@ -4355,6 +4381,7 @@ function renderGarage() {
     const def = effTank(base.id);
     const card = document.createElement('div');
     card.className = 'card' + (sel ? ' sel' : '');
+    card.dataset.tankRole = tankRole(base);
     const hex = '#' + base.color.toString(16).padStart(6, '0');
     const fireRate = 1 / def.cool;
     const thumb = renderTankThumb(base); // önbellekli 3B kart görseli (özel model inmediyse null → renk şeridi + async tazeleme)
@@ -5852,6 +5879,8 @@ $('btn-quests').addEventListener('click', () => { const t = T(); $('title').text
 $('btn-back-quests').addEventListener('click', openMenu);
 $('btn-lb').addEventListener('click', () => { const t = T(); $('title').textContent = V1_SIMPLE ? t.lbWeekTitle : t.lbTitle; $('submsg').textContent = ''; showPanel('panel-lb'); renderLeaderboard(V1_SIMPLE ? 'week' : 'day'); });
 $('btn-season').addEventListener('click', () => { $('title').textContent = T().navSeason; $('submsg').textContent = ''; renderSeason(); showPanel('panel-season'); });
+$('home-season').addEventListener('click', () => $('btn-season').click());
+$('home-collection').addEventListener('click', () => { garageTab = 'crates'; openGarage(); });
 $('btn-back-season').addEventListener('click', openMenu);
 $('lbt-day').addEventListener('click', () => renderLeaderboard('day'));
 $('lbt-week').addEventListener('click', () => renderLeaderboard('week'));

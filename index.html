@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#101a28">
+<meta name="theme-color" content="#07132c">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="assets/icon-192.png">
 <title>TANK SAVAŞI 3D</title>
@@ -428,7 +428,7 @@
 
 
 <div id="loading">
-  <img id="ldhero" src="assets/hero.jpg" alt="" decoding="async">
+  <img id="ldhero" src="assets/arena-lobby-v2.jpg" alt="" decoding="async">
   <div class="ld-emblem" aria-hidden="true"><svg class="gi"><use href="#gi-mark"/></svg></div>
   <div class="ldtitle">TANK SAVAŞI 3D</div>
   <div class="ldspin"></div>
@@ -495,7 +495,13 @@
 
   <!-- ana menü -->
   <div id="panel-main" class="panel show">
+    <div class="lobby-side">
     <div id="namerow"><svg class="gi"><use href="#gi-shield"/></svg> <input id="playername" maxlength="12" placeholder="İsmin" autocomplete="off"></div>
+    <div class="lobby-features">
+      <button id="home-season" class="feature-banner season-feature"><span class="feature-overline" id="home-season-label"></span><strong id="home-season-name"></strong><span id="home-season-progress"></span><span class="feature-meter"><i id="home-season-fill"></i></span><svg class="feature-symbol gi" aria-hidden="true"><use href="#gi-trophy"/></svg><span class="feature-arrow" aria-hidden="true">↗</span></button>
+      <button id="home-collection" class="feature-banner collection-feature"><span class="feature-overline" id="home-collection-label"></span><strong id="home-collection-name"></strong><span id="home-collection-desc"></span><img id="home-crate-img" alt="" hidden><span class="feature-arrow" aria-hidden="true">↗</span></button>
+    </div>
+    </div>
     <button id="home-tank" class="hangar-card" aria-label="Garajı aç">
       <span class="hangar-kicker" id="hangar-kicker">SEÇİLİ TANK</span>
       <span class="hangar-serial" aria-hidden="true">01 / 15</span><span class="hangar-watermark" aria-hidden="true">ACEMİ</span>
@@ -504,21 +510,23 @@
       <span class="hangar-info"><strong id="home-tank-name"></strong><span id="home-tank-role"></span></span>
       <span class="hangar-link" id="hangar-link">GARAJA GİT ↗</span>
     </button>
-    <div id="menubtns">
+    <div class="lobby-launch"><div class="launch-caption" id="launch-caption"></div><div id="menubtns">
       <button class="mbtn play" id="btn-quickplay">⚡ HIZLI OYNA</button>
       <button class="mbtn" id="btn-single">TEK OYUNCU</button>
       <button class="mbtn alt" id="btn-duel">ARKADAŞLA DÜELLO</button>
       <button class="mbtn alt" id="btn-ball">1v1 TOP MAÇI</button>
       <button class="mbtn alt" id="btn-coop">KOOPERATİF</button>
       <button class="mbtn alt" id="btn-team">2v2 TAKIM</button>
-    </div>
+    </div></div>
     <button id="statsline" aria-label="Komutan profilini aç"></button>
+    <div class="lobby-objectives">
     <button id="home-mission" class="mission-focus"></button>
     <button id="home-career" class="strip"></button>
     <button id="nextgoal" class="strip gold" style="display:none"></button>
     <button id="btn-patrolx2" class="strip" style="display:none"></button>
     <button id="btn-event" class="strip event" style="display:none"></button>
     <button id="btn-weekly" class="strip weekly" style="display:none"></button>
+    </div>
   </div>
 
   <!-- harita seçimi -->

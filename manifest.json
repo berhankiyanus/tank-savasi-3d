@@ -13,8 +13,8 @@
     "games",
     "entertainment"
   ],
-  "background_color": "#101a28",
-  "theme_color": "#101a28",
+  "background_color": "#07132c",
+  "theme_color": "#07132c",
   "icons": [
     {
       "src": "assets/icon-192.png",

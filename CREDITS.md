@@ -56,3 +56,6 @@ Altı yeni aksesuar, sekiz mermi modeli ve dört kutu Blender'da özgün olarak 
 
 ### Command interface update (2026-09-26)
 Original 24×24 line symbols, command emblem, hangar layout and menu styling authored for this project. Existing third-party asset credits above continue to apply.
+
+### Arena interface update (2026-09-26)
+`assets/arena-lobby-v2.jpg` is original arena background artwork generated for this project with OpenAI's built-in image generation tool. No Rocket League artwork, logos, or screenshots are included in the game. Arena styling, lobby composition and 3D inspection light strips were created for this project.
