@@ -6311,7 +6311,8 @@ const ptext=(tr,en)=>lang==='tr'?tr:en;
 let practiceMatch=null,practiceAcc=0;
 let rankedLoading=0, rankedPending=null, queueSince=0, lobbyStageKey='', leagueGeneration=0;
 const rankedClient = new RankedClient({base:apiBase(),wsBase:wsBase(),name:()=>profile.name,tank:()=>profile.selected,onEvent:rankedEvent});
-const rankedView = new RankedView({scene,camera,renderer,controls,client:rankedClient,disposeTank,buildTank:(id,mine)=>{
+const arenaMarkerGeo=new THREE.SphereGeometry(.1,6,4),arenaMarkerMat=new THREE.MeshBasicMaterial({color:0xe5f995,depthTest:false});
+const rankedView = new RankedView({scene,camera,renderer,controls,client:rankedClient,disposeTank,buildShot:mine=>{if(!mine)return null;const def=projectileById(profile.projectile),source=loadedAcc[def.id];if(!def.glb||!source)return null;const root=new THREE.Group(),visual=source.clone(true);const bounds=new THREE.Box3().setFromObject(visual),size=new THREE.Vector3();bounds.getSize(size);visual.scale.setScalar(.65/Math.max(size.x,size.y,size.z,.01));visual.traverse(o=>{if(o.isMesh)o.castShadow=o.receiveShadow=false;});root.add(visual);const marker=new THREE.Mesh(arenaMarkerGeo,arenaMarkerMat);marker.position.y=.3;root.add(marker);return root;},buildTank:(id,mine)=>{
   const def=tankById(id),mesh=buildTank({...def,scale:1});
   const box=new THREE.Box3().setFromObject(mesh),size=new THREE.Vector3();box.getSize(size);mesh.scale.multiplyScalar(4.8/Math.max(size.x,size.z));
   if(mine){applySkin(mesh,profile.skin,def.id);applyDecal(mesh,profile.decal,profile.decalSide);applyTracks(mesh,profile.track);applyAccessory(mesh,profile.accessory,def);applyAccessory(mesh,profile.accessory2,def,2);}
@@ -6345,12 +6346,12 @@ function openRankedQueue(){
 async function rankedEvent(m){
  if(m.t==='ready'){applyArenaInventory(m.account);return;}
  if(m.t==='queued'){queueSince=Date.now();$('queue-title').textContent=ptext('RAKİP ARANIYOR','FINDING A RIVAL');$('queue-status').textContent=ptext('Becerine ve bağlantına uygun bir oyuncu aranıyor.','Finding a player with a suitable rating and connection.');return;}
- if(m.t==='unavailable'||m.t==='error'){$('queue-title').textContent=ptext('ARENA ŞU AN KAPALI','ARENA UNAVAILABLE');$('queue-status').textContent=m.code==='version'?ptext('Yeni sürüme güncelle.','Update to the latest version.'):ptext('Çevrim içi hizmete ulaşılamıyor. Solo veya bot antrenmanı oynayabilirsin.','Online service is unavailable. Solo and bot practice remain available.');queueSince=0;return;}
+ if(m.t==='unavailable'||m.t==='error'){if(state==='play'&&mode==='ranked'){rankedLoading++;rankedView.clear();controls.reset();rankedClient.stop();rankedClient.match=null;state='menu';mode='solo';document.body.classList.remove('in-combat','ranked-combat');msgEl.classList.remove('hidden');$('topbar').style.visibility='hidden';showPanel('panel-queue');}$('queue-title').textContent=ptext('ARENA ŞU AN KAPALI','ARENA UNAVAILABLE');$('queue-status').textContent=m.code==='session'?ptext('Oturum bu cihazda kapandı. Hesabını başka cihazda açtıysan maça oradan devam edebilirsin.','This device session ended. If you opened the account on another device, continue there.'):m.code==='version'?ptext('Yeni sürüme güncelle.','Update to the latest version.'):ptext('Çevrim içi hizmete ulaşılamıyor. Solo veya bot antrenmanı oynayabilirsin.','Online service is unavailable. Solo and bot practice remain available.');queueSince=0;return;}
  if(m.t==='reconnecting'){controls.reset();$('wave').textContent=ptext('BAĞLANTI YENİLENİYOR','RECONNECTING');return;}
  if(m.t==='saving'){$('wave').textContent=ptext('SONUÇ KAYDEDİLİYOR','SAVING RESULT');return;}
  if(m.t==='start'){
   const gen=++rankedLoading;rankedPending=m;controls.reset();$('queue-title').textContent=ptext('RAKİP BULUNDU','RIVAL FOUND');
-  await Promise.all(Object.values(m.appearances||{}).map(id=>ensureModel(tankById(id).model)));
+  await Promise.all([...Object.values(m.appearances||{}).map(id=>ensureModel(tankById(id).model)),ensureAcc(projectileById(profile.projectile))]);
   if(gen!==rankedLoading)return;
   clearEnemies();clearBullets();clearPowerups();clearBallMode();clearCoop();clearTeam();buildArena(m.map,true);clearCovers();clearHazards();shieldBubble.visible=false;player.mesh.visible=false;
   mode='ranked';state='play';paused=false;showroom.active=false;msgEl.classList.add('hidden');$('topbar').style.visibility='visible';$('healthwrap').style.visibility='visible';$('minimap').style.display='none';document.body.classList.add('ranked-combat','in-combat');
