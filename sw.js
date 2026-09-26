@@ -1,12 +1,13 @@
 // Service worker — uygulama kabuğu + boot'u bloklayan varlıklar önbellekte (kurulabilirlik, hızlı ve OFFLINE açılış).
 // SÜRÜM: her yayında el ile artır (web bu dosyayı repodan sunar); native pakette build-www.js
 // __BUILDSTAMP__ damgasını gerçek zamanla değiştirir → her native sürüm otomatik taze önbellek.
-const CACHE = 'tank3d-v1.0.0-premium4-map-surfaces-__BUILDSTAMP__'; // web: sürüm adı her yayında değişir; native: build-www damgalar
+const CACHE = 'tank3d-v1.0.0-premium5-tread-rivals-__BUILDSTAMP__'; // web: sürüm adı her yayında değişir; native: build-www damgalar
 // Denetim fix'i: eski CORE tank.glb+env.hdr'ı içermiyordu → offline ilk açılış HEP retry ekranına düşüyordu.
 const CORE = [
   './',
   'index.html',
   'assets/outpost-lobby.jpg',
+  'assets/tread-rivals-logo.png',
   'main.js',
   'game-progress.mjs', 'garage-content.mjs', 'garage-visuals.mjs',
   'polish.css', 'game/arenas.mjs', 'game/arena-catalog.mjs', 'game/combat.mjs', 'game/controls.mjs','game/camera.mjs','game/map-finish.mjs','game/practice.mjs', 'game/presentation.mjs', 'game/premium-profile.mjs', 'game/ranked-view.mjs', 'net/client.mjs','net/session.mjs',

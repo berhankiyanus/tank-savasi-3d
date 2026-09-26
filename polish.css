@@ -80,3 +80,6 @@ body:not(.in-combat) #topbar,body:not(.in-combat) #minimap,body:not(.in-combat) 
  #wavebanner{font-size:22px;top:23%;letter-spacing:1px}
  #ftuehint{font-size:12px;bottom:12px;max-width:50%;left:25%;transform:none}
 }
+
+/* The same wordmark leads boot, menu and the native launch artwork. */
+.menu-brand{top:7px;height:46px}.menu-brand>img{width:150px;height:50px;object-fit:contain}.menu-brand [hidden]{display:none!important}

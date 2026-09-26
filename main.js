@@ -19,7 +19,7 @@ import { RGBELoader } from './libs/jsm/loaders/RGBELoader.js';
 // ---------------------------------------------------------------- dil
 const L = {
   tr: {
-    title: 'TANK SAVAŞI 3D',
+    title: 'TREAD RIVALS',
     sub: 'Duvarların arkasına saklanan düşman tankları yok et!',
     keysDesk: 'W / ↑ &nbsp;→&nbsp; ileri &nbsp;|&nbsp; S / ↓ &nbsp;→&nbsp; geri &nbsp;|&nbsp; A / D &nbsp;→&nbsp; dön &nbsp;|&nbsp; BOŞLUK &nbsp;→&nbsp; ateş',
     keysTouch: 'Sol çubuk &nbsp;→&nbsp; hareket &nbsp;|&nbsp; Sağ çubuk &nbsp;→&nbsp; nişan ve ateş',
@@ -35,7 +35,7 @@ const L = {
     patrolMsg: (c, h) => `🛡️ Tankın devriyedeydi: +🪙${c} (${h} saat)`,
     nextGoal: 'Sıradaki', weeklyLbl: '📅 HAFTANIN MODU', weeklyWin: 'Haftalık mod zaferi',
     modNames: { doubleBoss: 'Çift Boss', fast: 'Hızlı Düşmanlar', tough: 'Zırhlı Düşmanlar', bossRush: 'Boss Rush' },
-    shareBtn: '📤 PAYLAŞ', shareText: (w, d) => `Tank Savaşı 3D'de ${w}. dalgaya ulaştım${d ? ' — ' + d : ''}! Sen kaçta bitirirsin?`, shareSaved: '📤 Kart indirildi — paylaşabilirsin', shareFail: '📤 Paylaşım yapılamadı',
+    shareBtn: '📤 PAYLAŞ', shareText: (w, d) => `TREAD RIVALS'de ${w}. dalgaya ulaştım${d ? ' — ' + d : ''}! Sen kaçta bitirirsin?`, shareSaved: '📤 Kart indirildi — paylaşabilirsin', shareFail: '📤 Paylaşım yapılamadı',
     dyeWord: 'Boya', dyeGot: n => `🎨 ${n} boyası alındı ve uygulandı`,
     slot2Buy: '🔓 2. aksesuar yuvası · 💎60', slot2Got: '🔓 2. yuva açıldı — kule + gövde aksesuarı birlikte takılır', slot2Same: 'İki aksesuar aynı yere takılamaz (kule/gövde)', setStick: 'Joystick', stickN: 'NORMAL', stickT: 'HASSAS', stickW: 'GENİŞ',
     masteryWord: 'Ustalık', rankWord: 'Rütbe', masteryBuy: (r, c) => `⭐ Rütbe ${r} · 🪙${c}`, masteryNeed: (k, n) => `${k}/${n} yok etme`, masteryUp: (nm, r) => `⭐ ${nm} — Rütbe ${r}! ${r === 5 ? 'USTA unvanı' : r === 4 ? 'kill parası +%5' : r === 3 ? 'altın toz izi' : ''}`, masteryMax: 'USTA', masteryHint: 'Bu tankla yok et → rütbe',
@@ -60,7 +60,7 @@ const L = {
     againBtn: '↻ TEKRAR OYNA', rewardedBtn: '📺 Reklam izle → x2 ödül', rewardedGot: '🎉 x2 ödül alındı!', adLoading: '📺 Yükleniyor...',
     questsTitle: 'GÜNLÜK GÖREVLER', questsSub: 'Her gece yenilenir',
     lbTitle: 'LİDER TABLOSU', lbDaily: 'BUGÜN', lbWeekly: 'BU HAFTA', lbEmpty: 'Henüz skor yok — ilk sen ol!', lbLoad: 'Yükleniyor...',
-    appName: 'Tank Savaşı 3D', appNameUp: 'TANK SAVAŞI 3D', privacyClose: 'KAPAT',
+    appName: 'TREAD RIVALS', appNameUp: 'TREAD RIVALS', privacyClose: 'KAPAT',
     howBtn: '❓ Nasıl Oynanır', howTitle: 'Nasıl oynanır', howBody: '<ul><li><b>Kontroller:</b> sol çubuk ekran yönünde hareket eder; sağ çubuk kuleyi bağımsız yönlendirir ve dışarı çekildiğinde ateş eder. Bilgisayarda WASD + fare kullan.</li><li><b>Sekme:</b> mermin duvardan 2 kez seker — köşedeki düşmanı görmeden vur. İki sekmeli vuruş = <b>MEGA SEKME</b> bonusu.</li><li><b>Boss:</b> her 5. dalga. Kırmızı halka = saldırı hazırlığı, ardından kısa <b>savunmasız</b> an (yeşil halka) — o an vur.</li><li><b>Yükseltme:</b> 2/4/6/8/10. dalgada kart seç; 10. dalgayı geç → zafer, altın ve elmas.</li><li><b>Sefer kitleri:</b> kalkan/mıknatıs/tamir, koşu öncesi harita ekranından.</li><li><b>Garaj:</b> altınla tank ve yükseltme, jetonla sandık, elmasla premium tank/aksesuar.</li></ul>',
     defaultName: 'Oyuncu', nameBad: '🚫 Bu isim kullanılamaz', lbReport: '🚩 Uygunsuz isim bildir',
     gpuLost: '⚠️ Grafik sürücüsü sıfırlandı, bekleyin…', gpuReload: '↻ Grafik geri gelmedi — yeniden yüklemek için dokun',
@@ -91,7 +91,7 @@ const L = {
     single: 'TEK OYUNCU', duel: 'ARKADAŞLA DÜELLO', garage: 'GARAJ', back: '‹ GERİ',
     navQuests: 'GÖREVLER', navLb: 'LİDER', navSeason: 'SEZON', navShop: 'DÜKKAN',
     create: 'ODA KUR', join: 'KATIL', codePh: 'KOD',
-    shareBtn: '🔗 DAVET LİNKİ', linkCopied: '🔗 Davet linki kopyalandı!', shareText: 'Tank Savaşı 3D — bana katıl!',
+    shareBtn: '🔗 DAVET LİNKİ', linkCopied: '🔗 Davet linki kopyalandı!', shareText: 'TREAD RIVALS — bana katıl!',
     waiting: 'Arkadaşın bekleniyor...', roomLbl: 'ODA KODU:',
     joinFail: 'Oda bulunamadı!', connFail: 'Bağlantı kurulamadı!',
     health: 'CAN', wave: 'DALGA', score: 'SKOR', you: 'SEN', opp: 'RAKİP',
@@ -125,7 +125,7 @@ const L = {
     tabTanks: 'TANKLAR', tabSkins: 'KAPLAMALAR', profileTitle: 'PROFİL & BAŞARIMLAR', dailyW: 'Günlük Ödül · Gün',
   },
   en: {
-    title: 'TANK BATTLE 3D',
+    title: 'TREAD RIVALS',
     sub: 'Destroy the enemy tanks hiding behind the walls!',
     keysDesk: 'W / ↑ &nbsp;→&nbsp; forward &nbsp;|&nbsp; S / ↓ &nbsp;→&nbsp; back &nbsp;|&nbsp; A / D &nbsp;→&nbsp; turn &nbsp;|&nbsp; SPACE &nbsp;→&nbsp; fire',
     keysTouch: 'Left joystick &nbsp;→&nbsp; drive & turn &nbsp;|&nbsp; Right button &nbsp;→&nbsp; fire',
@@ -141,7 +141,7 @@ const L = {
     patrolMsg: (c, h) => `🛡️ Your tank was on patrol: +🪙${c} (${h}h)`,
     nextGoal: 'Next up', weeklyLbl: '📅 WEEKLY MODE', weeklyWin: 'Weekly mode victory',
     modNames: { doubleBoss: 'Double Boss', fast: 'Fast Enemies', tough: 'Armored Enemies', bossRush: 'Boss Rush' },
-    shareBtn: '📤 SHARE', shareText: (w, d) => `I reached wave ${w} in Tank Battle 3D${d ? ' — ' + d : ''}! Can you beat it?`, shareSaved: '📤 Card downloaded — ready to share', shareFail: '📤 Could not share',
+    shareBtn: '📤 SHARE', shareText: (w, d) => `I reached wave ${w} in TREAD RIVALS${d ? ' — ' + d : ''}! Can you beat it?`, shareSaved: '📤 Card downloaded — ready to share', shareFail: '📤 Could not share',
     dyeWord: 'Dye', dyeGot: n => `🎨 ${n} dye bought and applied`,
     slot2Buy: '🔓 2nd accessory slot · 💎60', slot2Got: '🔓 2nd slot unlocked — wear a turret + a hull accessory together', slot2Same: 'Two accessories cannot share a mount (turret/hull)', setStick: 'Joystick', stickN: 'NORMAL', stickT: 'TIGHT', stickW: 'WIDE',
     masteryWord: 'Mastery', rankWord: 'Rank', masteryBuy: (r, c) => `⭐ Rank ${r} · 🪙${c}`, masteryNeed: (k, n) => `${k}/${n} kills`, masteryUp: (nm, r) => `⭐ ${nm} — Rank ${r}! ${r === 5 ? 'MASTER title' : r === 4 ? '+5% kill coins' : r === 3 ? 'golden dust trail' : ''}`, masteryMax: 'MASTER', masteryHint: 'Kill with this tank → rank up',
@@ -166,7 +166,7 @@ const L = {
     againBtn: '↻ PLAY AGAIN', rewardedBtn: '📺 Watch ad → 2x reward', rewardedGot: '🎉 2x reward claimed!', adLoading: '📺 Loading...',
     questsTitle: 'DAILY QUESTS', questsSub: 'Refreshes every night',
     lbTitle: 'LEADERBOARD', lbDaily: 'TODAY', lbWeekly: 'THIS WEEK', lbEmpty: 'No scores yet — be the first!', lbLoad: 'Loading...',
-    appName: 'Tank Battle 3D', appNameUp: 'TANK BATTLE 3D', privacyClose: 'CLOSE',
+    appName: 'TREAD RIVALS', appNameUp: 'TREAD RIVALS', privacyClose: 'CLOSE',
     howBtn: '❓ How to play', howTitle: 'How to play', howBody: '<ul><li><b>Controls:</b> left stick moves in screen direction; right stick independently aims the turret and fires beyond its dead zone. On desktop use WASD and the mouse.</li><li><b>Bounce:</b> your shells bounce off walls twice — hit enemies around corners without seeing them. A double-bounce kill = <b>MEGA BOUNCE</b> bonus.</li><li><b>Boss:</b> every 5th wave. Red ring = attack wind-up, then a short <b>vulnerable</b> moment (green ring) — strike then.</li><li><b>Upgrades:</b> pick a card on waves 2/4/6/8/10; clear wave 10 → victory, coins and gems.</li><li><b>Kits:</b> shield/magnet/repair from the map screen before a run.</li><li><b>Garage:</b> coins buy tanks and upgrades, tokens open chests, gems buy premium tanks/accessories.</li></ul>',
     defaultName: 'Player', nameBad: '🚫 That name is not allowed', lbReport: '🚩 Report a name',
     gpuLost: '⚠️ Graphics driver reset, please wait…', gpuReload: '↻ Graphics did not recover — tap to reload',
@@ -194,7 +194,7 @@ const L = {
     single: 'SINGLE PLAYER', duel: 'DUEL WITH A FRIEND', garage: 'GARAGE', back: '‹ BACK',
     navQuests: 'QUESTS', navLb: 'RANKS', navSeason: 'SEASON', navShop: 'SHOP',
     create: 'CREATE ROOM', join: 'JOIN', codePh: 'CODE',
-    shareBtn: '🔗 INVITE LINK', linkCopied: '🔗 Invite link copied!', shareText: 'Tank Battle 3D — join me!',
+    shareBtn: '🔗 INVITE LINK', linkCopied: '🔗 Invite link copied!', shareText: 'TREAD RIVALS — join me!',
     waiting: 'Waiting for your friend...', roomLbl: 'ROOM CODE:',
     joinFail: 'Room not found!', connFail: 'Connection failed!',
     health: 'HP', wave: 'WAVE', score: 'SCORE', you: 'YOU', opp: 'RIVAL',
@@ -1141,20 +1141,28 @@ function tex(url, srgb = false, repeat = 1) {
 
 // açılış varlıkları: başarısızlıkta siyah ekran yerine YENİDEN DENE ekranı (zayıf ağ / ilk yüklemede kesinti)
 let tankGltf, envTex, skyTex;
+let bootCompleted=0;
+const bootTr=(localStorage.getItem('tanklang')||navigator.language||'tr').toLowerCase().startsWith('tr');
+const bootAsset=promise=>promise.then(value=>{
+  bootCompleted++;
+  const status=document.getElementById('boot-status');
+  if(status)status.textContent=bootCompleted===3?(bootTr?'Atölye hazırlanıyor…':'Preparing workshop…'):(bootTr?`Oyun dosyaları hazırlanıyor · ${bootCompleted}/3`:`Preparing game assets · ${bootCompleted}/3`);
+  return value;
+});
 try {
   [tankGltf, envTex, skyTex] = await Promise.all([
-    new GLTFLoader().loadAsync('assets/tank_recruit_mk2.glb'),
-    new RGBELoader().loadAsync('assets/env.hdr'),   // VARLIK FAZ1: 256×128 HDR yalnız IBL için (PMREM zaten bulanıklaştırır) — 1.4 MB → 97 KB
-    texLoader.loadAsync('assets/sky.jpg'),          // arka plan: aynı Poly Haven gökyüzü (kloofendal 48d puresky, CC0) ön-eşlenmiş JPG 1024×512
+    bootAsset(new GLTFLoader().loadAsync('assets/tank_recruit_mk2.glb')),
+    bootAsset(new RGBELoader().loadAsync('assets/env.hdr')),   // VARLIK FAZ1: 256×128 HDR yalnız IBL için (PMREM zaten bulanıklaştırır) — 1.4 MB → 97 KB
+    bootAsset(texLoader.loadAsync('assets/sky.jpg')),          // arka plan: aynı Poly Haven gökyüzü (kloofendal 48d puresky, CC0) ön-eşlenmiş JPG 1024×512
   ]);
 } catch (err) {
   track('asset_fail', { m: String(err && err.message).slice(0, 80) }); // açılış varlığı inmedi — artık görünür
   const ld = document.getElementById('loading');
   if (ld) {
     const trq = (localStorage.getItem('tanklang') || navigator.language || 'tr').toLowerCase().startsWith('tr');
-    ld.innerHTML = `<div class="ldtitle">TANK SAVAŞI 3D</div>
+    ld.innerHTML = `<img class="brand-lockup" src="assets/tread-rivals-logo.png" alt="TREAD RIVALS">
       <div class="ldtext" style="max-width:280px;text-align:center">⚠️ ${trq ? 'Yükleme başarısız — internet bağlantını kontrol et' : 'Loading failed — check your connection'}</div>
-      <button id="bootretry" style="margin-top:18px;font:bold 17px 'Barlow Semi Condensed','Field Symbols',monospace;padding:12px 26px;border-radius:12px;border:2px solid #7dff9b;background:#1c2a14;color:#7dff9b;cursor:pointer">↻ ${trq ? 'TEKRAR DENE' : 'RETRY'}</button>`;
+      <button id="bootretry" style="margin-top:18px;font:bold 17px 'Barlow Semi Condensed','Field Symbols',monospace;padding:12px 26px;border-radius:12px;border:2px solid #68dcf2;background:#142b49;color:#f0f6ff;cursor:pointer">↻ ${trq ? 'TEKRAR DENE' : 'RETRY'}</button>`;
     document.getElementById('bootretry').onclick = () => location.reload();
   }
   throw err; // modül dursun; retry temiz reload yapar
@@ -4011,7 +4019,7 @@ function refreshMenuChrome(id = document.querySelector('.panel.show')?.id) {
   $('menu-kicker').textContent = section ? section[tr ? 0 : 1] : '';
   $('menu-intro').textContent = section?.[2] || '';
   $('menu-intro').hidden = !section?.[2];
-  $('brand-label').textContent = tr ? 'SAHA ATÖLYESİ' : 'FIELD WORKSHOP';
+  $('brand-label').textContent = 'TREAD RIVALS';
   $('btn-home-nav').querySelector('.nlbl').textContent = tr ? 'ÜS' : 'HOME';
   $('bottomnav').setAttribute('aria-label',tr ? 'Ana menü' : 'Main navigation');
 }

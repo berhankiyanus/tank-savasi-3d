@@ -45,3 +45,6 @@ Field Symbols — Noto Emoji'den bu oyunun sabit metinleri için altküme oluşt
 Three.js r160 ve yükleyicileri — Copyright 2010–2023 Three.js Authors, MIT. Yerel import yolları uyarlanmıştır. Capacitor ve eklentileri — MIT; iOS Cordova bileşenleri — Apache 2.0; npm çalışma bağımlılıkları — MIT, ISC ve 0BSD. Tam telif/lisans metinleri ile Apache bildirimi uygulamada bulunur. Ayrıntılı sürüm listesi: `legal/software-sbom.json`.
 
 Projenin yeni sürümü için npm'deki genel ISC şablon etiketi kaldırıldı; bu işlem daha önce verilmiş olabilecek hakları geri almaz. Üçüncü tarafların kendi lisansları geçerlidir. Unity/Blender geliştirme araçları, sistem SDK'ları ve yerel kaynak arşivleri oyun paketine dahil değildir; bunların hesap/sözleşme durumları bu teknik varlık denetimiyle onaylanmış sayılmaz.
+
+## TREAD RIVALS marka görselleri
+Uygulama simgesi ve yazılı logo, bu proje için OpenAI görsel üretim aracıyla oluşturuldu. Kaynaklar ve tam üretim istemleri `design/brand/PROVENANCE.md` dosyasında korunur. Bu kayıt marka tescili veya münhasırlık garantisi değildir. Önceki `app-icon.svg` tarihsel tasarım kaynağı olarak tutulur.

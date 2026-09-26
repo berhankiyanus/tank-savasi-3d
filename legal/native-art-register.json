@@ -3,57 +3,69 @@
   "files": [
     {
       "file": "assets/icon-1024.png",
-      "sha256": "a0f878b133f1ac0ab78a1bf975f0d45b4fe1f0eecfc314c660eb3692b238de0e",
-      "bytes": 139148,
+      "sha256": "d7a05768a9403ee8a7c22eca554acc0729dc4fc08111a6b7d45db0f7e6c9c4d8",
+      "bytes": 1882619,
       "release": true,
       "status": "project-authored",
-      "source": "design/identity/app-icon.svg",
-      "generation": "design/identity/build_identity.cjs"
+      "source": "design/brand/PROVENANCE.md",
+      "generation": "design/brand/build-brand.cjs",
+      "license": "AI-generated project artwork; exclusivity and trademark clearance not established",
+      "evidenceLevel": "generated-source-and-prompt-retained"
     },
     {
       "file": "resources/icon.png",
-      "sha256": "a0f878b133f1ac0ab78a1bf975f0d45b4fe1f0eecfc314c660eb3692b238de0e",
-      "bytes": 139148,
+      "sha256": "d7a05768a9403ee8a7c22eca554acc0729dc4fc08111a6b7d45db0f7e6c9c4d8",
+      "bytes": 1882619,
       "release": true,
       "status": "project-authored",
-      "source": "design/identity/app-icon.svg",
-      "generation": "design/identity/build_identity.cjs"
+      "source": "design/brand/PROVENANCE.md",
+      "generation": "design/brand/build-brand.cjs",
+      "license": "AI-generated project artwork; exclusivity and trademark clearance not established",
+      "evidenceLevel": "generated-source-and-prompt-retained"
     },
     {
       "file": "resources/splash.png",
-      "sha256": "c533e7d85a81990109b6e6a63228cffc324fce7666a503411da64920146a3501",
-      "bytes": 244548,
+      "sha256": "0ef39c73fc9ea6df4865adbac864533b4c88a3b4894e9a98a5116cbbce3a32da",
+      "bytes": 946709,
       "release": true,
       "status": "project-authored",
-      "source": "design/identity/app-icon.svg",
-      "generation": "design/identity/build_identity.cjs"
+      "source": "design/brand/PROVENANCE.md",
+      "generation": "design/brand/build-brand.cjs",
+      "license": "AI-generated project artwork; exclusivity and trademark clearance not established",
+      "evidenceLevel": "generated-source-and-prompt-retained"
     },
     {
       "file": "resources/splash-dark.png",
-      "sha256": "c533e7d85a81990109b6e6a63228cffc324fce7666a503411da64920146a3501",
-      "bytes": 244548,
+      "sha256": "0ef39c73fc9ea6df4865adbac864533b4c88a3b4894e9a98a5116cbbce3a32da",
+      "bytes": 946709,
       "release": true,
       "status": "project-authored",
-      "source": "design/identity/app-icon.svg",
-      "generation": "design/identity/build_identity.cjs"
+      "source": "design/brand/PROVENANCE.md",
+      "generation": "design/brand/build-brand.cjs",
+      "license": "AI-generated project artwork; exclusivity and trademark clearance not established",
+      "evidenceLevel": "generated-source-and-prompt-retained"
     },
     {
       "file": "resources/store/play-icon-512.png",
-      "sha256": "d47312908456dfa26dce5c6f54576c871d439b1c831e5a2c55b880f5032048cc",
-      "bytes": 56757,
+      "sha256": "c368a828d2a778975c5fa44814dc717dfc6e5e478f0b6b01275dbe76cc97b001",
+      "bytes": 478177,
       "release": true,
       "status": "project-authored",
-      "source": "design/identity/app-icon.svg",
-      "generation": "design/identity/build_identity.cjs"
+      "source": "design/brand/PROVENANCE.md",
+      "generation": "design/brand/build-brand.cjs",
+      "license": "AI-generated project artwork; exclusivity and trademark clearance not established",
+      "evidenceLevel": "generated-source-and-prompt-retained"
     },
     {
       "file": "resources/store/feature-1024x500.jpg",
-      "sha256": "2d6496cf0e21afccdf352c4c99c9de95966ec52e72c32eb5a0e977a36b11ef1a",
-      "bytes": 28611,
+      "sha256": "8429961f271434d1594a6d990c8c611a3f6ca622393c9d4ef6874db7408e2cd8",
+      "bytes": 90952,
       "release": true,
       "status": "project-authored",
-      "source": "design/identity/app-icon.svg",
-      "generation": "design/identity/build_identity.cjs"
+      "source": "design/brand/PROVENANCE.md",
+      "generation": "design/brand/build-brand.cjs",
+      "license": "AI-generated project artwork; exclusivity and trademark clearance not established",
+      "evidenceLevel": "generated-source-and-prompt-retained"
     }
   ]
 }

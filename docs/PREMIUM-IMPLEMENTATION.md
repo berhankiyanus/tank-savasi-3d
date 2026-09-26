@@ -62,3 +62,10 @@ Bu sürüm **inceleme ve beta geliştirme sürümüdür**. Planın tamamlanmış
 - Dekor katmanı en fazla 7 instanced çizim grubu ekler; ek dinamik ışık ve harici görsel dosya indirmez. Harita değiştirilince kendi geometri, malzeme ve dokularını serbest bırakır. Fiziksel cihaz performansı ayrıca ölçülmelidir.
 - Menü ve garaj mevcut özgün atölye mimarisinde kaldı; lacivert/mavi yüzeyler, buz turkuazı gezinme ve sıcak turuncu ana eylem paletine geçti. Rakip oyundan görsel, logo, model veya arayüz dosyası alınmadı.
 - 16 haritanın malzemeleri yerel kontrol galerisinde karşılaştırıldı. Yakın kamera korunarak oyun içi kontrol, telefon boyutunda menü/garaj kontrolü, lisans kapısı ve iOS derlemesi yapıldı. 55 test geçti; veritabanı gerektiren 2 test atlandı.
+
+### TREAD RIVALS marka ve açılış — 26 Eylül
+Kullanıcı, mevcut benzer mağaza adları nedeniyle War of Tanks yerine TREAD RIVALS adını seçti. Görünen uygulama adı, menü, paylaşım metinleri, web manifesti ve gizlilik sayfası güncellendi; bundle ID, kayıt anahtarları ve sunucu adresi korundu.
+
+Yerleşik görsel üretim aracıyla tank simgesi ve şeffaf yazılı logo oluşturuldu. Kaynaklar, tam istemler ve üretim yöntemi `design/brand/PROVENANCE.md` içinde. 1024px opak iOS simgesi, web simgeleri ve yerel açılış görseli hazırlandı. Web logosu 177 KB; kaynak PNG'ler korunuyor. Yeni dosyalar varlık kayıtlarına dahil edildi. Marka tescili ve App Store adı rezervasyonu doğrulanmış değildir.
+
+Gerçek yükleme katmanı artık logoyu ve tamamlanan 3 başlangıç varlığını gösterir; hata durumunda logo ile yeniden deneme kalır. Yerel ağ gecikmesi verilerek açılış ekranı ve ardından menüye geçiş doğrulandı. Telefon boyutunda logo yerleşimi kontrol edildi. iOS adı ve simge/açılış kataloğu `prepare-ios.cjs` ile her eşitlemede tekrar üretilir. Bu değişiklik App Store gönderimi, imzalama veya inceleme onayı anlamına gelmez.

@@ -1,20 +1,20 @@
 {
   "appId": "com.berhankiyanus.tanksavasi",
-  "appName": "Tank Savaşı 3D",
+  "appName": "TREAD RIVALS",
   "webDir": "www",
-  "backgroundColor": "#17221c",
+  "backgroundColor": "#09162e",
   "server": {
     "androidScheme": "https"
   },
   "plugins": {
     "SplashScreen": {
       "launchShowDuration": 400,
-      "backgroundColor": "#17221c",
+      "backgroundColor": "#09162e",
       "showSpinner": false
     },
     "LocalNotifications": {
       "smallIcon": "ic_stat_tank",
-      "iconColor": "#c5d878"
+      "iconColor": "#68dcf2"
     }
   }
 }
