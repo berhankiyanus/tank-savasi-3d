@@ -1,3 +1,4 @@
+import { createMapFinish } from './game/map-finish.mjs';
 import { combatFraming } from './game/camera.mjs';
 import { advancePractice } from './game/practice.mjs';
 import { readSession,saveSession,clearSession } from './net/session.mjs';
@@ -1221,7 +1222,7 @@ groundMat.normalScale.set(0.3, 0.3);
 groundMat.aoMapIntensity = 0.35;
 groundMat.onBeforeCompile = shader => {
   shader.fragmentShader = shader.fragmentShader.replace('#include <map_fragment>',
-    '#include <map_fragment>\n diffuseColor.rgb = mix(vec3(0.16, 0.145, 0.11), diffuseColor.rgb, 0.30);');
+    '#include <map_fragment>\n diffuseColor.rgb = mix(vec3(0.13, 0.16, 0.17), diffuseColor.rgb, 0.24);');
 };
 groundMat.customProgramCacheKey = () => 'classic-terrain-soft-v1';
 const grassMat = new THREE.MeshStandardMaterial({
@@ -1841,7 +1842,7 @@ function buildArenaMarkings(mapIdx) {
 
 const arenaFloor = new THREE.MeshStandardMaterial({color:0x666b64,roughness:.93,metalness:.12});
 const arenaCover = new THREE.MeshStandardMaterial({color:0x343e3e,roughness:.72,metalness:.3});
-let competitiveGrid=null;
+let competitiveGrid=null, mapFinish=null;
 function buildArena(mapIdx,competitive=false) {
   clearCovers(); clearHazards();
   let wallMaterial = applyTheme(MAPS[mapIdx].theme);
@@ -1858,6 +1859,9 @@ function buildArena(mapIdx,competitive=false) {
   if (wallInst) { scene.remove(wallInst); wallInst.dispose(); wallInst = null; }
   let count = 0;
   for (const row of MAP) for (const ch of row) if (ch === '#') count++;
+  if(mapFinish)mapFinish.dispose();
+  mapFinish=createMapFinish({grid:MAP,cell:CELL,height:competitive?1.7:WALL_H,mapIdx});
+  scene.add(mapFinish.group);wallMaterial=mapFinish.wallMaterial;
   wallInst = new THREE.InstancedMesh(wallGeo, wallMaterial, count);
   wallInst.castShadow = wallInst.receiveShadow = true;
   const m = new THREE.Matrix4();
@@ -4163,33 +4167,33 @@ const SHOWROOM_PIVOT_Y = 0.5; // platform üstü — tank tabanı (y=0) buraya o
 function ensureShowroom() {
   if (showroomScene) return;
   showroomScene = new THREE.Scene();
-  showroomScene.background = new THREE.Color(0x111a20);
-  showroomScene.fog = new THREE.Fog(0x111a20, 18, 55);
+  showroomScene.background = new THREE.Color(0x0b1732);
+  showroomScene.fog = new THREE.Fog(0x0b1732, 18, 55);
   showroomScene.environment = envTex; // metal/parlak kaplamalarda yansıma (stüdyo HDR inince değişir)
   new RGBELoader().loadAsync('assets/env_studio.hdr').then(t => { t.mapping = THREE.EquirectangularReflectionMapping; studioEnvTex = t; if (showroomScene) showroomScene.environment = t; }).catch(() => {}); // VARLIK FAZ1: Poly Haven studio_small_09 (CC0) 256×128 — ürün çekimi yansıması
   showroomCam = new THREE.PerspectiveCamera(42, innerWidth / innerHeight, 0.1, 120);
   // zemin (gölge alan koyu disk)
-  const floor = new THREE.Mesh(new THREE.PlaneGeometry(80,80), new THREE.MeshStandardMaterial({ color: 0x1c2425, roughness: 0.78, metalness: 0.2 }));
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(80,80), new THREE.MeshStandardMaterial({ color: 0x132847, roughness: 0.78, metalness: 0.2 }));
   floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; showroomScene.add(floor);
   // Original modular workshop architecture; shared materials keep the lobby inexpensive.
-  const steel = new THREE.MeshStandardMaterial({color:0x273236,metalness:.6,roughness:.6});
-  const copper = new THREE.MeshStandardMaterial({color:0x926b4d,metalness:.55,roughness:.55});
-  const glow = new THREE.MeshBasicMaterial({color:0xd5e6cc});
+  const steel = new THREE.MeshStandardMaterial({color:0x24476b,metalness:.6,roughness:.6});
+  const copper = new THREE.MeshStandardMaterial({color:0xc68949,metalness:.55,roughness:.55});
+  const glow = new THREE.MeshBasicMaterial({color:0x8bdfff});
   const part=(x,y,z,w,h,d,mat)=>{const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);m.position.set(x,y,z);m.castShadow=m.receiveShadow=true;showroomScene.add(m);return m;};
   for(let i=-3;i<=3;i++) { part(i*4,3.2,-12,.3,6.4,.4,steel);part(i*4,6.3,-6,.3,.3,12,steel);if(i%2===0)part(i*4,5.9,-7,.08,.06,7,glow); }
   part(0,2.8,-12.3,28,5.6,.2,steel);
-  for(let i=-2;i<=2;i++){part(i*4,2.4,-11.98,3.4,3.9,.1,new THREE.MeshStandardMaterial({color:0x1c282b,metalness:.35,roughness:.8}));part(i*4,4.5,-11.8,2.8,.05,.06,copper);}
+  for(let i=-2;i<=2;i++){part(i*4,2.4,-11.98,3.4,3.9,.1,new THREE.MeshStandardMaterial({color:0x102847,metalness:.35,roughness:.8}));part(i*4,4.5,-11.8,2.8,.05,.06,copper);}
   for(const side of [-1,1]){part(side*7,1.25,-4,2.2,2.5,1.3,steel);for(let y=.5;y<2.5;y+=.5)part(side*7,y,-3.32,1.8,.04,.04,copper);part(side*8,3.2,-9,.12,.12,6,copper);}
-  const grid = new THREE.GridHelper(60,30,0x344349,0x273237);grid.position.y=.004;showroomScene.add(grid);
+  const grid = new THREE.GridHelper(60,30,0x34567a,0x1b3554);grid.position.y=.004;showroomScene.add(grid);
   // döner platform + parlayan halka
-  const base = new THREE.Mesh(new THREE.BoxGeometry(6.4, 0.5, 7.2), new THREE.MeshStandardMaterial({ color: 0x303b3c, roughness: 0.55, metalness: 0.5 }));
+  const base = new THREE.Mesh(new THREE.BoxGeometry(6.4, 0.5, 7.2), new THREE.MeshStandardMaterial({ color: 0x294564, roughness: 0.55, metalness: 0.5 }));
   base.position.y = 0.25; base.castShadow = base.receiveShadow = true; showroomScene.add(base);
-  srRingMat = new THREE.MeshStandardMaterial({ color: 0xc5d878, emissive: 0xc5d878, emissiveIntensity: 1.4 });
+  srRingMat = new THREE.MeshStandardMaterial({ color: 0x61d8f0, emissive: 0x61d8f0, emissiveIntensity: 1.4 });
   const ring = new THREE.Mesh(new THREE.TorusGeometry(4.0, 0.035, 4, 4), srRingMat);
   ring.rotation.x = Math.PI / 2; ring.rotation.z = Math.PI / 4; ring.position.y = 0.5; showroomScene.add(ring);
   // Low-cost physical light strips frame the rotating vehicle inside the expedition maintenance bay.
   for (const side of [-1, 1]) {
-    const color = side < 0 ? 0xc5d878 : 0xc5d878;
+    const color = side < 0 ? 0x61d8f0 : 0x61d8f0;
     const railMat = new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 2 });
     for (let i = 0; i < 3; i++) {
       const rail = new THREE.Mesh(new THREE.BoxGeometry(.065, .025, 4), railMat);
@@ -4201,9 +4205,9 @@ function ensureShowroom() {
   srKey = new THREE.DirectionalLight(0xffffff, 3.0); srKey.position.set(4, 9, 6); srKey.castShadow = true;
   srKey.shadow.mapSize.set(1024, 1024); const sc = srKey.shadow.camera; sc.left = -8; sc.right = 8; sc.top = 8; sc.bottom = -8; sc.near = 1; sc.far = 44; srKey.shadow.bias = -0.0006;
   showroomScene.add(srKey);
-  showroomScene.add(new THREE.HemisphereLight(0xd8dec7, 0x241d2e, 0.75));
-  srRim = new THREE.DirectionalLight(0xbcd796, 2.4); srRim.position.set(-6, 4, -7); showroomScene.add(srRim);
-  srAccent = new THREE.PointLight(0xe0be83, 26, 20, 2); srAccent.position.set(-4, 2.6, 3.5); showroomScene.add(srAccent);
+  showroomScene.add(new THREE.HemisphereLight(0xcbdfff, 0x241d2e, 0.75));
+  srRim = new THREE.DirectionalLight(0x69baff, 2.4); srRim.position.set(-6, 4, -7); showroomScene.add(srRim);
+  srAccent = new THREE.PointLight(0xffb56a, 26, 20, 2); srAccent.position.set(-4, 2.6, 3.5); showroomScene.add(srAccent);
   // sürükle-çevir kontrolleri (yalnızca vitrin açıkken)
   renderer.domElement.addEventListener('pointerdown', e => {
     if (!showroom.active) return;
@@ -4260,8 +4264,8 @@ function buildShowroomTank() {
   srRim.position.set(-6 * ls, 4 * ls, -7 * ls); srRim.intensity = 1.8 + (ls - 1) * 1.2;
   srAccent.position.set(-4 * ls, 2.6 * ls, 3.5 * ls); srAccent.distance = 20 * ls; srAccent.intensity = 26 * ls;
   const premium = !!tankById(showroom.tankId).gem;
-  srRingMat.color.setHex(premium ? 0xffbd38 : 0xc5d878);
-  srRingMat.emissive.setHex(premium ? 0xffbd38 : 0xc5d878);
+  srRingMat.color.setHex(premium ? 0xffbd78 : 0x61d8f0);
+  srRingMat.emissive.setHex(premium ? 0xffbd78 : 0x61d8f0);
 }
 function frameShowroomCam() {
   showroomCam.aspect = innerWidth / innerHeight;
@@ -5346,6 +5350,7 @@ function clearBallMode() {
   ball = null;
 }
 function buildBallArena() {
+  if(mapFinish){mapFinish.dispose();mapFinish=null;}
   const wallMaterial = applyTheme('stadium');
   arenaHalf = Math.max(PITCH.PW, PITCH.PH) / 2 + 2;
   walls.length = 0; openCells = [];

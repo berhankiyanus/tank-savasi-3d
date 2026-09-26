@@ -55,3 +55,10 @@ Bu sürüm **inceleme ve beta geliştirme sürümüdür**. Planın tamamlanmış
 - Savaş sırasında görev/ekonomi bildirimleri sırada bekler; güncelleme şeridi gizlenir. Küçük yatay ekranda mini harita ve dalga başlığı küçültülür. Ekran çevrilmesi ve boyut değişiminde girdiler sıfırlanır.
 - Kamera izdüşüm testleri 844×390, 667×375 ve 852×320 boyutlarında standart 3 birim tank genişliğinin en az 65 CSS piksel kaldığını; rekabetçi kadrajın cihazdan bağımsız olduğunu doğrular. Tarayıcıda 844×390 solo ve 667×320 antrenman görsel olarak kontrol edildi.
 - iOS simülatör derlemesi başarılı. Simülatör ana ekranı açıldı ancak dokunma otomasyonu pencere hatası verdi; bu kontrol fiziksel telefon oynanış testi sayılmaz.
+
+### Mevcut haritalar ve mavi atölye paleti — 26 Eylül
+- Yeni harita eklenmedi. 16 mevcut haritanın grid özeti sabit bir regresyon testiyle korunuyor; yollar, siper çarpışmaları ve doğma düzenleri değiştirilmedi.
+- Her haritaya ayrı duvar/kapak/taban/işaret paleti verildi. Özgün kodla üretilen yüzey dokusu, üst kapak, servis paneli, taban şeridi, küçük ışık işaretleri ve düşük kontrastlı zemin lekeleri eklendi. Çöl, kanyon ve kar temalarında mat doğal yüzeyler kullanılıyor.
+- Dekor katmanı en fazla 7 instanced çizim grubu ekler; ek dinamik ışık ve harici görsel dosya indirmez. Harita değiştirilince kendi geometri, malzeme ve dokularını serbest bırakır. Fiziksel cihaz performansı ayrıca ölçülmelidir.
+- Menü ve garaj mevcut özgün atölye mimarisinde kaldı; lacivert/mavi yüzeyler, buz turkuazı gezinme ve sıcak turuncu ana eylem paletine geçti. Rakip oyundan görsel, logo, model veya arayüz dosyası alınmadı.
+- 16 haritanın malzemeleri yerel kontrol galerisinde karşılaştırıldı. Yakın kamera korunarak oyun içi kontrol, telefon boyutunda menü/garaj kontrolü, lisans kapısı ve iOS derlemesi yapıldı. 55 test geçti; veritabanı gerektiren 2 test atlandı.
