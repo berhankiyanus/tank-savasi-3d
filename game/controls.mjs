@@ -9,7 +9,7 @@ export function createControls({move,aim,settings=()=>({}),active=()=>true}){
     for(const ev of ['pointerup','pointercancel','lostpointercapture'])el.addEventListener(ev,end);
   }
   addEventListener('keydown',e=>{if(e.target.closest('input,textarea,select')||!active())return;keys.add(e.code);});
-  addEventListener('keyup',e=>keys.delete(e.code));addEventListener('blur',reset);document.addEventListener('visibilitychange',()=>{if(document.hidden)reset();});
+  addEventListener('keyup',e=>keys.delete(e.code));addEventListener('blur',reset);addEventListener('resize',reset);addEventListener('orientationchange',reset);document.addEventListener('visibilitychange',()=>{if(document.hidden)reset();});
   const read=()=>{if(!active()){reset();return {x:0,z:0,aim:state.aim,fire:false};}let x=state.x+(keys.has('KeyD')||keys.has('ArrowRight')?1:0)-(keys.has('KeyA')||keys.has('ArrowLeft')?1:0),z=state.z+(keys.has('KeyS')||keys.has('ArrowDown')?1:0)-(keys.has('KeyW')||keys.has('ArrowUp')?1:0);const d=Math.max(1,Math.hypot(x,z));return {x:x/d,z:z/d,aim:state.aim,fire:state.fire||keys.has('Space')};};
   return {state,read,reset,setAim:(x,z)=>{state.aim=Math.atan2(-x,-z);}};
 }

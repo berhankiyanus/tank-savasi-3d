@@ -48,3 +48,10 @@ Arena'yı kapatmak: `RANKED_ENABLED=0` ve yeniden başlatma. Gerçek satış zat
 ## Yayın kararı
 
 Bu sürüm **inceleme ve beta geliştirme sürümüdür**. Planın tamamlanmış sayılma ölçütü henüz karşılanmamıştır. Mağaza, dereceli ticari yayın ve başarı/oyuncu tutma iddiaları yukarıdaki kapılar geçilmeden açılmamalıdır.
+
+### Telefon kadrajı düzeltmesi — 26 Eylül
+- Önceki 18 birim yüksek kamera, kısa yatay telefon ekranında tankı gereğinden küçük gösteriyordu. Ortak kamera profili yatayda 12.5 birim; solo dikey önizlemede önceki 18 birim korunur. Arena bütün cihazlarda aynı 16:9 dünya kadrajını kullanır.
+- Solo takipte konum ve bakış hedefi birlikte hareket eder; maça girişte kamera doğrudan yerleşir. Takip ağır çekimden bağımsız gerçek zaman kullanır.
+- Savaş sırasında görev/ekonomi bildirimleri sırada bekler; güncelleme şeridi gizlenir. Küçük yatay ekranda mini harita ve dalga başlığı küçültülür. Ekran çevrilmesi ve boyut değişiminde girdiler sıfırlanır.
+- Kamera izdüşüm testleri 844×390, 667×375 ve 852×320 boyutlarında standart 3 birim tank genişliğinin en az 65 CSS piksel kaldığını; rekabetçi kadrajın cihazdan bağımsız olduğunu doğrular. Tarayıcıda 844×390 solo ve 667×320 antrenman görsel olarak kontrol edildi.
+- iOS simülatör derlemesi başarılı. Simülatör ana ekranı açıldı ancak dokunma otomasyonu pencere hatası verdi; bu kontrol fiziksel telefon oynanış testi sayılmaz.

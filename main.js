@@ -1,3 +1,4 @@
+import { combatFraming } from './game/camera.mjs';
 import { advancePractice } from './game/practice.mjs';
 import { readSession,saveSession,clearSession } from './net/session.mjs';
 import { ARENA_CATALOG } from './game/arena-catalog.mjs';
@@ -20,7 +21,7 @@ const L = {
     title: 'TANK SAVAŞI 3D',
     sub: 'Duvarların arkasına saklanan düşman tankları yok et!',
     keysDesk: 'W / ↑ &nbsp;→&nbsp; ileri &nbsp;|&nbsp; S / ↓ &nbsp;→&nbsp; geri &nbsp;|&nbsp; A / D &nbsp;→&nbsp; dön &nbsp;|&nbsp; BOŞLUK &nbsp;→&nbsp; ateş',
-    keysTouch: 'Soldaki joystick &nbsp;→&nbsp; sür ve dön &nbsp;|&nbsp; Sağdaki buton &nbsp;→&nbsp; ateş',
+    keysTouch: 'Sol çubuk &nbsp;→&nbsp; hareket &nbsp;|&nbsp; Sağ çubuk &nbsp;→&nbsp; nişan ve ateş',
     quickPlay: 'HIZLI OYNA',
     victoryTitle: '🏆 ZAFER!', victorySub: (s, c, n) => `Görev tamam — ${n || 10} dalga temizlendi!<br>Skor ${s} · +🪙${c}`, endlessBtn: '∞ SONSUZ DEVAM',
     botRookie: '🟢 ÇAYLAK · +🪙30', botPro: '🟡 USTA · +🪙70', botElite: '🔴 EFSANE · +🪙150',
@@ -3279,7 +3280,7 @@ function showToast(text, dur = 2800) {
   pumpToast();
 }
 function pumpToast() {
-  if (toastBusy || !toastQ.length) return;
+  if (state === 'play' || toastBusy || !toastQ.length) return;
   const { text, dur } = toastQ.shift();
   const el = $('toast'); el.textContent = text; el.style.opacity = '1';
   toastT = Math.min(dur / 1000, toastQ.length ? 1.7 : dur / 1000); // sırada bekleyen varsa hızlan
@@ -6552,6 +6553,7 @@ function tick() {
   if (glLost) { clock.getDelta(); return; } /* bağlam kayıpken çizme (hata seli yok) */
   const realDt = clock.getDelta();
   let dt = Math.min(realDt, 0.05);
+  const enteringCombat=state === 'play' && !document.body.classList.contains('in-combat');
   document.body.classList.toggle('in-combat',state === 'play');
   if (mode === 'ranked' && state === 'play') { if(practiceMatch){practiceAcc+=Math.min(realDt,.1);while(practiceAcc>=1/ARENA_RULES.hz&&!practiceMatch.over){practiceAcc-=1/ARENA_RULES.hz;advancePractice(practiceMatch);stepArena(practiceMatch);rankedView.receive({...snapshotArena(practiceMatch),events:practiceMatch.events});}if(practiceMatch.over){finishArenaPractice();return;}}monitorPerf(realDt,true); rankedView.frame(realDt);updateParticles(realDt);updateFlashes(realDt);updateFloaters(realDt);if(toastT>0){toastT-=realDt;if(toastT<=0){$('toast').style.opacity='0';toastBusy=false;pumpToast();}}updateRankedHud(); return; }
   if (slowmoT > 0 && mode === 'solo') { slowmoT -= dt; dt *= 0.35; } // MEGA SEKME slow-mo (gerçek zamanla söner, sim yavaşlar)
@@ -6877,14 +6879,18 @@ function tick() {
     }
   }
 
+  if (state !== 'play') pumpToast();
   if (renderPremiumStage(dt)) return;
   const focusX=player.x-Math.sin(player.aim)*1.25, focusZ=player.z-Math.cos(player.aim)*1.25;
-  camera.aspect=innerWidth/innerHeight;camera.fov=50;camera.updateProjectionMatrix();
-  _camTarget.set(focusX,18,focusZ+12);
-  camera.position.lerp(_camTarget,1-Math.exp(-6*dt));
+  const framing=combatFraming(innerWidth,innerHeight);
+  camera.aspect=framing.aspect;camera.fov=framing.fov;camera.updateProjectionMatrix();
+  _camTarget.set(focusX,framing.elevation,focusZ+framing.back);
+  if(enteringCombat) camera.position.copy(_camTarget);
+  else camera.position.lerp(_camTarget,1-Math.exp(-6*realDt));
   shake=Math.max(0,shake-dt*2);
   if(!settings.reducedMotion && shake>0) camera.position.x+=(Math.random()-.5)*Math.min(shake,.15);
-  camera.lookAt(focusX,0,focusZ-1.5);
+  // Follow position and look target together: steering must not swivel the camera.
+  camera.lookAt(camera.position.x,0,camera.position.z-framing.back-framing.ahead);
 
   tickCamoAnim(); // animasyonlu desen (KOZMETİK 2.0)
   renderer.render(scene, camera);
