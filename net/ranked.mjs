@@ -26,6 +26,8 @@ export function installRanked(server,{pool,enabled=false,development=false,clean
    if(req.method==='POST'&&url.pathname==='/api/arena/recover'){if(!rate('recover:'+ip,5)){reply(res,429,{error:'rate'});return true;}const b=await body(req),r=await store.recover(b.code);if(!r){reply(res,401,{error:'recovery'});return true;}clients.get(r.account.id)?.ws?.close(4009,'recovered');reply(res,200,r);return true;}
    const a=await store.authenticate((req.headers.authorization||'').replace(/^Bearer /,''));if(!a){reply(res,401,{error:'session'});return true;}
    if(req.method==='POST'&&url.pathname==='/api/arena/delete'){const b=await body(req);if(b.confirm!==a.id||clients.get(a.id)?.match){reply(res,409,{error:'confirmation_or_active_match'});return true;}removeQueue(a.id);clients.get(a.id)?.ws?.close(4009,'deleted');clients.delete(a.id);await store.deleteAccount(a.id);reply(res,200,{deleted:true});return true;}
+   if(req.method==='POST'&&url.pathname==='/api/arena/report'){if(!rate('report:'+a.id,5)){reply(res,429,{error:'rate'});return true;}const b=await body(req);reply(res,200,await store.report(a.id,b.target,b.reason));return true;}
+   if(req.method==='POST'&&url.pathname==='/api/arena/block'){const b=await body(req);if(typeof b.blocked!=='boolean')throw Error();const updated=await store.block(a.id,b.target,b.blocked);if(clients.has(a.id))clients.get(a.id).account=updated;reply(res,200,updated);return true;}
    if(req.method==='GET'&&url.pathname==='/api/arena/profile'){reply(res,200,await store.profile(a));return true;}
    if(req.method==='GET'&&url.pathname==='/api/arena/catalog'){reply(res,200,{items:ARENA_CATALOG});return true;}
    if(req.method==='POST'&&url.pathname==='/api/arena/purchase'){const b=await body(req);reply(res,200,await store.purchase(a.id,b.id));return true;}
@@ -50,7 +52,7 @@ export function installRanked(server,{pool,enabled=false,development=false,clean
     return;
    }
    if(m.t==='pong'&&m.n===client.pingAt){client.rtt=Math.min(2000,now-client.pingAt);return;}
-   if(m.t==='queue'&&!client.match){removeQueue(client.id);client.joined=now;client.appearance=String(m.tank||'recruit').slice(0,24);queue.push(client);send(ws,{t:'queued',since:now});return;}
+   if(m.t==='queue'&&!client.match){client.localBlocked=Array.isArray(m.blocked)?m.blocked.filter(v=>typeof v==='string'&&/^[a-f0-9-]{36}$/.test(v)).slice(0,200):[];removeQueue(client.id);client.joined=now;client.appearance=String(m.tank||'recruit').slice(0,24);queue.push(client);send(ws,{t:'queued',since:now});return;}
    if(m.t==='cancel'){removeQueue(client.id);send(ws,{t:'cancelled'});return;}
    const entry=matches.get(client.match);if(!entry)return;
    if(m.t==='input')acceptInput(entry.m,client.id,m);
@@ -58,13 +60,15 @@ export function installRanked(server,{pool,enabled=false,development=false,clean
   }catch{send(ws,{t:'error',code:'request'});}});
   ws.on('close',()=>{clearTimeout(authTimer);if(client&&client.ws===ws){removeQueue(client.id);client.gone=Date.now();client.ws=null;}});
  });
+ const cleanup=setInterval(()=>{if(pool&&healthy)pool.query("DELETE FROM arena_reports WHERE created_at < now()-interval '90 days'").catch(()=>{});},3600000);cleanup.unref();
+ const moderationTimer=setInterval(async()=>{if(!pool||!healthy||!clients.size)return;try{const rows=await pool.query("SELECT id FROM arena_accounts WHERE id=ANY($1) AND data->>'moderationBanned'='true'",[[...clients.keys()]]);for(const {id} of rows.rows){removeQueue(id);clients.get(id)?.ws?.close(4009,'suspended');}}catch{}},15000);moderationTimer.unref();
  let cycle=0,last=performance.now(),acc=0;
  async function settle(entry){if(entry.settling)return;entry.settling=true;try{const result=await store.commit(entry.m);for(const p of entry.m.players){const c=clients.get(p.id);if(c){c.match=null;if(result)Object.assign(c.account,result.players[p.id]);send(c.ws,{t:'result',...viewResult(result,p.id)});}}matches.delete(entry.m.id);}catch{entry.settling=false;for(const p of entry.m.players)send(clients.get(p.id)?.ws,{t:'saving'});}}
  const timer=setInterval(()=>{
   const now=Date.now(),clock=performance.now();acc+=Math.min(.25,(clock-last)/1000);last=clock;
   // One public queue. A failed wide-latency pairing stays queued instead of silently adding a bot.
   for(let i=0;i<queue.length&&matches.size<maxMatches;i++){
-   const a=queue[i];if(!a.ws||a.match)continue;const j=queue.findIndex((b,k)=>k>i&&b.ws&&!b.match&&a.rtt<250&&b.rtt<250&&Math.abs(a.account.rating-b.account.rating)<=Math.min(400,100+Math.floor((now-Math.min(a.joined,b.joined))/15000)*75));
+   const a=queue[i];if(!a.ws||a.match)continue;const j=queue.findIndex((b,k)=>k>i&&b.ws&&!b.match&&!a.account.data?.blocked?.includes(b.id)&&!b.account.data?.blocked?.includes(a.id)&&!a.localBlocked?.includes(b.id)&&!b.localBlocked?.includes(a.id)&&a.rtt<250&&b.rtt<250&&Math.abs(a.account.rating-b.account.rating)<=Math.min(400,100+Math.floor((now-Math.min(a.joined,b.joined))/15000)*75));
    if(j<0)continue;const b=queue[j];queue.splice(j,1);queue.splice(i--,1);
    const id=randomUUID(),map=ARENAS[cycle++%ARENAS.length].id,m=createMatch(id,map,[a.id,b.id]),entry={m,names:{[a.id]:a.account.name,[b.id]:b.account.name},appearances:{[a.id]:a.appearance,[b.id]:b.appearance},events:[]};matches.set(id,entry);
    for(const c of [a,b]){c.match=id;send(c.ws,{...snapshot(m),t:'start',you:c.id,names:entry.names,appearances:entry.appearances});}
@@ -79,5 +83,5 @@ export function installRanked(server,{pool,enabled=false,development=false,clean
   for(const [id,c] of clients){if(c.ws&&now-(c.pingAt||0)>5000){c.pingAt=now;send(c.ws,{t:'ping',n:now});}if(c.gone&&!c.match&&now-c.gone>60000)clients.delete(id);}
   if(limits.size>1000)for(const [k,v] of limits)if(now-v.at>60000)limits.delete(k);
  },1000/RULES.hz);timer.unref();
- return {http,store,matches,queue,close(){stopping=true;clearInterval(timer);for(const e of matches.values())for(const p of e.m.players)send(clients.get(p.id)?.ws,{t:'void',reason:'server'});for(const c of clients.values())c.ws?.close(1012,'restart');wss.close();}};
+ return {http,store,matches,queue,close(){stopping=true;clearInterval(timer);clearInterval(cleanup);clearInterval(moderationTimer);for(const e of matches.values())for(const p of e.m.players)send(clients.get(p.id)?.ws,{t:'void',reason:'server'});for(const c of clients.values())c.ws?.close(1012,'restart');wss.close();}};
 }

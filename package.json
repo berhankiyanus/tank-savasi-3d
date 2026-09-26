@@ -8,10 +8,12 @@
     "build:www": "node build-www.js",
     "sync": "node build-www.js && npx cap sync",
     "open:ios": "npx cap open ios",
+    "preview:ios:audio": "node tools/prepare-ios-audio-preview.cjs",
     "open:android": "npx cap open android",
     "test": "node --test tests/*.test.mjs",
     "audit:release": "node legal/verify-release.cjs",
-    "sync:ios": "node build-www.js && npx cap sync ios && node tools/prepare-ios.cjs"
+    "sync:ios": "node build-www.js && npx cap sync ios && node tools/prepare-ios.cjs",
+    "audit:appstore": "node tools/verify-app-store.cjs"
   },
   "engines": {
     "node": ">=18"

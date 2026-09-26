@@ -1,0 +1,29 @@
+{
+  "name": "TREAD RIVALS",
+  "bundleId": "com.berhankiyanus.tanksavasi",
+  "version": "1.1.0",
+  "build": 2,
+  "supportURL": "https://tank-savasi-3d.onrender.com/support.html",
+  "privacyURL": "https://tank-savasi-3d.onrender.com/privacy.html",
+  "copyright": "2026 Berhan Kıyanus",
+  "primaryCategory": "Games",
+  "gameSubcategories": ["Action", "Strategy"],
+  "localizations": {
+    "tr": {
+      "subtitle": "Tankını seç, arenaya hükmet",
+      "promotionalText": "Siperleri kullan, atışlarını sektir ve tankına kendi tarzını ver. Solo seferlerde ilerle, bot antrenmanında bağımsız nişan becerini geliştir.",
+      "keywords": "tank,savaş,aksiyon,strateji,arena,sekme,zırh,garaj,özelleştirme,antrenman",
+      "description": "TREAD RIVALS, hareket ve nişanı ayrı kontrol ettiğin bir tank aksiyon oyunudur. Siperleri kullan, duvarlardan sektirdiğin atışlarla açı yakala ve kendi tank tarzını oluştur.\n\nSOLO SEFER\nFarklı haritalarda düşman dalgalarına karşı savaş. Görevleri tamamla, solo ilerlemeni geliştir ve garajını genişlet.\n\nBOT ANTRENMANI\nÜç dakikalık Arena kurallarını bot rakibe karşı öğren. Hareket, bağımsız kule nişanı ve sektirme atışlarını dene. Antrenman lig puanı vermez.\n\nSENİN GARAJIN\nTank gövdeleri, boyalar, desenler, aksesuarlar ve mermi görünümleriyle kendi kombinlerini oluştur.\n\nSANA GÖRE KONTROL\nYatay ekran, iki çubuklu kontrol, solak düzeni, kontrol boyutu, azaltılmış hareket ve ayrı ses seviyesi seçenekleri.\n\nSolo ilerleme cihazında saklanır. Kullanım ölçümü ve solo skor paylaşımı isteğe bağlıdır. Çevrim içi hizmetler internet bağlantısı gerektirir."
+    },
+    "en-US": {
+      "subtitle": "Ricochet. Outplay. Customize.",
+      "promotionalText": "Use cover, bounce your shots and make your tank your own. Progress through solo battles and sharpen independent aiming in bot practice.",
+      "keywords": "tank,action,strategy,arena,ricochet,armor,garage,customization,battle,practice",
+      "description": "TREAD RIVALS is a tank action game with independent movement and turret aiming. Use cover, find angles with ricocheting shots and build your own tank style.\n\nSOLO CAMPAIGN\nBattle enemy waves across different maps. Complete objectives, develop your solo progress and expand your garage.\n\nBOT PRACTICE\nLearn the three-minute Arena rules against a clearly labeled bot. Practice movement, turret aiming and ricochet shots. Practice does not award a league rating.\n\nYOUR GARAGE\nCreate loadouts with tank bodies, paints, decals, accessories and projectile appearances.\n\nYOUR CONTROLS\nPlay in landscape with dual-stick controls, a left-handed layout, adjustable control size, reduced motion and separate audio levels.\n\nSolo progress is stored on your device. Usage analytics and solo score sharing are optional. Online services require an internet connection."
+    }
+  },
+  "onlineParagraphAfterProductionValidation": {
+    "tr": "EŞİT GÜÇTE 1v1 ARENA\nÜç dakikalık düellolarda beş imhaya ulaşmaya çalış. Tank görünümleri savaş gücünü değiştirmez; hareket, hasar ve maç sonucu sunucuda doğrulanır. İlk beş maçın yerleştirme maçlarıdır.",
+    "en-US": "EQUAL-POWER 1v1 ARENA\nAim for five eliminations in three-minute duels. Tank appearances do not change combat power; movement, damage and results are verified by the server. Your first five matches are placement matches."
+  }
+}

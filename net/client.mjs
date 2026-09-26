@@ -1,8 +1,11 @@
 import { readSession,saveSession } from './session.mjs';
 import { RULES } from '../game/combat.mjs';
+import { fetchJSON } from './http.mjs';
 export class RankedClient {
- constructor({base='',wsBase,onEvent,name,tank}){Object.assign(this,{base,wsBase,onEvent,name,tank});this.socket=null;this.seq=0;this.stopped=true;this.account=null;this.match=null;this.generation=0;}
- async request(path,options={}){const r=await fetch(this.base+'/api/arena/'+path,{...options,headers:{'Content-Type':'application/json',...(this.token?{Authorization:'Bearer '+this.token}:{}),...options.headers},cache:'no-store'});if(!r.ok){const e=Error('HTTP '+r.status);e.status=r.status;throw e;}return r.json();}
+ constructor({base='',wsBase,onEvent,name,tank,blocked=()=>[]}){Object.assign(this,{base,wsBase,onEvent,name,tank,blocked});this.socket=null;this.seq=0;this.stopped=true;this.account=null;this.match=null;this.generation=0;}
+ async request(path,options={}){
+  return fetchJSON(this.base+'/api/arena/'+path,{...options,headers:{'Content-Type':'application/json',...(this.token?{Authorization:'Bearer '+this.token}:{}),...options.headers},cache:'no-store'});
+ }
  async connect(){const generation=++this.generation;this.stopped=false;this.onEvent({t:'connecting'});
   try { const status=await this.request('status');if(!status.available)throw Error('unavailable');if(this.stopped||generation!==this.generation)return;
    this.token=await readSession();
@@ -16,7 +19,7 @@ export class RankedClient {
   ws.onopen=()=>this.send({t:'hello',version:RULES.version,token:this.token});
   ws.onmessage=ev=>{if(this.socket!==ws)return;let m;try{m=JSON.parse(ev.data);}catch{return;}
    if(m.t==='ping'){this.send({t:'pong',n:m.n});return;}
-   if(m.t==='ready'){clearTimeout(timeout);ready=true;this.account=m.account;this.onEvent(m);if(!this.match)this.send({t:'queue',tank:this.tank()});else{const result=m.account.history?.find(h=>h.id===this.match);if(result){this.match=null;this.onEvent({t:'result',...result});}else if(!m.activeMatch){this.match=null;this.onEvent({t:'void',reason:'server'});}}return;}
+   if(m.t==='ready'){clearTimeout(timeout);ready=true;this.account=m.account;this.onEvent(m);if(!this.match)this.send({t:'queue',tank:this.tank(),blocked:this.blocked()});else{const result=m.account.history?.find(h=>h.id===this.match);if(result){this.match=null;this.onEvent({t:'result',...result});}else if(!m.activeMatch){this.match=null;this.onEvent({t:'void',reason:'server'});}}return;}
    if(m.t==='start')this.match=m.id;
    if(m.t==='result'||m.t==='void')this.match=null;
    this.onEvent(m);

@@ -19,7 +19,7 @@ function verifyRelease(){
  const allowed=new Set(files);
  for(const f of files.filter(f=>!f.startsWith('libs/')&&/\.(m?js|html|css|json)$/.test(f))){
   const s=fs.readFileSync(path.join(ROOT,f),'utf8');
-  for(const m of s.matchAll(/assets\/[a-zA-Z0-9_./-]+\.(?:glb|hdr|jpg|png|ttf|woff2)/g))if(!allowed.has(m[0]))throw Error('Unapproved runtime reference '+m[0]+' in '+f);
+  for(const m of s.matchAll(/assets\/[a-zA-Z0-9_./-]+\.(?:glb|hdr|jpg|png|ttf|woff2|mp3|m4a|wav|ogg|aac|flac)/g))if(!allowed.has(m[0]))throw Error('Unapproved runtime reference '+m[0]+' in '+f);
  }
  const sbom=JSON.parse(fs.readFileSync(path.join(ROOT,'legal/software-sbom.json')));
  if(sbom.lockSha256!==sha(fs.readFileSync(path.join(ROOT,'package-lock.json'))))throw Error('Dependency lock changed; review software licenses and refresh SBOM.');

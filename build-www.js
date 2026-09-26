@@ -7,6 +7,8 @@ const root = __dirname;
 const out = path.join(root, 'www');
 const { files: items } = require('./release-policy.cjs');
 require('./legal/verify-release.cjs').verifyRelease();
+// Imports in .mjs files must parse too; main.js minification alone cannot catch them.
+for(const file of items.filter(f=>/\.m?js$/.test(f)))require('child_process').execFileSync(process.execPath,['--input-type=module','--check'],{input:fs.readFileSync(path.join(root,file)),stdio:['pipe','pipe','pipe']});
 
 function copy(src, dst) {
   fs.mkdirSync(path.dirname(dst), { recursive: true });
@@ -51,4 +53,6 @@ try {
 } catch (e) { console.warn('küçültme atlandı:', e.message); }
 const sizeOf = d => fs.readdirSync(d).reduce((a, f) => { const q = path.join(d, f); const st = fs.statSync(q); return a + (st.isDirectory() ? sizeOf(q) : st.size); }, 0);
 const mb = sizeOf(out) / 1048576;
+const digest=require('crypto').createHash('sha256');for(const file of [...items].sort()){digest.update(file+'\0');digest.update(fs.readFileSync(path.join(root,file)));}
+fs.writeFileSync(path.join(out,'build-info.json'),JSON.stringify({sourceDigest:digest.digest('hex'),builtAt:new Date().toISOString()},null,2));
 console.log('www/ oluşturuldu:', items.filter(i => fs.existsSync(path.join(root, i))).join(', '), '·', mb.toFixed(2), 'MB' + (mb > 7 ? '  ⚠ 7 MB hedefi aşıldı' : ''));

@@ -1,7 +1,7 @@
 // Service worker — uygulama kabuğu + boot'u bloklayan varlıklar önbellekte (kurulabilirlik, hızlı ve OFFLINE açılış).
 // SÜRÜM: her yayında el ile artır (web bu dosyayı repodan sunar); native pakette build-www.js
 // __BUILDSTAMP__ damgasını gerçek zamanla değiştirir → her native sürüm otomatik taze önbellek.
-const CACHE = 'tank3d-v1.0.0-premium5-tread-rivals-__BUILDSTAMP__'; // web: sürüm adı her yayında değişir; native: build-www damgalar
+const CACHE = 'tank3d-v1.0.0-premium9-release-prep-__BUILDSTAMP__'; // web: sürüm adı her yayında değişir; native: build-www damgalar
 // Denetim fix'i: eski CORE tank.glb+env.hdr'ı içermiyordu → offline ilk açılış HEP retry ekranına düşüyordu.
 const CORE = [
   './',
@@ -9,6 +9,7 @@ const CORE = [
   'assets/outpost-lobby.jpg',
   'assets/tread-rivals-logo.png',
   'main.js',
+  'game/audio.mjs', 'game/privacy.mjs','net/http.mjs', 'privacy.html', 'support.html',
   'game-progress.mjs', 'garage-content.mjs', 'garage-visuals.mjs',
   'polish.css', 'game/arenas.mjs', 'game/arena-catalog.mjs', 'game/combat.mjs', 'game/controls.mjs','game/camera.mjs','game/map-finish.mjs','game/practice.mjs', 'game/presentation.mjs', 'game/premium-profile.mjs', 'game/ranked-view.mjs', 'net/client.mjs','net/session.mjs',
   'libs/three.module.js',
@@ -34,6 +35,7 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
   if (e.request.method !== 'GET' || url.protocol.startsWith('ws') || url.origin !== location.origin) return;
+  if (url.pathname.startsWith('/_audio-preview/')) return; // Private audition audio must never enter the offline/release cache.
   if (/^\/(api\/|ev|lb|stats|events)/.test(url.pathname)) return;
   if (ASSET_RE.test(url.pathname)) {
     // stale-while-revalidate: önbellekten anında yanıt, arka planda güncelle

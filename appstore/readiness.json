@@ -1,0 +1,54 @@
+{
+  "gates": [
+    {
+      "id": "production-arena",
+      "status": "blocked",
+      "reason": "26 Sep: production status available=false. Durable PostgreSQL and a non-sleeping server must be configured, paid resources separately authorized, then real-device 1v1/reconnect/load checks repeated."
+    },
+    {
+      "id": "distribution-account",
+      "status": "pending",
+      "reason": "Apple Developer membership, App Store Connect app record, distribution signing and name reservation need verification in the owner's account."
+    },
+    {
+      "id": "public-support-privacy",
+      "status": "pending",
+      "reason": "Updated support/privacy pages exist in the native package; deploy the same revision to Render and verify both public URLs before submission."
+    },
+    {
+      "id": "audio-selection",
+      "status": "pending",
+      "reason": "AudioHero commercial iOS/Humble license confirmation is pending. Private audition recordings are excluded. Confirm final licensed soundtrack, or explicitly choose the project-authored fallback for release."
+    },
+    {
+      "id": "release-scope",
+      "status": "pending",
+      "reason": "Current build has no real-money payments or advertising. Owner's first-release choice is pending; do not enable unfinished IAP or claim it in metadata."
+    },
+    {
+      "id": "store-declarations",
+      "status": "pending",
+      "reason": "Owner must confirm privacy labels, age-rating questionnaire, export declaration, review contact, regions and EU trader status as applicable."
+    },
+    {
+      "id": "device-beta",
+      "status": "pending",
+      "reason": "Final signed release build needs physical iPhone/iPad playthrough, offline launch, audio interruptions, controls and a 20-minute thermal/memory test. Simulator/browser checks do not replace this."
+    },
+    {
+      "id": "screenshots",
+      "status": "pending",
+      "reason": "Actual iPhone 6.9-inch native home screenshot captured (2868x1320, JPEG without alpha). Gameplay/garage and iPad 13-inch captures remain; iPad simulator boot and native coordinate interaction stalled. Final images must match the submitted build."
+    },
+    {
+      "id": "moderation-operations",
+      "status": "pending",
+      "reason": "Report/block/filter tools exist. The owner must monitor the private report queue and support inbox and act on abusive accounts before opening online play."
+    },
+    {
+      "id": "apple-validation",
+      "status": "pending",
+      "reason": "Local Release archive is not App Store Connect validation. Sign, validate, upload and inspect Apple's processing/privacy diagnostics before selecting a build for review."
+    }
+  ]
+}

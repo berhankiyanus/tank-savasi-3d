@@ -495,7 +495,7 @@
     <div class="queue-card"><span class="eyebrow">ARENA / 01</span><h2 id="queue-title">RAKİP ARANIYOR</h2><p id="queue-status" role="status" aria-live="polite">Bağlanıyor…</p><div id="queue-time">00:00</div><p id="queue-rules">1v1 · 3 dakika · 5 imha · Eşit güç</p><button id="queue-cancel" class="mbtn">İPTAL</button><button id="queue-practice" class="mbtn small">BOT ANTRENMANI</button></div>
   </div>
   <div id="panel-league" class="panel"><div class="league-hero"><span class="eyebrow">REKABETÇİ 1v1</span><h2 id="league-rating">YERLEŞTİRME</h2><p id="league-status">İlk beş maçınla dereceni belirle.</p></div><div id="league-list" role="status"></div><button id="league-play" class="mbtn play">SAVAŞA GİR</button><button id="league-solo" class="mbtn small">SOLO REKORLARI</button></div>
-  <div id="panel-arena-result" class="panel"><span class="eyebrow">MAÇ RAPORU</span><h2 id="arena-result-title"></h2><div id="arena-result-score"></div><p id="arena-result-detail"></p><p id="arena-result-reward"></p><button id="arena-again" class="mbtn play">YENİ RAKİP BUL</button><button id="arena-home" class="mbtn">ÜSSE DÖN</button></div>
+  <div id="panel-arena-result" class="panel"><span class="eyebrow">MAÇ RAPORU</span><h2 id="arena-result-title"></h2><div id="arena-result-score"></div><p id="arena-result-detail"></p><p id="arena-result-reward"></p><button id="arena-player-safety" class="mbtn small" hidden>BİLDİR / ENGELLE · REPORT / BLOCK</button><button id="arena-again" class="mbtn play">YENİ RAKİP BUL</button><button id="arena-home" class="mbtn">ÜSSE DÖN</button></div>
 
   <div id="panel-main" class="panel show">
     <div class="lobby-side">
@@ -696,6 +696,16 @@
     <h2 id="set-title">AYARLAR</h2>
     <button class="mbtn" id="set-sound">Ses: AÇIK</button>
     <button class="mbtn" id="set-music">Müzik: AÇIK</button>
+    <fieldset class="audio-mix">
+      <legend id="audio-mix-title">SES DENGESİ</legend>
+      <label for="audio-volMusic"><span id="audio-label-volMusic">Müzik</span><output id="audio-value-volMusic" for="audio-volMusic">65%</output></label>
+      <input id="audio-volMusic" type="range" min="0" max="100" step="1" value="65">
+      <label for="audio-volSfx"><span id="audio-label-volSfx">Efektler</span><output id="audio-value-volSfx" for="audio-volSfx">80%</output></label>
+      <input id="audio-volSfx" type="range" min="0" max="100" step="1" value="80">
+      <label for="audio-volEngine"><span id="audio-label-volEngine">Motor</span><output id="audio-value-volEngine" for="audio-volEngine">35%</output></label>
+      <input id="audio-volEngine" type="range" min="0" max="100" step="1" value="35">
+      <p id="audio-preview-status" hidden></p>
+    </fieldset>
     <button class="mbtn" id="set-quality">Kalite: YÜKSEK</button>
     <button class="mbtn" id="set-haptic">Titreşim: AÇIK</button>
     <button class="mbtn" id="set-autofire">Oto Ateş: AÇIK</button>
@@ -706,7 +716,8 @@
       <button class="mbtn alt" id="set-quit">ANA MENÜ</button>
     </div>
     <div class="credits-summary">Modeller: Kenney (CC0) + proje tasarımları · Doku / ışık: Poly Haven (CC0) · Barlow (OFL)<br><button class="mbtn small" id="set-licenses">LİSANSLAR / LICENSES</button></div>
-    <div style="font-size:11px;color:#8aa08c;margin-top:6px"><a id="set-privacy" href="privacy.html" style="color:#7dd8a0">Gizlilik</a> &nbsp;·&nbsp; <span id="set-ver">v0.9.0</span></div>
+    <div class="premium-settings"><h3>VERİ / DATA</h3><button class="mbtn small" id="set-analytics" role="switch" aria-checked="false">Kullanım ölçümü: KAPALI</button><button class="mbtn small" id="set-share-scores" role="switch" aria-checked="false">Solo skor paylaşımı: KAPALI</button><p id="set-data-note"></p><button class="mbtn small" id="set-rival" hidden>RAKİBİ BİLDİR / ENGELLE</button><button class="mbtn small" id="set-support">DESTEK VE GERİ BİLDİRİM</button><button class="mbtn small" id="set-reset-solo">CİHAZDAKİ SOLO KAYDI SİL</button><div id="solo-reset-confirm" hidden><p id="solo-reset-note" role="alert"></p><button class="mbtn small" id="solo-reset-cancel">VAZGEÇ</button><button class="mbtn small" id="solo-reset-delete">EVET, SOLO KAYDI SİL</button></div></div>
+    <div style="font-size:13px;margin-top:6px"><a id="set-privacy" href="privacy.html">Gizlilik</a> &nbsp;·&nbsp; <span id="set-ver">v1.1.0</span></div>
     <button class="mbtn small" id="set-how">❓ Nasıl Oynanır</button>
     <button class="mbtn small" id="set-close">KAPAT</button>
   </div>
@@ -731,10 +742,19 @@
       b.textContent = (en ? 'Something went wrong: ' : 'Bir hata oluştu: ') + String(m).slice(0, 120) + (en ? '  (tap to close)' : '  (kapatmak için dokun)');
       b.style.display = 'block'; b.onclick = function () { b.style.display = 'none'; };
       clearTimeout(window.__errT); window.__errT = setTimeout(function () { b.style.display = 'none'; }, 12000);
-    } else { b.textContent = 'HATA / ERROR: ' + m; b.style.display = 'block'; }
+    } else {
+      if (!window.__bootFailure) window.__bootFailure = String(m);
+      b.textContent = (en ? 'Unable to start: ' : 'Oyun başlatılamadı: ') + window.__bootFailure;
+      b.style.display = 'block'; b.style.zIndex = '120';
+      var status = document.getElementById('boot-status'); if (status) status.textContent = en ? 'Please try again.' : 'Lütfen tekrar dene.';
+      if (!document.getElementById('boot-error-retry')) {
+        var retry = document.createElement('button'); retry.id = 'boot-error-retry'; retry.className = 'mbtn';
+        retry.textContent = en ? 'TRY AGAIN' : 'TEKRAR DENE'; retry.onclick = function () { location.reload(); }; b.appendChild(retry);
+      }
+    }
   };
   setTimeout(function () {
-    if (!window.__gameLoaded) window.__showErr('Oyun yüklenemedi — tarayıcı çok eski olabilir / Game failed to load.');
+    if (!window.__gameLoaded && !window.__bootFailure) window.__showErr('Hazırlık beklenenden uzun sürdü / Preparation took longer than expected.');
   }, 15000);
   // service worker sadece web'de (native app'te varlıklar zaten cihazda gömülü — SW gereksiz/sorunlu)
   var __native = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());

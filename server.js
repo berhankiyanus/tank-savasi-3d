@@ -59,7 +59,7 @@ if (process.env.DATABASE_URL) {
     setInterval(() => { // 30 günden eski kayıtları buda
       if (!pgPool) return;
       const cut = new Date(Date.now() - 30 * 864e5).toISOString().slice(0, 10);
-      pgPool.query("DELETE FROM lb WHERE period LIKE 'd:%' AND period < $1", ['d:' + cut]).catch(() => {});
+      pgPool.query("DELETE FROM lb WHERE (period LIKE 'd:%' AND period < $1) OR (period LIKE 'w:%' AND period <> $2) OR (period LIKE 's:%' AND period <> $3)", ['d:' + cut, 'w:'+lbKeys().week, 's:'+lbKeys().week]).catch(() => {});
       pgPool.query('DELETE FROM days WHERE day < $1', [cut]).catch(() => {});
     }, 6 * 3600e3);
   } catch (e) { console.error('[PG] pg modülü yok:', e.message); }
@@ -84,12 +84,13 @@ function trackEvent(m) {
     (stats.days[day] || (stats.days[day] = new Set())).add(m.pid.slice(0, 40));
     if (pgPool) pgPool.query('INSERT INTO days(day, pid) VALUES($1, $2) ON CONFLICT DO NOTHING', [day, m.pid.slice(0, 40)]).catch(() => {});
     const dk = Object.keys(stats.days);
-    if (dk.length > 45) for (const k of dk.sort().slice(0, dk.length - 45)) delete stats.days[k]; // en eski günleri buda
+    if (dk.length > 30) for (const k of dk.sort().slice(0, dk.length - 30)) delete stats.days[k]; // en eski günleri buda
   }
   // eski oturumları buda (bellek sızıntısı önle)
   const keys = Object.keys(stats.sessions);
   if (keys.length > 5000) for (const k of keys.slice(0, 1000)) delete stats.sessions[k];
-  console.log('[EV]', m.ev, m.mode || '', (m.sid || '').slice(0, 6), m.dur != null ? m.dur + 's' : '');
+  // Only aggregate event counters are exposed; no player/session identifiers in logs.
+  console.log('[EV]', m.ev, m.mode || '');
 }
 
 // ---- lider tablosu (günlük + haftalık, in-memory; gece/hafta sonu sıfırlanır) ----
@@ -281,8 +282,12 @@ function handleReq(req, res) {
 }
 // tek isteğin beklenmedik hatası süreci ve diğer odaları düşürmesin
 let rankedService = null;
+const audioPreview = require('./tools/audio-preview-server.cjs').createAudioPreview({
+  enabled: process.env.AUDIO_PREVIEW === '1', production: process.env.NODE_ENV === 'production',
+  root: path.join(ROOT, '.local-audio', 'preview'),
+});
 const server = http.createServer(async (req, res) => {
-  try { if (req.url.startsWith('/api/arena/')) { if (!rankedService) { res.writeHead(503); res.end(); return; } if(await rankedService.http(req,res)) return; } handleReq(req, res); }
+  try { if(audioPreview?.(req,res))return; if (req.url.startsWith('/api/arena/')) { if (!rankedService) { res.writeHead(503); res.end(); return; } if(await rankedService.http(req,res)) return; } handleReq(req, res); }
   catch (e) { console.error('[HTTP]', e && e.message); try { res.writeHead(500); res.end(); } catch {} }
 });
 
@@ -378,5 +383,5 @@ import('./net/ranked.mjs').then(({installRanked}) => {
   const development = process.env.NODE_ENV !== 'production' && process.env.RANKED_DEV === '1';
   rankedService = installRanked(server,{pool:pgPool,development,enabled:development || process.env.RANKED_ENABLED === '1',cleanName});
   process.on('SIGTERM',()=>{rankedService.close();server.close(()=>process.exit(0));});
-  server.listen(PORT, () => console.log(`Tank sunucusu ${PORT} portunda dinliyor`));
+  server.listen(PORT, audioPreview ? '127.0.0.1' : undefined, () => console.log(`Tank sunucusu ${PORT} portunda dinliyor${audioPreview ? ' (yalnız yerel ses denemesi)' : ''}`));
 }).catch(e=>{console.error(e);process.exitCode=1;});

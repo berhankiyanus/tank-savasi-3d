@@ -1,5 +1,8 @@
+import { fetchJSON } from './net/http.mjs';
+import { GameAudio, level as audioLevel } from './game/audio.mjs';
+import { createTelemetry, optedIn, clearSoloData } from './game/privacy.mjs';
 import { createMapFinish } from './game/map-finish.mjs';
-import { combatFraming } from './game/camera.mjs';
+import { combatFraming, createCombatCamera, applyCombatCamera } from './game/camera.mjs';
 import { advancePractice } from './game/practice.mjs';
 import { readSession,saveSession,clearSession } from './net/session.mjs';
 import { ARENA_CATALOG } from './game/arena-catalog.mjs';
@@ -290,12 +293,16 @@ if (typeof settings.music !== 'boolean') settings.music = true;
 if (typeof settings.haptics !== 'boolean') settings.haptics = true; // titreşim tercihi (yeni ayar)
 // E2: oto-ateş — araştırma: tek-parmak kontrol 9/10 başarılı oyunda; dokunmatikte varsayılan AÇIK (D0 sürtünmesi), PvE'de geçerli
 if (typeof settings.notifs !== 'boolean') settings.notifs = false; // günlük hatırlatma bildirimi (yalnız native)
-if (typeof settings.volSfx !== 'number') settings.volSfx = 1;
-if (typeof settings.volMusic !== 'number') settings.volMusic = 1;
+settings.volSfx = audioLevel(settings.volSfx, .8);
+settings.volMusic = audioLevel(settings.volMusic, .65);
+settings.volEngine = audioLevel(settings.volEngine, .35);
 if (!['normal', 'tight', 'wide'].includes(settings.stick)) settings.stick = 'normal'; // FAZ3: joystick ölü bölge (0.2 / 0.1 / 0.3)
 const stickDz = () => (settings.stick === 'tight' ? 0.1 : settings.stick === 'wide' ? 0.3 : 0.2);
 if (typeof settings.autoFire !== 'boolean') settings.autoFire = ('ontouchstart' in window || navigator.maxTouchPoints > 0); // (IS_TOUCH henüz tanımsız — TDZ)
-const GAME_VER = '1.1.0-beta'; // ayarlar panelinde görünür; mağaza sürümleriyle birlikte artır
+for(const key of ['blockedArena','blockedSoloNames'])settings[key]=Array.isArray(settings[key])?settings[key].filter(v=>typeof v==='string').slice(0,200):[];
+settings.analytics = optedIn(settings.analytics);
+settings.shareScores = optedIn(settings.shareScores);
+const GAME_VER = '1.1.0'; // tools/verify-app-store.cjs checks the native version matches.
 function saveSettings() { try { localStorage.setItem('tanksettings', JSON.stringify(settings)); } catch (e) { /* engelli depolama: ayar kalıcı olmaz ama oyun çalışır */ } }
 
 // ---------------------------------------------------------------- sunucu adresi (web vs native app)
@@ -470,15 +477,12 @@ function maybeInterstitial() { return; // No forced interruptions in the premium
 }
 
 // ---------------------------------------------------------------- analitik (anonim huni ölçümü)
-const SESSION_ID = Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+const telemetry = createTelemetry({enabled:()=>settings.analytics,storage:{getItem:k=>localStorage.getItem(k),setItem:(k,v)=>localStorage.setItem(k,v),removeItem:k=>localStorage.removeItem(k)},send:payload=>{
+  const body=JSON.stringify(payload),url=apiBase()+'/ev';
+  if(!navigator.sendBeacon?.(url,body))fetch(url,{method:'POST',body,keepalive:true}).catch(()=>{});
+}});
 function track(ev, data) {
-  try {
-    // pid: kalıcı istemci kimliği (CLIENT_ID) — sunucuda günlük tekil oyuncu (D1/D7 retention) sayımı için
-    const payload = JSON.stringify(Object.assign({ ev, sid: SESSION_ID, pid: CLIENT_ID, t: Date.now() }, data || {}));
-    const url = apiBase() + '/ev';
-    if (navigator.sendBeacon) navigator.sendBeacon(url, payload);
-    else fetch(url, { method: 'POST', body: payload, keepalive: true }).catch(() => {});
-  } catch {}
+  telemetry.track(ev,data);
 }
 track('load_start'); // boot hunisi başlangıcı (load_end ile fark = ilk-kareye-süre; eksikse boot terki)
 // lider tablosu: kalıcı istemci kimliği (aynı oyuncunun günlük en iyisi tekilleşsin)
@@ -491,6 +495,7 @@ const CLIENT_ID = (() => {
   } catch (e) { return Math.random().toString(36).slice(2, 12); }
 })();
 function submitScore(score) {
+  if(!settings.shareScores)return;
   if (!score || score < 1) return;
   try {
     const payload = JSON.stringify({ cid: CLIENT_ID, name: profile.name || T().defaultName, score: score | 0, av: avatarIcon(), ti: profile.title || '' }); // KOZMETİK 2.0: vanity
@@ -500,6 +505,7 @@ function submitScore(score) {
   } catch {}
 }
 function submitTime(sec) {
+  if(!settings.shareScores)return;
   if (!sec || sec < 60) return;
   try {
     const payload = JSON.stringify({ cid: CLIENT_ID, name: profile.name || T().defaultName, time: sec | 0, av: avatarIcon(), ti: profile.title || '' });
@@ -509,7 +515,7 @@ function submitTime(sec) {
   } catch {}
 }
 async function fetchLeaderboard(period) {
-  try { const r = await fetch(apiBase() + '/lb?p=' + period, { cache: 'no-store', signal: AbortSignal.timeout ? AbortSignal.timeout(8000) : undefined }); return await r.json(); } /* P1-2: uyuyan sunucuda 8 sn'de vazgeç */
+  try { return await fetchJSON(apiBase() + '/lb?p=' + period, { cache: 'no-store' },8000); } /* P1-2: uyuyan sunucuda 8 sn'de vazgeç */
   catch { return null; } // null = ağ hatası (boş liste "henüz skor yok" ile karışmasın — denetim)
 }
 let paused = false;
@@ -1025,7 +1031,7 @@ async function fetchEvent(force) {
   if (!force && Date.now() - eventFetchedAt < 5 * 60e3) return;
   eventFetchedAt = Date.now();
   activeEvent = eventSpec(); renderEventBtn(); /* P1-2: yerel formül hemen görünür; sunucu cevabı gelince tazelenir */
-  try { const r = await fetch(apiBase() + '/events', { cache: 'no-store', signal: AbortSignal.timeout ? AbortSignal.timeout(8000) : undefined }); const j = await r.json(); if (j && typeof j.active === 'boolean') activeEvent = j; } catch {}
+  try { const j = await fetchJSON(apiBase() + '/events', { cache: 'no-store' },8000); if (j && typeof j.active === 'boolean') activeEvent = j; } catch {}
   renderEventBtn();
 }
 function eventKey() { return 'e' + (activeEvent.endsAt || 0); }
@@ -2259,162 +2265,42 @@ const fwdX = a => -Math.sin(a), fwdZ = a => -Math.cos(a);
 const headingTo = (fx, fz, tx, tz) => Math.atan2(-(tx - fx), -(tz - fz));
 
 // ---------------------------------------------------------------- ses
-let AC = null;
-let sfxBus = null; // tüm efektler tek gain'den geçer → SES seviyesi tek noktadan (P1 ses paketi)
-function audio() {
-  if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)();
-  if (AC.state === 'suspended') AC.resume();
-  if (!sfxBus) { sfxBus = AC.createGain(); sfxBus.connect(AC.destination); applySfxVol(); }
-  return AC;
-}
-function applySfxVol() { if (sfxBus && AC) sfxBus.gain.setTargetAtTime(settings.muted ? 0 : (settings.volSfx || 1), AC.currentTime, 0.05); }
-function noiseBuf(ac, dur) {
-  const b = ac.createBuffer(1, ac.sampleRate * dur, ac.sampleRate);
-  const d = b.getChannelData(0);
-  for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
-  return b;
-}
-function sfxFire() {
-  if (settings.muted) return;
-  const ac = audio(), t = ac.currentTime;
-  const o = ac.createOscillator(), g = ac.createGain();
-  o.type = 'square'; o.frequency.setValueAtTime(240, t);
-  o.frequency.exponentialRampToValueAtTime(50, t + 0.16);
-  g.gain.setValueAtTime(0.12, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
-  o.connect(g).connect(sfxBus); o.start(t); o.stop(t + 0.2);
-  const n = ac.createBufferSource(), ng = ac.createGain(), f = ac.createBiquadFilter();
-  n.buffer = noiseBuf(ac, 0.12); f.type = 'lowpass'; f.frequency.value = 2400;
-  ng.gain.setValueAtTime(0.1, t); ng.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
-  n.connect(f).connect(ng).connect(sfxBus); n.start(t);
-}
-function sfxBounce() {
-  if (settings.muted) return;
-  const ac = audio(), t = ac.currentTime;
-  const o = ac.createOscillator(), g = ac.createGain();
-  o.type = 'triangle'; o.frequency.setValueAtTime(900, t);
-  o.frequency.exponentialRampToValueAtTime(300, t + 0.08);
-  g.gain.setValueAtTime(0.07, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.09);
-  o.connect(g).connect(sfxBus); o.start(t); o.stop(t + 0.1);
-}
-let lastBoom = 0;
-function sfxBoom(big = false) {
-  if (settings.muted) return;
-  const now = performance.now();
-  if (!big && now - lastBoom < 55) return; // küçük patlama seslerini kısıtla (üst üste binmesin)
-  lastBoom = now;
-  const ac = audio(), t = ac.currentTime;
-  const n = ac.createBufferSource(), g = ac.createGain(), f = ac.createBiquadFilter();
-  n.buffer = noiseBuf(ac, big ? 0.9 : 0.5);
-  f.type = 'lowpass'; f.frequency.setValueAtTime(big ? 900 : 700, t);
-  f.frequency.exponentialRampToValueAtTime(60, t + (big ? 0.8 : 0.45));
-  g.gain.setValueAtTime(big ? 0.5 : 0.3, t);
-  g.gain.exponentialRampToValueAtTime(0.001, t + (big ? 0.9 : 0.5));
-  n.connect(f).connect(g).connect(sfxBus); n.start(t);
-}
-function sfxCoin() {
-  if (settings.muted) return;
-  const ac = audio(), t = ac.currentTime;
-  const o = ac.createOscillator(), g = ac.createGain();
-  o.type = 'sine'; o.frequency.setValueAtTime(880, t);
-  o.frequency.setValueAtTime(1320, t + 0.06);
-  g.gain.setValueAtTime(0.08, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
-  o.connect(g).connect(sfxBus); o.start(t); o.stop(t + 0.2);
-}
-// ---- prosedürel arka plan müziği (özgün, WebAudio ile üretilir) ----
-let musicGain = null, musicPlaying = false, musicTimer = null, musicNext = 0, musicChord = 0;
-const CHORDS = [
-  [110.00, [220.00, 261.63, 329.63]], // Am
-  [87.31, [174.61, 220.00, 261.63]],  // F
-  [130.81, [261.63, 329.63, 392.00]], // C
-  [98.00, [196.00, 246.94, 293.66]],  // G
-];
-function playChordAt(bass, triad, t, dur) {
-  const ac = AC, v = 0.045;
-  const bo = ac.createOscillator(), bg = ac.createGain();
-  bo.type = 'triangle'; bo.frequency.value = bass;
-  bg.gain.setValueAtTime(0.0001, t); bg.gain.linearRampToValueAtTime(v * 1.3, t + 0.06); bg.gain.linearRampToValueAtTime(0.0001, t + dur);
-  bo.connect(bg).connect(musicGain); bo.start(t); bo.stop(t + dur + 0.1);
-  for (const f of triad) {
-    const o = ac.createOscillator(), g = ac.createGain(), fl = ac.createBiquadFilter();
-    o.type = 'sawtooth'; o.frequency.value = f; fl.type = 'lowpass'; fl.frequency.value = 850;
-    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(v * 0.35, t + 0.35); g.gain.linearRampToValueAtTime(0.0001, t + dur);
-    o.connect(fl).connect(g).connect(musicGain); o.start(t); o.stop(t + dur + 0.1);
-  }
-}
-function scheduleMusic() {
-  if (!musicPlaying || !AC) return;
-  if (settings.muted || !settings.music) { musicNext = AC.currentTime + 0.1; return; }
-  const now = AC.currentTime, beat = state === 'play' ? 1.7 : 2.1;
-  while (musicNext < now + 0.35) {
-    const [bass, triad] = CHORDS[musicChord % 4];
-    playChordAt(bass, triad, musicNext, beat);
-    musicNext += beat; musicChord++;
-  }
-}
-let musicDuck = 1; // pause'ta müzik kısılır (low-pass yerine ucuz duck)
-function updateMusicGain() {
-  if (!musicGain || !AC) return;
-  const v = (settings.muted || !settings.music) ? 0 : (settings.volMusic || 1) * musicDuck;
-  musicGain.gain.setTargetAtTime(v, AC.currentTime, 0.3);
-}
-function startMusic() {
-  audio();
-  if (!musicGain) { musicGain = AC.createGain(); musicGain.gain.value = 0; musicGain.connect(AC.destination); }
-  if (!musicPlaying) { musicPlaying = true; musicNext = AC.currentTime + 0.15; musicChord = 0; musicTimer = setInterval(scheduleMusic, 130); }
-  updateMusicGain();
-}
-// olay müzikleri (kısa flöriler)
-function sting(notes, dur = 0.14, type = 'square', vol = 0.12) {
-  if (settings.muted) return;
-  const ac = audio(); let t = ac.currentTime;
-  for (const f of notes) {
-    const o = ac.createOscillator(), g = ac.createGain();
-    o.type = type; o.frequency.value = f;
-    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    o.connect(g).connect(sfxBus); o.start(t); o.stop(t + dur + 0.03);
-    t += dur;
-  }
-}
-const stingWave = () => sting([523, 659, 784], 0.12);
-const stingBoss = () => sting([146, 123, 98, 82], 0.26, 'sawtooth', 0.14);
-const stingWin = () => sting([523, 659, 784, 1047], 0.13);
-const stingVictory = () => { sting([523, 659, 784, 1047], 0.12); setTimeout(() => sting([1319, 1047, 1568, 2093], 0.15, 'triangle', 0.11), 500); }; // zafer fanfarı (P1)
-const stingLose = () => sting([392, 330, 262, 196], 0.2, 'triangle', 0.12);
-const stingGoal = () => sting([659, 880], 0.1);
-function sfxUI() { if (settings.muted) return; const ac = audio(), t = ac.currentTime; const o = ac.createOscillator(), g = ac.createGain(); o.type = 'triangle'; o.frequency.value = 620; g.gain.setValueAtTime(0.05, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.05); o.connect(g).connect(sfxBus); o.start(t); o.stop(t + 0.06); }
-document.addEventListener('click', e => { if (e.target.closest && e.target.closest('.mbtn, .navbtn, .buildcard, .pill')) sfxUI(); }); // UI tık sesi (P1)
-
-// motor sesi (sürüşe göre uğultu)
-let engineOsc = null, engineGain = null, engineFreq = null;
-function startEngine() {
-  const ac = audio();
-  if (engineOsc) return;
-  engineOsc = ac.createOscillator();
-  const filter = ac.createBiquadFilter();
-  engineGain = ac.createGain();
-  engineOsc.type = 'sawtooth'; engineOsc.frequency.value = 55;
-  filter.type = 'lowpass'; filter.frequency.value = 380;
-  engineGain.gain.value = 0;
-  engineOsc.connect(filter).connect(engineGain).connect(sfxBus);
-  engineOsc.start();
-  engineFreq = engineOsc.frequency;
-}
-function updateEngine() {
-  if (!engineGain || !AC) return;
-  const spd = Math.min(1, Math.abs(player.speed) / 10);
-  const on = state === 'play' && !paused && player.alive && !settings.muted;
-  engineGain.gain.setTargetAtTime(on ? 0.012 + spd * 0.05 : 0, AC.currentTime, 0.1);
-  engineFreq.setTargetAtTime(52 + spd * 48, AC.currentTime, 0.1);
-}
-function sfxPower() {
-  if (settings.muted) return;
-  const ac = audio(), t = ac.currentTime;
-  const o = ac.createOscillator(), g = ac.createGain();
-  o.type = 'triangle';
-  o.frequency.setValueAtTime(440, t);
-  o.frequency.exponentialRampToValueAtTime(1200, t + 0.18);
-  g.gain.setValueAtTime(0.11, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.32);
-  o.connect(g).connect(sfxBus); o.start(t); o.stop(t + 0.34);
+const sound = new GameAudio({settings:()=>settings,href:location.href,onStatus:status=>{
+  const el=document.getElementById('audio-preview-status');if(!el)return;
+  el.hidden=!status.preview;
+  el.dataset.detail=status.reason;
+  el.textContent=lang==='tr'
+    ? `Ses denemesi · ${status.state==='ready'?'hazır':status.state==='loading'?'yükleniyor':'yerel paket bulunamadı'}${status.track?' · '+status.track:''}${status.errors?' · '+status.errors+' dosya yüklenemedi':''}`
+    : `Audio preview · ${status.state}${status.track?' · '+status.track:''}${status.errors?' · '+status.errors+' unavailable':''}`;
+}});
+let musicDuck=1;
+function audio(){sound.unlock();return sound.ac;}
+function applySfxVol(){sound.applyMix();}
+function updateMusicGain(){sound.applyMix();}
+function startMusic(){sound.unlock();}
+function startEngine(){sound.unlock();}
+function sfxFire(position,own=false){sound.cue('fire',{position,own});}
+function sfxBounce(position){sound.cue('bounce',{position});}
+function sfxBoom(big=false,position){sound.cue(big?'destroy':'impact',{position});}
+function sfxCoin(){sound.cue('coin');}
+function sfxPower(){sound.cue('equip');}
+function sfxUI(){sound.cue('ui');}
+const stingWave=()=>sound.cue('wave');
+const stingBoss=()=>sound.cue('wave');
+const stingWin=()=>sound.cue('win');
+const stingVictory=()=>sound.cue('win');
+const stingLose=()=>sound.cue('lose');
+const stingGoal=()=>sound.cue('win');
+document.addEventListener('click',e=>{if(e.target.closest?.('.mbtn, .navbtn, .buildcard, .pill'))sfxUI();});
+function updateGameAudio(){
+  const panel=document.body.dataset.panel;
+  const battle=state==='play';
+  const ranked=battle&&mode==='ranked';
+  const me=ranked?rankedView.predicted:player;
+  const movement=ranked?controls.read():null;
+  sound.update({scene:battle?'battle':(showroom.active||panel==='panel-garage')?'garage':panel==='panel-arena-result'?'result':'menu',
+    paused:paused||musicDuck<1,listener:me?{x:me.x,z:me.z}:null,
+    speed:ranked?Math.hypot(movement.x||0,movement.z||0):Math.abs(player.speed||0)/10,alive:!!me?.alive});
 }
 
 // ---------------------------------------------------------------- efektler
@@ -2447,7 +2333,7 @@ function updateFlashes(dt) {
 const particles = [];
 const partGeo = new THREE.BoxGeometry(0.22, 0.22, 0.22);
 let shake = 0;
-function explode(x, y, z, big = false, pal = null) { // pal: KOZMETİK 2.0 patlama paleti {hot:[..], ring, big}
+function explode(x, y, z, big = false, pal = null, audible = true) { // pal: KOZMETİK 2.0 patlama paleti {hot:[..], ring, big}
   const heavy = particles.length > 130; // çok parçacık varsa yenilerini üretme (aşırı yüklenmeyi önler)
   const n = heavy ? 0 : Math.round((big ? 18 : 8) * (pal && pal.big ? pal.big : 1));
   const hotCols = pal && pal.hot;
@@ -2473,7 +2359,7 @@ function explode(x, y, z, big = false, pal = null) { // pal: KOZMETİK 2.0 patla
   }
   popFlash(x, y + 0.5, z, pal && pal.ring ? pal.ring : 0xffa040, big ? 55 : 24, big ? 22 : 12, big ? 0.32 : 0.22);
   if (big) shake = Math.min(1.2, shake + 0.5); // sadece tank patlamaları ekranı sarssın
-  sfxBoom(big);
+  if(audible)sfxBoom(big,{x,z});
 }
 function updateParticles(dt) {
   for (let i = particles.length - 1; i >= 0; i--) {
@@ -2829,7 +2715,7 @@ function fire(owner, angOff = 0, playerShot = null) {
   }
   bullets.push(b);
   muzzleFlash(bx, 1.3, bz, isPlayer ? playerMuzzle : null); // K5: oyuncunun iz/kimlik renginde namlu alevi
-  sfxFire();
+  sfxFire({x:bx,z:bz},isPlayer);
   if (isPlayer && playerTurret) recoil = 0.14;
 }
 function clearBullets() { for (const b of bullets) scene.remove(b.mesh); bullets.length = 0; }
@@ -2846,7 +2732,7 @@ function dropMine(e) {
 function mineBlast(m) {
   const i = mines.indexOf(m); if (i < 0) return;
   mines.splice(i, 1); scene.remove(m.mesh);
-  explode(m.x, 0.6, m.z, true); sfxBoom(false); shake = Math.max(shake, 0.6);
+  explode(m.x, 0.6, m.z, true); shake = Math.max(shake, 0.6);
   if (player.alive && Math.hypot(player.x - m.x, player.z - m.z) < 2.5 && player.inv <= 0 && player.shieldT <= 0) { player.inv = 1.0; player.health--; renderHealth(); hitFlash(); if (player.health <= 0) soloPlayerDied(); }
   for (const e of enemies) if (e.alive && Math.hypot(e.x - m.x, e.z - m.z) < 2.5) soloDamage(e, 1, null);
 }
@@ -2862,7 +2748,7 @@ function updateMines(dt) {
 function clearMines() { for (const m of mines) scene.remove(m.mesh); mines.length = 0; }
 // kamikaze patlaması: oyuncu (r3, 1 hasar) + diğer düşmanlar (zincir); kendini patlattıysa ödül yok
 function kamikazeBlast(e, byPlayer) {
-  explode(e.x, 1.0, e.z, true); sfxBoom(true); shake = Math.max(shake, 0.8);
+  explode(e.x, 1.0, e.z, true); shake = Math.max(shake, 0.8);
   if (!byPlayer && player.alive && Math.hypot(player.x - e.x, player.z - e.z) < 3.8 && player.inv <= 0 && player.shieldT <= 0) { player.inv = 1.0; player.health--; renderHealth(); hitFlash(); if (player.health <= 0) soloPlayerDied(); }
   for (const o of enemies) if (o !== e && o.alive && Math.hypot(o.x - e.x, o.z - e.z) < 3.4) soloDamage(o, 1, null);
   if (e.alive) { e.alive = false; scene.remove(e.mesh); disposeTank(e.mesh); }
@@ -3700,8 +3586,9 @@ async function renderLeaderboard(period) {
     const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1) + '.';
     const me = r.name === myName ? ' me' : '';
     const tt = r.ti ? titleById(r.ti) : null; // KOZMETİK 2.0: sunucudan avatar + unvan (allowlist)
-    return `<div class="lbrow${me}"><span class="lbrank">${medal}</span><span class="lbname">${r.av ? esc(r.av) + ' ' : ''}${esc(r.name)}${tt ? ` <span class="lbtitle" style="color:${tt.col}">${tt.name[lang]}</span>` : ''}</span><span class="lbscore">${period === 'speed' ? '⏱ ' + fmtTime(r.score) : '🌊 ' + r.score}</span></div>`;
+    return `<div class="lbrow${me}"><span class="lbrank">${medal}</span><span class="lbname">${r.av ? esc(r.av) + ' ' : ''}${(settings.blockedSoloNames||[]).includes(r.name)?(lang==='tr'?'Engellenen oyuncu':'Blocked player'):esc(r.name)}${tt ? ` <span class="lbtitle" style="color:${tt.col}">${tt.name[lang]}</span>` : ''}</span><span class="lbscore">${period === 'speed' ? '⏱ ' + fmtTime(r.score) : '🌊 ' + r.score}</span><button class="mbtn small" data-solo-name="${esc(r.name)}">${lang==='tr'?'BİLDİR / GİZLE':'REPORT / HIDE'}</button></div>`;
   }).join('');
+  for(const button of $('lblist').querySelectorAll('[data-solo-name]'))button.onclick=()=>showPlayerSafety({name:button.dataset.soloName,solo:true});
 }
 let questView = 'daily';
 function renderQuests() {
@@ -3817,7 +3704,7 @@ function updateRunCoins() {
   }
 }
 const _camFwd = new THREE.Vector3();
-const _camTarget = new THREE.Vector3();
+const soloCameraFollow = createCombatCamera();
 function updateEnemyArrow() {
   let target = null, count = 0;
   if (state === 'play' && !paused && (mode === 'solo' || (mode === 'coop' && isAuthority))) {
@@ -6077,8 +5964,14 @@ $('btn-leave').addEventListener('click', () => { closeNet(); clearBallMode(); bu
 function updateSettingsLabels() {
   const t = T();
   $('set-title').textContent = paused ? t.pausedW : t.setTitle;
-  $('set-sound').textContent = `${t.setSound}: ${settings.muted ? t.offW : ((settings.volSfx || 1) < 1 ? t.midW : t.onW)}`;
-  $('set-music').textContent = `${t.setMusic}: ${!settings.music ? t.offW : ((settings.volMusic || 1) < 1 ? t.midW : t.onW)}`;
+  $('set-sound').textContent = `${lang==='tr'?'Tüm sesler':'All audio'}: ${settings.muted ? t.offW : t.onW}`;
+  $('set-music').textContent = `${t.setMusic}: ${!settings.music ? t.offW : t.onW}`;
+  for(const [key,tr,en]of [['volSfx','Efektler','Effects'],['volMusic','Müzik','Music'],['volEngine','Motor','Engine']]){
+    const value=Math.round(settings[key]*100),input=$('audio-'+key);input.value=value;
+    $('audio-label-'+key).textContent=lang==='tr'?tr:en;$('audio-value-'+key).textContent=value+'%';
+    input.setAttribute('aria-valuetext',value+'%');
+  }
+  $('audio-mix-title').textContent=lang==='tr'?'SES DENGESİ':'AUDIO MIX';
   $('set-quality').textContent = `${t.setQuality}: ${settings.quality === 'low' ? t.qLow : t.qHigh}`;
   $('set-haptic').textContent = `${t.setHaptic}: ${settings.haptics ? t.onW : t.offW}`;
   $('set-autofire').textContent = `${t.setAutoFire}: ${settings.autoFire ? t.onW : t.offW}`;
@@ -6086,6 +5979,12 @@ function updateSettingsLabels() {
   const nb2 = $('set-notifs'); nb2.style.display = isNativeApp() ? '' : 'none';
   nb2.textContent = `${t.setNotifs}: ${settings.notifs ? t.onW : t.offW}`;
   $('set-privacy').textContent = t.privacyLbl;
+  $('set-rival').textContent=lang==='tr'?'RAKİBİ BİLDİR / ENGELLE':'REPORT / BLOCK OPPONENT';
+  $('set-support').textContent = lang==='tr'?'DESTEK VE GERİ BİLDİRİM':'SUPPORT & FEEDBACK';
+  $('set-analytics').textContent = (lang==='tr'?'Kullanım ölçümü: ':'Usage analytics: ')+(settings.analytics?t.onW:t.offW);
+  $('set-share-scores').textContent = (lang==='tr'?'Solo skor paylaşımı: ':'Share solo scores: ')+(settings.shareScores?t.onW:t.offW);
+  $('set-data-note').textContent = lang==='tr'?'İsteğe bağlıdır. Kullanım ölçümü ekran ve maç etkinliklerini rastgele bir kimlikle gönderir. Solo skor paylaşımı takma adını ve skorunu herkese açık listeye ekler. Kapatmak önceki kayıtları silmez; silme talebi için Destek bölümünü kullan.':'Optional. Analytics sends screen and match activity with a random ID. Sharing publishes your nickname and solo score. Switching off does not delete past records; contact Support for deletion.';
+  $('set-reset-solo').textContent = lang==='tr'?'CİHAZDAKİ SOLO KAYDI SİL':'DELETE LOCAL SOLO SAVE';
   $('set-privacy').href = 'privacy.html'; // LANSMAN: privacy.html pakette (build-www items) → uygulama içi kutuda açılır (openPrivacy)
   $('set-ver').textContent = 'v' + GAME_VER;
   $('set-resume').textContent = t.resumeW;
@@ -6095,11 +5994,12 @@ function updateSettingsLabels() {
     const b = $(id), [label,value] = b.textContent.split(':');
     b.innerHTML = `<span>${label}</span><span class="setting-value">${value.trim()}</span>`;
   }
-  for (const [id,on] of [['set-haptic',settings.haptics],['set-autofire',settings.autoFire],['set-notifs',settings.notifs]]) {
+  for (const [id,on] of [['set-haptic',settings.haptics],['set-autofire',settings.autoFire],['set-notifs',settings.notifs],['set-analytics',settings.analytics],['set-share-scores',settings.shareScores]]) {
     $(id).setAttribute('role','switch'); $(id).setAttribute('aria-checked',String(!!on));
   }
 }
 function openSettings() {
+  $('solo-reset-confirm').hidden=true;
   controls.reset();
   const inGame = state === 'play';
   if (inGame && mode === 'solo') paused = true;
@@ -6111,24 +6011,44 @@ function openSettings() {
 function closeSettings() {
   musicDuck = 1; updateMusicGain(); paused = false; $('settings').classList.add('hidden'); }
 $('set-licenses').addEventListener('click', openLicenses); $('set-privacy').addEventListener('click', openPrivacy); $('set-how').addEventListener('click', openHow); $('privacyclose').addEventListener('click', closePrivacy);
+$('set-analytics').onclick=()=>{settings.analytics=!settings.analytics;if(!settings.analytics)telemetry.revoke();saveSettings();updateSettingsLabels();};
+$('set-share-scores').onclick=()=>{settings.shareScores=!settings.shareScores;saveSettings();updateSettingsLabels();};
+$('privacybody').addEventListener('click',e=>{const link=e.target.closest('a');if(link?.getAttribute('href')==='privacy.html'){e.preventDefault();privacyLoaded=false;openPrivacy();}else if(link?.getAttribute('href')==='licenses.html'){e.preventDefault();openLicenses();}});
+$('set-support').onclick=async()=>{
+  const body=$('privacybody');privacyLoaded=false;body.textContent=lang==='tr'?'Yükleniyor…':'Loading…';$('privacyclose').textContent=T().privacyClose;$('privacybox').classList.remove('hidden');
+  try{const response=await fetch('support.html');if(!response.ok)throw Error();const doc=new DOMParser().parseFromString(await response.text(),'text/html');body.innerHTML=doc.querySelector('main').innerHTML;}
+  catch{body.innerHTML='<p>Destek / Support: <a href="mailto:berhankiyanus123@gmail.com">berhankiyanus123@gmail.com</a></p>';}
+  body.scrollTop=0;
+};
+$('set-reset-solo').onclick=()=>{
+  if(state==='play'){showToast(lang==='tr'?'Önce ana menüye dön.':'Return to the main menu first.',2200);return;}
+  $('solo-reset-note').textContent=lang==='tr'?'Bu cihazdaki solo ilerleme, tanklar, kozmetikler ve yedek geri alınamaz biçimde silinir. Arena hesabın sunucuda kalır; onu Arena Hesabı bölümünden silebilirsin.':'Your local solo progress, tanks, cosmetics and backup will be permanently deleted. Your server Arena account remains; delete it separately under Arena Account.';
+  $('solo-reset-cancel').textContent=lang==='tr'?'VAZGEÇ':'CANCEL';$('solo-reset-delete').textContent=lang==='tr'?'EVET, SOLO KAYDI SİL':'YES, DELETE SOLO SAVE';$('solo-reset-confirm').hidden=false;
+};
+$('solo-reset-cancel').onclick=()=>{$('solo-reset-confirm').hidden=true;};
+$('solo-reset-delete').onclick=async()=>{
+  if(state==='play')return;const button=$('solo-reset-delete');button.disabled=true;
+  try{const LN=capPlugins().LocalNotifications;if(LN)await LN.cancel({notifications:NOTIF_IDS.map(id=>({id}))});clearSoloData(localStorage);location.reload();}
+  catch{$('solo-reset-note').textContent=lang==='tr'?'Silme tamamlanamadı. Yeniden dene.':'Deletion could not complete. Try again.';button.disabled=false;}
+};
 $('btn-settings').addEventListener('click', openSettings);
 $('btn-settings-menu').addEventListener('click', openSettings);
-$('set-sound').addEventListener('click', () => { // 3 kademe: AÇIK → KISIK → KAPALI
-  if (settings.muted) { settings.muted = false; settings.volSfx = 1; }
-  else if ((settings.volSfx || 1) >= 1) settings.volSfx = 0.4;
-  else settings.muted = true;
+$('set-sound').addEventListener('click', () => {
+  settings.muted=!settings.muted;
   saveSettings(); updateSettingsLabels(); updateMusicGain(); applySfxVol(); if (!settings.muted) sfxCoin();
 });
 $('set-haptic').addEventListener('click', () => { settings.haptics = !settings.haptics; saveSettings(); updateSettingsLabels(); haptic('MEDIUM'); });
 $('set-autofire').addEventListener('click', () => { settings.autoFire = !settings.autoFire; saveSettings(); updateSettingsLabels(); });
 $('set-stick').addEventListener('click', () => { settings.stick = settings.stick === 'normal' ? 'tight' : settings.stick === 'tight' ? 'wide' : 'normal'; saveSettings(); updateSettingsLabels(); });
 $('set-notifs').addEventListener('click', () => { settings.notifs = !settings.notifs; saveSettings(); updateSettingsLabels(); setupNotifs(); });
-$('set-music').addEventListener('click', () => { // 3 kademe: AÇIK → KISIK → KAPALI
-  if (!settings.music) { settings.music = true; settings.volMusic = 1; startMusic(); }
-  else if ((settings.volMusic || 1) >= 1) settings.volMusic = 0.4;
-  else settings.music = false;
+$('set-music').addEventListener('click', () => {
+  settings.music=!settings.music;if(settings.music)startMusic();
   saveSettings(); updateSettingsLabels(); updateMusicGain();
 });
+for(const key of ['volSfx','volMusic','volEngine']){
+  $('audio-'+key).addEventListener('input',e=>{settings[key]=audioLevel(Number(e.target.value)/100);saveSettings();updateSettingsLabels();sound.applyMix();});
+  $('audio-'+key).addEventListener('change',()=>{if(key==='volSfx')sfxUI();});
+}
 $('set-quality').addEventListener('click', () => { settings.quality = settings.quality === 'low' ? 'high' : 'low'; saveSettings(); applyQuality(); updateSettingsLabels(); });
 $('set-resume').addEventListener('click', closeSettings);
 $('set-close').addEventListener('click', closeSettings);
@@ -6154,7 +6074,7 @@ addEventListener('keyup', e => { keys[e.code] = false; });
 // ilk kullanıcı etkileşiminde ses bağlamını + müziği başlat (tarayıcı kuralı)
 let audioUnlocked = false;
 function unlockAudio() {
-  if (audioUnlocked) return; audioUnlocked = true;
+  audioUnlocked = true; // Every gesture may recover an iOS audio interruption.
   try { startMusic(); } catch (e) { }
 }
 addEventListener('pointerdown', unlockAudio);
@@ -6164,11 +6084,14 @@ const touchCtl = { turn: 0, move: 0, fire: false };
 // arka plan/odak kaybında girdileri bırak (bildirim/uygulama değişimi sonrası tank kendi kendine gitmesin/ateş etmesin)
 function resetInputs() { for (const k of Object.keys(keys)) keys[k] = false; touchCtl.turn = 0; touchCtl.move = 0; touchCtl.fire = false; }
 function onAppHidden() {
+  sound.setHidden(true);
   resetInputs();
   if (state === 'play' && mode === 'solo' && !paused) openSettings(); // solo: otomatik duraklat (ayarlar = duraklatma ekranı)
 }
 addEventListener('blur', onAppHidden);
-document.addEventListener('visibilitychange', () => { if (document.hidden) onAppHidden(); });
+document.addEventListener('visibilitychange', () => { if (document.hidden) onAppHidden(); else sound.setHidden(false); });
+addEventListener('focus',()=>{if(!document.hidden)sound.setHidden(false);});
+if(isNativeApp()){try{capPlugins().App?.addListener('appStateChange',({isActive})=>{if(isActive)sound.setHidden(false);else onAppHidden();});}catch{}}
 if (IS_TOUCH) document.body.classList.add('touch');
 
 // ---------------------------------------------------------------- düşman AI
@@ -6323,15 +6246,16 @@ async function renderArenaProgress(){const target=$('arena-progress');if(!target
 const controls = createControls({move:$('stick'),aim:$('aimstick'),settings:()=>({deadzone:settings.stick==='wide'?.25:settings.stick==='tight'?.08:.14}),active:()=>state==='play'&&!paused&&$('settings').classList.contains('hidden')});
 const ptext=(tr,en)=>lang==='tr'?tr:en;
 let practiceMatch=null,practiceAcc=0;
-let rankedLoading=0, rankedPending=null, queueSince=0, lobbyStageKey='', leagueGeneration=0;
-const rankedClient = new RankedClient({base:apiBase(),wsBase:wsBase(),name:()=>profile.name,tank:()=>profile.selected,onEvent:rankedEvent});
+let rankedLoading=0, rankedPending=null, queueSince=0, lobbyStageKey='', leagueGeneration=0, lastRival=null;
+const rankedClient = new RankedClient({base:apiBase(),wsBase:wsBase(),name:()=>profile.name,tank:()=>profile.selected,blocked:()=>settings.blockedArena||[],onEvent:rankedEvent});
 const arenaMarkerGeo=new THREE.SphereGeometry(.1,6,4),arenaMarkerMat=new THREE.MeshBasicMaterial({color:0xe5f995,depthTest:false});
 const rankedView = new RankedView({scene,camera,renderer,controls,client:rankedClient,disposeTank,buildShot:mine=>{if(!mine)return null;const def=projectileById(profile.projectile),source=loadedAcc[def.id];if(!def.glb||!source)return null;const root=new THREE.Group(),visual=source.clone(true);const bounds=new THREE.Box3().setFromObject(visual),size=new THREE.Vector3();bounds.getSize(size);visual.scale.setScalar(.65/Math.max(size.x,size.y,size.z,.01));visual.traverse(o=>{if(o.isMesh)o.castShadow=o.receiveShadow=false;});root.add(visual);const marker=new THREE.Mesh(arenaMarkerGeo,arenaMarkerMat);marker.position.y=.3;root.add(marker);return root;},buildTank:(id,mine)=>{
   const def=tankById(id),mesh=buildTank({...def,scale:1});
   const box=new THREE.Box3().setFromObject(mesh),size=new THREE.Vector3();box.getSize(size);mesh.scale.multiplyScalar(4.8/Math.max(size.x,size.z));
   if(mine){applySkin(mesh,profile.skin,def.id);applyDecal(mesh,profile.decal,profile.decalSide);applyTracks(mesh,profile.track);applyAccessory(mesh,profile.accessory,def);applyAccessory(mesh,profile.accessory2,def,2);}
   return mesh;
-},onEffect:(ev,mine)=>{if(ev.t==='fire'){sfxFire();muzzleFlash(ev.x-Math.sin(ev.aim)*1.6,1.2,ev.z-Math.cos(ev.aim)*1.6,0xe8f3b5);}else if(ev.t==='bounce'){sfxBounce();explode(ev.x,1.2,ev.z,false);}else if(ev.t==='hit'){explode(ev.x,1.2,ev.z,false);if(mine){hitFlash();haptic('LIGHT');}}else if(ev.t==='kill'){explode(ev.x,1.2,ev.z,true);sfxBoom(true);if(mine)haptic('MEDIUM');}}});
+},onEffect:(ev,mine)=>{if(ev.t==='fire'){sfxFire(ev,mine);muzzleFlash(ev.x-Math.sin(ev.aim)*1.6,1.2,ev.z-Math.cos(ev.aim)*1.6,0xe8f3b5);}else if(ev.t==='bounce'){sfxBounce(ev);explode(ev.x,1.2,ev.z,false,null,false);}else if(ev.t==='hit'){explode(ev.x,1.2,ev.z,false);if(mine){hitFlash();haptic('LIGHT');}}else if(ev.t==='kill'){explode(ev.x,1.2,ev.z,true);if(mine)haptic('MEDIUM');}}});
+rankedView.reducedMotion=()=>settings.reducedMotion;
 function refreshPremium(id){
   $('btn-quests').querySelector('.nlbl').textContent=ptext('İLERLEME','PROGRESS');$('btn-lb').querySelector('.nlbl').textContent=ptext('LİG','LEAGUE');$('btn-shop-nav').querySelector('.nlbl').textContent=ptext('MAĞAZA','STORE');
   $('btn-quickplay').innerHTML=gi('play')+ptext(' SAVAŞA GİR',' FIND MATCH');$('btn-single').textContent=ptext('SOLO SEFER','SOLO EXPEDITION');$('btn-duel').textContent=ptext('ANTRENMAN','PRACTICE');
@@ -6364,12 +6288,13 @@ async function rankedEvent(m){
  if(m.t==='reconnecting'){controls.reset();$('wave').textContent=ptext('BAĞLANTI YENİLENİYOR','RECONNECTING');return;}
  if(m.t==='saving'){$('wave').textContent=ptext('SONUÇ KAYDEDİLİYOR','SAVING RESULT');return;}
  if(m.t==='start'){
+  const rival=Object.entries(m.names||{}).find(([id])=>id!==m.you);lastRival=rival&&rival[0]!=='bot'?{id:rival[0],name:rival[1]}:null;$('set-rival').hidden=!lastRival;
   const gen=++rankedLoading;rankedPending=m;controls.reset();$('queue-title').textContent=ptext('RAKİP BULUNDU','RIVAL FOUND');
   await Promise.all([...Object.values(m.appearances||{}).map(id=>ensureModel(tankById(id).model)),ensureAcc(projectileById(profile.projectile))]);
   if(gen!==rankedLoading)return;
   clearEnemies();clearBullets();clearPowerups();clearBallMode();clearCoop();clearTeam();buildArena(m.map,true);clearCovers();clearHazards();shieldBubble.visible=false;player.mesh.visible=false;
   mode='ranked';state='play';paused=false;showroom.active=false;msgEl.classList.add('hidden');$('topbar').style.visibility='visible';$('healthwrap').style.visibility='visible';$('minimap').style.display='none';document.body.classList.add('ranked-combat','in-combat');
-  rankedView.begin(m);let names=$('arena-names');if(!names){names=document.createElement('div');names.id='arena-names';$('topbar').append(names);}names.textContent=Object.entries(m.names||{}).filter(([id])=>id!==m.you).map(([,name])=>name).join('');if(rankedPending?.tick>m.tick)rankedView.receive(rankedPending);rankedPending=null;audio();track('arena_start',{map:m.map});return;
+  rankedView.begin(m);let names=$('arena-names');if(!names){names=document.createElement('div');names.id='arena-names';$('topbar').append(names);}names.textContent=lastRival&&isPlayerBlocked(lastRival)?ptext('ENGELLENEN OYUNCU','BLOCKED PLAYER'):Object.entries(m.names||{}).filter(([id])=>id!==m.you).map(([,name])=>name).join('');if(rankedPending?.tick>m.tick)rankedView.receive(rankedPending);rankedPending=null;audio();track('arena_start',{map:m.map});return;
  }
  if(m.t==='snapshot'){if(rankedView.latest?.id===m.id)rankedView.receive(m);else rankedPending=m;return;}
  if(m.t==='result'||m.t==='void'){
@@ -6380,15 +6305,38 @@ async function rankedEvent(m){
   $('arena-result-score').textContent=m.players?Object.values(m.players).map(p=>p.score).join(' — '):'—';
   $('arena-result-detail').textContent=me?`${me.rating} ${ptext('puan','rating')} · ${me.delta>=0?'+':''}${me.delta} · ${me.games<5?ptext('Yerleştirme ','Placement ')+me.games+'/5':(m.reason==='disconnect'?ptext('Hükmen sonuç','Forfeit result'):ptext('Doğrulanmış sonuç','Verified result'))}`:ptext('Sunucu kesintisi · derece kaybı yok','Server interruption · no rating loss');
   $('arena-result-reward').textContent=me?`+${me.reward} ${ptext('Arena kredisi · sunucuda saklandı','Arena credits · saved on server')}`:'';
-  track('arena_end',{reason:m.reason});return;
+  $('arena-player-safety').hidden=!lastRival;track('arena_end',{reason:m.reason});return;
  }
 }
 function updateRankedHud(){const s=rankedView.latest;if(!s)return;const me=s.players.find(p=>p.id===rankedView.you),opp=s.players.find(p=>p.id!==rankedView.you),sec=Math.max(0,Math.ceil((s.time>=180?210:180)-s.time));$('wave').textContent=`${s.time>=180?ptext('UZATMA ','OVERTIME '):''}${Math.floor(sec/60)}:${String(sec%60).padStart(2,'0')}`;$('score').textContent=`${me.score} — ${opp.score}`;$('health').textContent=me.alive?'▰'.repeat(me.hp)+'▱'.repeat(3-me.hp):ptext('YENİDEN DOĞUYOR','RESPAWNING');}
+function isPlayerBlocked(player){return player.solo?(settings.blockedSoloNames||[]).includes(player.name):(settings.blockedArena||[]).includes(player.id)||(rankedClient.account?.data?.blocked||[]).includes(player.id);}
+function showPlayerSafety(target){
+ if(!target)return;const body=$('privacybody');privacyLoaded=false;
+ body.innerHTML=`<h1>${ptext('OYUNCU GÜVENLİĞİ','PLAYER SAFETY')}</h1><p id="safety-name"></p><p>${target.solo?ptext('Gizlemek bu takma adı solo tablolarında saklar. Bildirim destek e-postanı açar; göndermek senin seçimin.','Hiding conceals this nickname in solo boards. Reporting opens a support email for you to send.'):ptext('Engellemek bu adı gizler ve sonraki eşleşmelerde bu oyuncuyu dışarıda bırakır. Devam eden maç tamamlanır.','Blocking hides the name and prevents future pairings. Any current match continues.')}</p><button id="safety-block" class="mbtn"></button><label for="safety-reason">${ptext('Bildirim nedeni','Report reason')}</label><select id="safety-reason"><option value="name">${ptext('Uygunsuz takma ad','Inappropriate nickname')}</option><option value="abuse">${ptext('Rahatsız edici davranış','Abusive behavior')}</option><option value="cheating">${ptext('Hile şüphesi','Suspected cheating')}</option></select><button id="safety-report" class="mbtn">${ptext('BİLDİR','REPORT')}</button><p id="safety-status" role="status"></p><a id="safety-email">${ptext('Destek e-postası','Contact support')}</a>`;
+ $('safety-name').textContent=isPlayerBlocked(target)?ptext('Engellenen oyuncu','Blocked player'):target.name;
+ const email='mailto:berhankiyanus123@gmail.com?subject=TREAD%20RIVALS%20Player%20Report&body='+encodeURIComponent('Player: '+target.name+'\n'+(target.id?'Arena ID: '+target.id+'\n':'Solo leaderboard\n')+'Date: '+new Date().toISOString()+'\nReason: ');$('safety-email').href=email;
+ const label=()=>{$('safety-block').textContent=isPlayerBlocked(target)?ptext('ENGELİ KALDIR','UNBLOCK'):ptext('OYUNCUYU ENGELLE','BLOCK PLAYER');};label();
+ $('safety-block').onclick=async()=>{
+  const blocked=!isPlayerBlocked(target),key=target.solo?'blockedSoloNames':'blockedArena',value=target.solo?target.name:target.id,list=new Set(settings[key]||[]);if(blocked)list.add(value);else list.delete(value);if(list.size>200){$('safety-status').textContent=ptext('Engel listesi dolu. Önce bir engeli kaldır.','Block list is full. Unblock someone first.');return;}
+  settings[key]=[...list];saveSettings();
+  let synced=true;if(!target.solo){try{const a=await arenaProfile();if(a)applyArenaInventory(await rankedClient.request('block',{method:'POST',body:JSON.stringify({target:target.id,blocked})}));}catch{synced=false;}}
+  label();$('safety-name').textContent=blocked?ptext('Engellenen oyuncu','Blocked player'):target.name;$('safety-status').textContent=!blocked&&!synced?ptext('Sunucudaki engel kaldırılamadı. Bağlantını kontrol edip yeniden dene.','Could not remove the server block. Check your connection and retry.'):ptext('Tercihin bu cihazda kaydedildi.','Preference saved on this device.');if(blocked&&target.id===lastRival?.id&&$('arena-names'))$('arena-names').textContent=ptext('ENGELLENEN OYUNCU','BLOCKED PLAYER');
+  if(document.body.dataset.panel==='panel-league')openLeague();if(document.body.dataset.panel==='panel-lb')renderLeaderboard(lbPeriod);
+ };
+ $('safety-report').onclick=async()=>{
+  if(target.solo){$('safety-email').href=email+encodeURIComponent($('safety-reason').value);$('safety-email').click();return;}const button=$('safety-report');button.disabled=true;
+  try{const a=await arenaProfile();if(!a)throw Error('account');await rankedClient.request('report',{method:'POST',body:JSON.stringify({target:target.id,reason:$('safety-reason').value})});$('safety-status').textContent=ptext('Bildirimin alındı. İncelenecek. İstersen oyuncuyu ayrıca engelleyebilirsin.','Report received for review. You can also block this player.');}
+  catch{$('safety-status').textContent=ptext('Bildirim gönderilemedi. Arena hesabın ve bağlantın gerekli; destek e-postasını kullanabilirsin.','Report could not be sent. An Arena account and connection are required; you can email support instead.');button.disabled=false;}
+ };
+ $('privacyclose').textContent=T().privacyClose;$('privacybox').classList.remove('hidden');body.scrollTop=0;
+}
+$('set-rival').onclick=() =>showPlayerSafety(lastRival);$('arena-player-safety').onclick=()=>showPlayerSafety(lastRival);
 async function openLeague(){const gen=++leagueGeneration;$('title').textContent=ptext('LİG','LEAGUE');$('submsg').textContent='';showPanel('panel-league');$('league-list').textContent=ptext('Yükleniyor…','Loading…');
- try{const [board,status]=await Promise.all([fetch(apiBase()+'/api/arena/leaderboard',{cache:'no-store'}).then(r=>{if(!r.ok)throw Error();return r.json();}),fetch(apiBase()+'/api/arena/status',{cache:'no-store'}).then(r=>r.json())]);if(gen!==leagueGeneration)return;
-  const token=await readSession();if(token){const r=await fetch(apiBase()+'/api/arena/profile',{headers:{Authorization:'Bearer '+token},cache:'no-store'});if(r.ok)rankedClient.account=await r.json();}
+ try{const [board,status]=await Promise.all([rankedClient.request('leaderboard'),rankedClient.request('status')]);if(gen!==leagueGeneration)return;
+  const token=await readSession();if(token){rankedClient.token=token;try{rankedClient.account=await rankedClient.request('profile');}catch(e){if(e.status===401)rankedClient.account=null;else throw e;}}if(gen!==leagueGeneration)return;
   const a=rankedClient.account;if(a)applyArenaInventory(a);$('league-rating').textContent=a?`${a.rating} ${ptext('PUAN','RATING')}`:ptext('YERLEŞTİRME','PLACEMENT');$('league-status').textContent=a?`${a.games} ${ptext('maç','matches')} · ${a.wins} ${ptext('zafer','wins')} · ${a.credits} ${ptext('Arena kredisi','Arena credits')}${status.development?' · TEST':''}`:ptext('İlk beş maçınla dereceni belirle.','Complete five placement matches.');
-  $('league-list').innerHTML=board.rows.length?board.rows.map((r,i)=>`<div class="league-row"><b>${i+1}</b><span>${esc(r.name)}</span><strong>${r.rating}</strong></div>`).join(''):ptext('Sezonun ilk sıralaması seni bekliyor.','Be among the first ranked players.');
+  $('league-list').innerHTML=board.rows.length?board.rows.map((r,i)=>`<div class="league-row"><b>${i+1}</b><span>${isPlayerBlocked(r)?ptext('Engellenen oyuncu','Blocked player'):esc(r.name)}</span><strong>${r.rating}</strong>${r.id&&r.id!==rankedClient.account?.id?`<button class="mbtn small" data-player="${esc(r.id)}" aria-label="${ptext('Oyuncu seçenekleri','Player options')}">${ptext('BİLDİR / ENGELLE','REPORT / BLOCK')}</button>`:''}</div>`).join(''):ptext('Sezonun ilk sıralaması seni bekliyor.','Be among the first ranked players.');
+  for(const button of $('league-list').querySelectorAll('[data-player]'))button.onclick=()=>showPlayerSafety(board.rows.find(r=>r.id===button.dataset.player));
  }catch{$('league-list').textContent=ptext('Lig hizmeti şu an kullanılamıyor. Solo kayıtların cihazında korunuyor.','League is unavailable. Your solo progress remains on this device.');}
 }
 async function startArenaPractice(){
@@ -6398,6 +6346,7 @@ async function startArenaPractice(){
  banner(ptext('BOT ANTRENMANI · LİG PUANI YOK','BOT PRACTICE · NO RATING'));
 }
 function finishArenaPractice(){
+ $('arena-player-safety').hidden=true;
  const m=practiceMatch;practiceMatch=null;controls.reset();rankedView.clear();state='menu';mode='solo';document.body.classList.remove('in-combat','ranked-combat');$('topbar').style.visibility='hidden';msgEl.classList.remove('hidden');
  $('title').textContent=ptext('ANTRENMAN RAPORU','PRACTICE REPORT');showPanel('panel-arena-result');$('arena-result-title').textContent=m.winner==='local'?ptext('ZAFER','VICTORY'):m.winner===null?ptext('BERABERE','DRAW'):ptext('ANTRENMAN TAMAMLANDI','PRACTICE COMPLETE');$('arena-result-score').textContent=m.players.map(p=>p.score).join(' — ');$('arena-result-detail').textContent=ptext('Aynı Arena kuralları · bot rakip','Same Arena rules · bot opponent');$('arena-result-reward').textContent=ptext('Antrenman lig puanı veya Arena kredisi vermez.','Practice awards no rating or Arena credits.');
 }
@@ -6426,7 +6375,7 @@ if ((profile.games || 0) > 0) checkDaily(); else dailyPending = true;
   const jc = (params.get('j') || '').trim().toUpperCase();
   const jm = params.get('m');
   const validMode = ['coop', 'team', 'duel', 'ball'].includes(jm) ? jm : 'coop';
-  if (/^[A-Z0-9]{4}$/.test(jc)) {
+  if (!V1_SIMPLE && /^[A-Z0-9]{4}$/.test(jc)) {
     history.replaceState(null, '', location.pathname); // linki URL'den temizle (yeniden yüklemede tekrar katılmasın)
     autoJoinFromLink(jc, validMode);
   } else if ((profile.games || 0) === 0) {
@@ -6564,6 +6513,7 @@ function trackTransitions() {
 function tick() {
   requestAnimationFrame(tick);
   if (glLost) { clock.getDelta(); return; } /* bağlam kayıpken çizme (hata seli yok) */
+  updateGameAudio();
   const realDt = clock.getDelta();
   let dt = Math.min(realDt, 0.05);
   const enteringCombat=state === 'play' && !document.body.classList.contains('in-combat');
@@ -6690,7 +6640,7 @@ function tick() {
         b.mesh.position.x += b.vx * dt; b.mesh.position.z += b.vz * dt; b.mesh.position.y = 1.13 + 24 * p * (1 - p);
         if (p >= 1 || dead) {
           const x = b.mesh.position.x, z = b.mesh.position.z;
-          explode(x, 1.0, z, true); sfxBoom(false); shake = Math.max(shake, 0.4);
+          explode(x, 1.0, z, true); shake = Math.max(shake, 0.4);
           if (mode === 'solo') for (const e of enemies) if (e.alive && Math.hypot(e.x - x, e.z - z) < 3.6) soloDamage(e, 1 + bDmg(), null);
           if (mode === 'solo' || (mode === 'coop' && isAuthority)) for (const cv of covers.slice()) if (Math.hypot(cv.x - x, cv.z - z) < 3.6) damageCover(cv);
           dead = true;
@@ -6872,7 +6822,6 @@ function tick() {
   updateRunCoins();
   updateBuffs();
   drawMinimap();
-  updateEngine();
 
   // kalkan baloncukları (yerel + uzak oyuncular)
   shieldMat.opacity = 0.18 + Math.abs(Math.sin(clock.elapsedTime * 5)) * 0.12;
@@ -6894,16 +6843,11 @@ function tick() {
 
   if (state !== 'play') pumpToast();
   if (renderPremiumStage(dt)) return;
-  const focusX=player.x-Math.sin(player.aim)*1.25, focusZ=player.z-Math.cos(player.aim)*1.25;
   const framing=combatFraming(innerWidth,innerHeight);
-  camera.aspect=framing.aspect;camera.fov=framing.fov;camera.updateProjectionMatrix();
-  _camTarget.set(focusX,framing.elevation,focusZ+framing.back);
-  if(enteringCombat) camera.position.copy(_camTarget);
-  else camera.position.lerp(_camTarget,1-Math.exp(-6*realDt));
+  const focus=soloCameraFollow.update({x:player.x,z:player.z,input:state==='play'?controls.read():{},framing,dt:paused?0:realDt,alive:player.alive,reset:enteringCombat,limit:Math.max(8,arenaHalf-5),reducedMotion:settings.reducedMotion});
   shake=Math.max(0,shake-dt*2);
-  if(!settings.reducedMotion && shake>0) camera.position.x+=(Math.random()-.5)*Math.min(shake,.15);
-  // Follow position and look target together: steering must not swivel the camera.
-  camera.lookAt(camera.position.x,0,camera.position.z-framing.back-framing.ahead);
+  const shakeX=!settings.reducedMotion&&shake>0?(Math.random()-.5)*Math.min(shake,.15):0;
+  applyCombatCamera(camera,focus,framing,shakeX);
 
   tickCamoAnim(); // animasyonlu desen (KOZMETİK 2.0)
   renderer.render(scene, camera);
@@ -6911,6 +6855,7 @@ function tick() {
 }
 tick();
 window.__gameLoaded = true;
+{const error=document.getElementById('errbox');if(error)error.style.display='none';}
 { const ls = document.getElementById('loading'); if (ls) { ls.classList.add('gone'); setTimeout(() => ls.remove(), 600); } }
 // analitik: yükleme tamam + oturum çıkışı
 track('load_end', { touch: IS_TOUCH, lang, native: isNativeApp() });

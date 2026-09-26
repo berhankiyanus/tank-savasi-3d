@@ -16,6 +16,18 @@ test('real sockets authenticate, pair, reject fake wins, reconnect and commit on
 });
 test('production fails closed without durable storage',async t=>{let service;const server=http.createServer((req,res)=>service.http(req,res));service=installRanked(server,{enabled:true});await service.store.ready;const port=await listen(server);t.after(()=>{service.close();server.close();});const r=await fetch('http://127.0.0.1:'+port+'/api/arena/status');assert.equal((await r.json()).available,false);assert.equal((await fetch('http://127.0.0.1:'+port+'/api/arena/guest',{method:'POST',body:'{}'})).status,503);});
 
+test('blocked rivals stay unmatched and reports require an authenticated account',async t=>{
+ let service;const server=http.createServer((req,res)=>service.http(req,res));service=installRanked(server,{enabled:true,development:true});await service.store.ready;const port=await listen(server),sockets=[];t.after(()=>{sockets.forEach(w=>w.terminate());service.close();server.close();});
+ const a=await service.store.create('A'),b=await service.store.create('B');
+ const request=(path,body,token)=>fetch(`http://127.0.0.1:${port}/api/arena/${path}`,{method:'POST',headers:{'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},body:JSON.stringify(body)});
+ assert.equal((await request('report',{target:b.account.id,reason:'name'})).status,401);
+ assert.equal((await request('report',{target:b.account.id,reason:'name'},a.token)).status,200);
+ assert.equal((await request('block',{target:b.account.id,blocked:true},a.token)).status,200);
+ for(const user of [a,b]){const ws=new WebSocket(`ws://127.0.0.1:${port}/ranked`);sockets.push(ws);await new Promise(r=>ws.once('open',r));let ready=wait(ws,'ready');ws.send(JSON.stringify({t:'hello',version:RULES.version,token:user.token}));await ready;const queued=wait(ws,'queued');ws.send(JSON.stringify({t:'queue'}));await queued;}
+ await new Promise(r=>setTimeout(r,150));assert.equal(service.matches.size,0);assert.equal(service.queue.length,2);
+ const start=wait(sockets[0],'start');assert.equal((await request('block',{target:b.account.id,blocked:false},a.token)).status,200);await start;assert.equal(service.matches.size,1);
+});
+
 test('25 simultaneous matches preserve capacity and accept delayed inputs',{timeout:15000},async t=>{
  let service;const server=http.createServer((req,res)=>service.http(req,res));service=installRanked(server,{development:true,enabled:true,maxMatches:25});await service.store.ready;const port=await listen(server),sockets=[],delayed=new Set();t.after(()=>{for(const timer of delayed)clearTimeout(timer);sockets.forEach(w=>w.terminate());service.close();server.close();});
  const connect=async n=>{const a=await service.store.create('Load '+n),w=new WebSocket('ws://127.0.0.1:'+port+'/ranked');sockets.push(w);await new Promise(resolve=>w.once('open',resolve));const ready=wait(w,'ready');w.on('message',raw=>{const m=JSON.parse(raw);if(m.t==='ping')w.send(JSON.stringify({t:'pong',n:m.n}));});w.send(JSON.stringify({t:'hello',version:RULES.version,token:a.token}));await ready;return w;};

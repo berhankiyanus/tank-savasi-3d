@@ -7,6 +7,7 @@ www/
 ios/
 android/
 resources/src-assets/
+.local-audio/
 
 design/premium-fleet/*.blend*
 

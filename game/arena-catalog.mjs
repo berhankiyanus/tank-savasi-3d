@@ -8,7 +8,7 @@ export const ARENA_CATALOG = Object.freeze([
  {id:'acc:holodrone',kind:'acc',item:'holodrone',price:850},
 ]);
 export function advanceArenaProgress(data,m,p,won,now=Date.now()){
- const next=structuredClone(data||{}),date=new Date(now).toISOString().slice(0,10),week=Math.floor((now+3*86400000)/(7*86400000));next.inventory||=[];
+ const next=globalThis.structuredClone?structuredClone(data||{}):JSON.parse(JSON.stringify(data||{})),date=new Date(now).toISOString().slice(0,10),week=Math.floor((now+3*86400000)/(7*86400000));next.inventory||=[];
  if(next.daily?.date!==date)next.daily={date,matches:0,kills:0,bounces:0,claimed:[],first:false};
  if(next.weekly?.week!==week)next.weekly={week,matches:0,claimed:false};
  const d=next.daily,w=next.weekly;let bonus=0;
