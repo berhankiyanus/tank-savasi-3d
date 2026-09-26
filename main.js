@@ -6878,8 +6878,9 @@ function tick() {
   }
 
   if (renderPremiumStage(dt)) return;
-  const focusX=player.x-Math.sin(player.aim)*2, focusZ=player.z-Math.cos(player.aim)*2;
-  _camTarget.set(focusX,32,focusZ+23);
+  const focusX=player.x-Math.sin(player.aim)*1.25, focusZ=player.z-Math.cos(player.aim)*1.25;
+  camera.aspect=innerWidth/innerHeight;camera.fov=50;camera.updateProjectionMatrix();
+  _camTarget.set(focusX,18,focusZ+12);
   camera.position.lerp(_camTarget,1-Math.exp(-6*dt));
   shake=Math.max(0,shake-dt*2);
   if(!settings.reducedMotion && shake>0) camera.position.x+=(Math.random()-.5)*Math.min(shake,.15);
