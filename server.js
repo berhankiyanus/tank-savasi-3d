@@ -9,6 +9,7 @@ const PORT = process.env.PORT || 8734;
 const MIME = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript',
+  '.mjs': 'text/javascript',
   '.json': 'application/json',
   '.css': 'text/css',
   '.glb': 'model/gltf-binary',
@@ -19,7 +20,7 @@ const MIME = {
   '.md': 'text/plain; charset=utf-8',
 };
 // yalnızca yayın dosyaları sunulur (kod/.git/konfig sızıntısına karşı allowlist)
-const ALLOW_FILES = new Set(['/index.html', '/main.js', '/sw.js', '/manifest.json', '/privacy.html', '/CREDITS.md', '/playable.html']); // playable.html: oynanabilir reklam demosu (tools/playable/dist kopyası)
+const ALLOW_FILES = new Set(['/index.html', '/main.js', '/game-progress.mjs', '/garage-content.mjs', '/garage-visuals.mjs', '/polish.css', '/sw.js', '/manifest.json', '/privacy.html', '/CREDITS.md', '/playable.html']); // playable.html: oynanabilir reklam demosu (tools/playable/dist kopyası)
 const ALLOW_DIRS = ['/assets/', '/libs/'];
 
 // ---- LANSMAN P0-12: koruma katmanı ----

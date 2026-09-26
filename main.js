@@ -1,3 +1,6 @@
+import { DECALS, PROJECTILES, WORKSHOP_ACCESSORIES, WORKSHOP_SETS, migrateWorkshop } from './garage-content.mjs';
+import { applyDecal, decalImage } from './garage-visuals.mjs';
+import { dailyQuestIds, collectQuestRewards, isStandardTimeRecord, CAREER_STEPS, careerProgress, collectCareerReward } from './game-progress.mjs';
 import * as THREE from './libs/three.module.js';
 import { GLTFLoader } from './libs/jsm/loaders/GLTFLoader.js';
 import { RGBELoader } from './libs/jsm/loaders/RGBELoader.js';
@@ -89,7 +92,7 @@ const L = {
     peerLeft: 'Rakip oyundan ayrıldı',
     chooseMap: 'HARİTA SEÇ',
     buy: 'SATIN AL', owned: 'SEÇ', selected: '✓ SEÇİLİ', locked: w => `🔒 Dalga ${w}`,
-    accTab: 'AKSESUAR', accEquip: 'TAK', accRemove: '✓ ÇIKAR', accNone: 'Aksesuar yok', shopTitle: 'ELMAS DÜKKÂNI',
+    accTab: 'AKSESUAR', accEquip: 'TAK', accRemove: '✓ ÇIKAR', accNone: 'Aksesuar yok', shopTitle: 'İKMAL DÜKKÂNI',
     shopSoon: '🔒 Satın alma yakında — mağaza sürümüyle birlikte gelecek',
     noMoney: 'Yetersiz 🪙!', sHealth: 'Can', sSpeed: 'Hız', sFire: 'Ateş',
     reward: '🪙', bestWave: w => `En iyi: Dalga ${w}`, maxLevel: 'MAKS',
@@ -192,7 +195,7 @@ const L = {
     peerLeft: 'Your rival left the game',
     chooseMap: 'CHOOSE MAP',
     buy: 'BUY', owned: 'SELECT', selected: '✓ SELECTED', locked: w => `🔒 Wave ${w}`,
-    accTab: 'ACCESSORY', accEquip: 'EQUIP', accRemove: '✓ REMOVE', accNone: 'No accessory', shopTitle: 'GEM SHOP',
+    accTab: 'ACCESSORY', accEquip: 'EQUIP', accRemove: '✓ REMOVE', accNone: 'No accessory', shopTitle: 'SUPPLY SHOP',
     shopSoon: '🔒 Purchases coming soon — with the store release',
     noMoney: 'Not enough 🪙!', sHealth: 'HP', sSpeed: 'Speed', sFire: 'Fire',
     reward: '🪙', bestWave: w => `Best: Wave ${w}`, maxLevel: 'MAX',
@@ -219,7 +222,7 @@ const T = () => L[lang];
 
 // ---------------------------------------------------------------- kalıcı profil
 const DEFAULT_PROFILE = { coins: 0, owned: ['recruit'], selected: 'recruit', bestWave: 1, upgrades: {}, kills: 0, wins: 0, games: 0, skins: ['default'], skin: 'default', achieved: [], lastDaily: '', streak: 0, name: '', gift1: false, level: 1, xp: 0, tokens: 0, gems: 0, accessories: [], accessory: '', tracks: ['default'], track: 'default', trails: ['default'], trail: 'default', explosions: ['default'], explosion: 'default', titles: [], title: '', chestPity: {}, avatars: ['helmet'], avatar: 'helmet', prestige: 0 };
-const PROFILE_V = 4; // şema sürümü — migrateProfile() eski kayıtları yeni alanlarla tamamlar
+const PROFILE_V = 5; // şema sürümü — migrateProfile() eski kayıtları yeni alanlarla tamamlar
 let profile;
 try {
   profile = Object.assign({}, DEFAULT_PROFILE, JSON.parse(localStorage.getItem('tankprofile') || '{}'));
@@ -246,6 +249,7 @@ try {
 } catch { profile = Object.assign({}, DEFAULT_PROFILE, { v: PROFILE_V }); migrateProfile(profile); }
 // FAZ0: şema taşıma — v3 alanları (kitler, ustalık, reklam günlüğü, bölümler, sezon geçmişi, arkadaş kodu) eksikse tamamlanır
 function migrateProfile(p) {
+  migrateWorkshop(p);
   const obj = k => { if (!p[k] || typeof p[k] !== 'object' || Array.isArray(p[k])) p[k] = {}; };
   obj('kits'); obj('mastery'); obj('chapters'); obj('seasonHistory'); obj('mapWins'); obj('dyes'); obj('dye'); obj('chestPity');
   for (const k of ['tracks', 'trails', 'explosions']) if (!Array.isArray(p[k])) p[k] = ['default']; // KOZMETİK 2.0 (v4)
@@ -254,6 +258,7 @@ function migrateProfile(p) {
   if (!Array.isArray(p.avatars)) p.avatars = ['helmet']; if (typeof p.avatar !== 'string') p.avatar = 'helmet'; if (typeof p.prestige !== 'number') p.prestige = 0; // K6
   if (!Array.isArray(p.rewardedLog)) p.rewardedLog = [];
   if (typeof p.code !== 'string') p.code = '';
+  if (!Array.isArray(p.careerClaims)) p.careerClaims = [];
   p.v = PROFILE_V;
 }
 function saveProfile() {
@@ -485,7 +490,7 @@ let paused = false;
 let matchSeq = 0; // gecikmiş timer'ların eski maça ait sonuç üretmesini önler
 let matchEndReason = ''; // analitik: maç neden bitti (death/victory/win/lose/disconnect/quit) — D1/D7 huni analizi için
 // game-icons stencil yardımcıları (index.html'deki #gisprite sembollerine referans; renk currentColor'dan)
-const gi = id => `<svg class="gi"><use href="#gi-${id}"/></svg>`;
+const gi = id => `<svg class="gi" aria-hidden="true" focusable="false"><use href="#gi-${id}"/></svg>`;
 // VARLIK FAZ 4: innerHTML'e giden metinlerde para/elmas/jeton emojisi → stencil ikon (textContent/bildirim/toast'ta emoji kalır)
 const iconize = s => String(s).replace(/🪙/g, gi('coins')).replace(/💎/g, gi('gem')).replace(/🎰/g, gi('token')).replace(/⚡/g, gi('bolt')).replace(/🔒/g, gi('lock')).replace(/📤/g, gi('share')).replace(/🎁/g, gi('chest')).replace(/🕹️/g, gi('joystick')).replace(/🛡️/g, gi('shield')).replace(/🏆/g, gi('trophy')); /* U5: innerHTML'e giden en görünür emojiler stencil ikon */
 // VARLIK FAZ 2: yeni tank modellerinde geniş gövde yüzeyleri 'TankLight' — boyanın açık tonuyla boyanır ki tank kimlik rengi okunsun
@@ -531,24 +536,24 @@ const fmtTime = s => Math.floor(s / 60) + ':' + String(Math.floor(s) % 60).padSt
 const TANKS = [
   // DENGE (2026-09-18): atış aralığı bandı 0.38-0.60'a sıkıştırıldı — "iyi tank = 3-7× atış" hile hissi
   // veriyordu. Pahalı tanklar artık YAN-BASAMAK (karakter) + `shot` kimlik rengi (mermi/iz — görsel premium).
-  { id: 'recruit',  name: { tr: 'Acemi',      en: 'Recruit'  }, price: 0,    color: 0x4a5d26, scale: 1.00, health: 5, speed: 8.0,  turn: 2.6, cool: 0.45, bspeed: 24, model: 'recruit', turretTop: 1.78 },
-  { id: 'scout',    name: { tr: 'Kaşif',      en: 'Scout'    }, price: 150,  color: 0x2f7db0, scale: 0.90, health: 4, speed: 10.6, turn: 3.3, cool: 0.42, bspeed: 28, model: 'scout', turretTop: 2.17 },
-  { id: 'guardian', name: { tr: 'Muhafız',    en: 'Guardian' }, price: 300,  color: 0x707070, scale: 1.00, health: 8, speed: 6.4,  turn: 2.0, cool: 0.50, bspeed: 22, mech: 'regen', model: 'guardian', turretTop: 2.16 }, // Quaternius tank (CC0) — kendi GLB'si, ölçek 1.0 (model zaten geniş: ±1.38)
-  { id: 'sniper',   name: { tr: 'Nişancı',    en: 'Sniper'   }, price: 500,  color: 0x7a3aa0, scale: 1.00, health: 5, speed: 8.6,  turn: 2.8, cool: 0.40, bspeed: 42, shot: 0xb46aff, mech: 'pierce', model: 'sniper', turretTop: 1.33 },
-  { id: 'phantom',  name: { tr: 'Hayalet',    en: 'Phantom'  }, price: 1000,  color: 0x1aa37a, scale: 1.00, health: 6, speed: 9.6,  turn: 3.0, cool: 0.40, bspeed: 32, glow: true, shot: 0x3affc8, mech: 'stealth', model: 'phantom', turretTop: 1.78 }, // Zsky 'Tank' (CC BY) — modern alçak MBT
-  { id: 'goldking', name: { tr: 'Altın Kral', en: 'Gold King'}, price: 2200, color: 0xffcc33, scale: 1.08, health: 8, speed: 9.2,  turn: 2.9, cool: 0.38, bspeed: 36, glow: true, metal: true, shot: 0xffd24a, mech: 'rich', model: 'goldking', turretTop: 2.21 },
-  { id: 'heavy',    name: { tr: 'Ağır Tank',   en: 'Heavy Tank'}, price: 4200, color: 0x6b6f4a, scale: 0.95, health: 11, speed: 5.6, turn: 1.8, cool: 0.50, bspeed: 30, model: 'heavy', metal: true, turretTop: 1.8, shot: 0xffb45a },
-  { id: 'twin',     name: { tr: 'İkiz Namlu',  en: 'Twin Cannon'}, price: 5500, color: 0x556047, scale: 0.95, health: 7,  speed: 8.4, turn: 2.8, cool: 0.52, bspeed: 30, model: 'twin', turretTop: 1.62, shot: 0xbfe84a, mech: 'twin' },
-  { id: 'arty',     name: { tr: 'Obüs',        en: 'Howitzer'  }, price: 7000, color: 0x6a6248, scale: 0.95, health: 6,  speed: 5.4, turn: 1.7, cool: 0.60, bspeed: 46, model: 'arty', turretTop: 1.55, shot: 0xffc27a, mech: 'lob' },
+  { id: 'recruit',  name: { tr: 'Acemi',      en: 'Recruit'  }, price: 0,    color: 0x4a5d26, scale: 1.00, health: 5, speed: 8.0,  turn: 2.6, cool: 0.45, bspeed: 24, model: 'recruit', turretTop: 1.83 },
+  { id: 'scout',    name: { tr: 'Kaşif',      en: 'Scout'    }, price: 150,  color: 0x2f7db0, scale: 0.90, health: 4, speed: 10.6, turn: 3.3, cool: 0.42, bspeed: 28, model: 'scout', turretTop: 1.72 },
+  { id: 'guardian', name: { tr: 'Muhafız',    en: 'Guardian' }, price: 300,  color: 0x707070, scale: 1.00, health: 8, speed: 6.4,  turn: 2.0, cool: 0.50, bspeed: 22, mech: 'regen', model: 'guardian', turretTop: 1.99, rearDeckTop: 1.12 },
+  { id: 'sniper',   name: { tr: 'Nişancı',    en: 'Sniper'   }, price: 500,  color: 0x7a3aa0, scale: 1.00, health: 5, speed: 8.6,  turn: 2.8, cool: 0.40, bspeed: 42, shot: 0xb46aff, mech: 'pierce', model: 'sniper', turretTop: 1.52, rearDeckTop: 1.12 },
+  { id: 'phantom',  name: { tr: 'Hayalet',    en: 'Phantom'  }, price: 1000,  color: 0x1aa37a, scale: 1.00, health: 6, speed: 9.6,  turn: 3.0, cool: 0.40, bspeed: 32, glow: true, shot: 0x3affc8, mech: 'stealth', model: 'phantom', turretTop: 1.62, rearDeckTop: 1.12 },
+  { id: 'goldking', name: { tr: 'Altın Kral', en: 'Gold King'}, price: 2200, color: 0xffcc33, scale: 1.08, health: 8, speed: 9.2,  turn: 2.9, cool: 0.38, bspeed: 36, glow: true, metal: true, shot: 0xffd24a, mech: 'rich', model: 'goldking', turretTop: 2.07, rearDeckTop: 1.12 },
+  { id: 'heavy',    name: { tr: 'Ağır Tank',   en: 'Heavy Tank'}, price: 4200, color: 0x6b6f4a, scale: 0.95, health: 11, speed: 5.6, turn: 1.8, cool: 0.50, bspeed: 30, model: 'heavy', metal: true, turretTop: 2.04, shot: 0xffb45a },
+  { id: 'twin',     name: { tr: 'İkiz Namlu',  en: 'Twin Cannon'}, price: 5500, color: 0x556047, scale: 0.95, health: 7,  speed: 8.4, turn: 2.8, cool: 0.52, bspeed: 30, model: 'twin', turretTop: 1.76, rearDeckTop: 1.12, shot: 0xbfe84a, mech: 'twin' },
+  { id: 'arty',     name: { tr: 'Obüs',        en: 'Howitzer'  }, price: 7000, color: 0x6a6248, scale: 0.95, health: 6,  speed: 5.4, turn: 1.7, cool: 0.60, bspeed: 46, model: 'arty', turretTop: 1.84, rearDeckTop: 1.12, shot: 0xffc27a, mech: 'lob' },
   // coin merdiveninin tepesi — dozer bıçaklı süper-ağır; SIDEGRADE felsefesi: güç değil karakter (yavaş+tanky, ateş hızı ORTALAMA ALTINDA)
-  { id: 'mamut',    name: { tr: 'Mamut',       en: 'Mammoth'   }, price: 9500, color: 0x525a3a, scale: 1.18, health: 12, speed: 5.0, turn: 1.6, cool: 0.48, bspeed: 28, model: 'mamut', metal: true, turretTop: 1.9, shot: 0xff9a3a, mech: 'ram' },
-  // SEZON 2 (FAZ3): BURÇ — heavy.glb yeniden kullanım + çelik mavisi; mech aegis (25 sn'de bir 4 sn otomatik kalkan)
-  { id: 'bastion',  name: { tr: 'Burç',        en: 'Bastion'   }, price: 11000, color: 0x3a5a6a, scale: 0.95, health: 10, speed: 6.0, turn: 1.9, cool: 0.46, bspeed: 30, model: 'heavy', metal: true, turretTop: 1.8, shot: 0x7ad0ff, mech: 'aegis' },
-  // KOZMETİK 2.0 sonrası yeni tanklar (CC BY modeller, Blender boru hattı): coin merdiveninin yeni tepesi; yan-basamak
-  { id: 'lynx',     name: { tr: 'Vaşak',       en: 'Lynx'      }, price: 12500, color: 0xc8a020, scale: 0.95, health: 6,  speed: 10.8, turn: 3.4, cool: 0.52, bspeed: 30, model: 'lynx', turretTop: 2.4, shot: 0xf0d040, mech: 'twin' }, // Zsky 'Light Tank' (CC BY) — çift namlulu hafif tank
-  { id: 'boxer',    name: { tr: 'Boksör',      en: 'Boxer'     }, price: 14000, color: 0x6a7a3a, scale: 1.05, health: 11, speed: 6.2, turn: 1.9, cool: 0.50, bspeed: 30, model: 'boxer', metal: true, turretTop: 1.55, shot: 0xb0ff60, mech: 'knock' }, // KolosStudios 'Tank' (CC BY) — yuvarlak kuleli ağır
-  { id: 'hover',    name: { tr: 'Hover Tank',  en: 'Hover Tank'}, gem: 75, color: 0x3a4450, scale: 1.00, health: 5, speed: 12.0, turn: 3.5, cool: 0.40, bspeed: 34, model: 'hover', metal: true, glow: true, turretTop: 1.5, shot: 0x35e0ff, mech: 'hover' },
-  { id: 'titan',    name: { tr: 'Titan',       en: 'Titan'     }, gem: 150, color: 0x40444a, scale: 1.05, health: 13, speed: 5.2, turn: 1.6, cool: 0.44, bspeed: 32, model: 'titan', metal: true, glow: true, turretTop: 2.05, shot: 0xff4a3a, mech: 'knock' },
+  { id: 'mamut',    name: { tr: 'Mamut',       en: 'Mammoth'   }, price: 9500, color: 0x525a3a, scale: 1.18, health: 12, speed: 5.0, turn: 1.6, cool: 0.48, bspeed: 28, model: 'mamut', metal: true, turretTop: 1.95, rearDeckTop: 1.12, shot: 0xff9a3a, mech: 'ram' },
+  // SEZON 2 (FAZ3): BURÇ — özgün kalkan üniteli model; mech aegis (25 sn'de bir 4 sn otomatik kalkan)
+  { id: 'bastion',  name: { tr: 'Burç',        en: 'Bastion'   }, price: 11000, color: 0x3a5a6a, scale: 0.95, health: 10, speed: 6.0, turn: 1.9, cool: 0.46, bspeed: 30, model: 'bastion', metal: true, turretTop: 2.07, rearDeckTop: 1.12, shot: 0x7ad0ff, mech: 'aegis' },
+  // KOZMETİK 2.0 sonrası yeni tanklar (özgün Blender modelleri): coin merdiveninin yeni tepesi; yan-basamak
+  { id: 'lynx',     name: { tr: 'Vaşak',       en: 'Lynx'      }, price: 12500, color: 0xc8a020, scale: 0.95, health: 6,  speed: 10.8, turn: 3.4, cool: 0.52, bspeed: 30, model: 'lynx', turretTop: 1.74, rearDeckTop: 1.12, shot: 0xf0d040, mech: 'twin' },
+  { id: 'boxer',    name: { tr: 'Boksör',      en: 'Boxer'     }, price: 14000, color: 0x6a7a3a, scale: 1.05, health: 11, speed: 6.2, turn: 1.9, cool: 0.50, bspeed: 30, model: 'boxer', metal: true, turretTop: 1.83, rearDeckTop: 1.12, shot: 0xb0ff60, mech: 'knock' },
+  { id: 'hover',    name: { tr: 'Hover Tank',  en: 'Hover Tank'}, gem: 75, color: 0x3a4450, scale: 1.00, health: 5, speed: 12.0, turn: 3.5, cool: 0.40, bspeed: 34, model: 'hover', metal: true, glow: true, turretTop: 1.66, rearDeckTop: 1.12, shot: 0x35e0ff, mech: 'hover' },
+  { id: 'titan',    name: { tr: 'Titan',       en: 'Titan'     }, gem: 150, color: 0x40444a, scale: 1.05, health: 13, speed: 5.2, turn: 1.6, cool: 0.44, bspeed: 32, model: 'titan', metal: true, glow: true, turretTop: 2.1, rearDeckTop: 1.12, shot: 0xff4a3a, mech: 'knock' },
 ];
 const tankById = id => TANKS.find(t => t.id === id) || TANKS[0];
 // FAZ2 (plan A-4): TANK MEKANİK KİMLİĞİ — yan-basamak (güç değil karakter); yalnız solo'da (PvP eşit tank, coop authority-dışı)
@@ -868,6 +873,18 @@ const MAPS = [
     '#############','#...#.....#.#','#.#.#.###.#.#','#.#...#...#.#','#.###.#.###.#',
     '#.....#.....#','#.##.###.##.#','#.....#.....#','#.###.#.###.#','#.#...#...#.#',
     '#.#.###.#.#.#','#.#.....#...#','#############' ] },
+  { name: { tr: 'Sınır Karakolu', en: 'Border Outpost' }, req: 3, theme: 'desert', grid: [
+    '#############','#...........#','#..##...##..#','#..#.....#..#','#.....#.....#',
+    '#.#..###..#.#','#.#.......#.#','#.#..###..#.#','#.....#.....#','#..#.....#..#',
+    '#..##...##..#','#...........#','#############' ] },
+  { name: { tr: 'Kuru Havuz', en: 'Dry Dock' }, req: 4, theme: 'harbor', grid: [
+    '#############','#...........#','#.###...###.#','#...........#','#..#.....#..#',
+    '#..#.#.#.#..#','#....#.#....#','#..#.#.#.#..#','#..#.....#..#','#...........#',
+    '#.###...###.#','#...........#','#############' ] },
+  { name: { tr: 'Kutup İstasyonu', en: 'Polar Station' }, req: 5, theme: 'snow', grid: [
+    '#############','#...........#','#..#..#..#..#','#..#.....#..#','#....#.#....#',
+    '#.#.......#.#','#.#..###..#.#','#.#.......#.#','#....#.#....#','#..#.....#..#',
+    '#..#..#..#..#','#...........#','#############' ] },
 ];
 const mapUnlocked = i => profile.bestWave >= MAPS[i].req;
 // FAZ1 (plan A-6): BÖLÜMLER — 4 × 3 harita (kilit sırası). Bölüm = 3 haritada da zafer → +🎰2 +💎1. Anlatı: bölümün ilk koşusunda kısa brifing.
@@ -1138,7 +1155,7 @@ function getRoomEnv() {
 
 // ---------------------------------------------------------------- tank modelleri (tembel-yükleme)
 // farklı GLB gövde modelleri; ilk pakete girmez, seçilince/önizlenince yüklenir (performans bütçesi)
-const MODEL_PATHS = { recruit: 'assets/tank_recruit.glb', scout: 'assets/tank_scout.glb', phantom: 'assets/tank_phantom.glb', lynx: 'assets/tank_lynx.glb', boxer: 'assets/tank_boxer.glb', sniper: 'assets/tank_sniper.glb', goldking: 'assets/tank_goldking.glb', guardian: 'assets/tank_guardian.glb', heavy: 'assets/tank_heavy.glb', hover: 'assets/tank_hover.glb', twin: 'assets/tank_twin.glb', arty: 'assets/tank_arty.glb', titan: 'assets/tank_titan.glb', mamut: 'assets/tank_mamut.glb' };
+const MODEL_PATHS = { bastion: 'assets/tank_bastion_mk2.glb', recruit: 'assets/tank_recruit_mk2.glb', scout: 'assets/tank_scout_mk2.glb', phantom: 'assets/tank_phantom_mk2.glb', lynx: 'assets/tank_lynx_mk2.glb', boxer: 'assets/tank_boxer_mk2.glb', sniper: 'assets/tank_sniper_mk2.glb', goldking: 'assets/tank_goldking_mk2.glb', guardian: 'assets/tank_guardian_mk2.glb', heavy: 'assets/tank_heavy_mk2.glb', hover: 'assets/tank_hover_mk2.glb', twin: 'assets/tank_twin_mk2.glb', arty: 'assets/tank_arty_mk2.glb', titan: 'assets/tank_titan_mk2.glb', mamut: 'assets/tank_mamut_mk2.glb' };
 const loadedModels = {}; // modelId -> gltf.scene
 const _modelLoader = new GLTFLoader();
 async function ensureModel(modelId) {
@@ -1170,6 +1187,15 @@ const groundMat = new THREE.MeshStandardMaterial({
   aoMap: tex('assets/textures/ground_ao.jpg', false, 12),
 });
 groundMat.aoMap.channel = 0;
+// Compress ground contrast so shells and tank silhouettes read on a phone.
+// Keep the source PBR assets intact; apply the treatment only to the classic terrain.
+groundMat.normalScale.set(0.3, 0.3);
+groundMat.aoMapIntensity = 0.35;
+groundMat.onBeforeCompile = shader => {
+  shader.fragmentShader = shader.fragmentShader.replace('#include <map_fragment>',
+    '#include <map_fragment>\n diffuseColor.rgb = mix(vec3(0.16, 0.145, 0.11), diffuseColor.rgb, 0.30);');
+};
+groundMat.customProgramCacheKey = () => 'classic-terrain-soft-v1';
 const grassMat = new THREE.MeshStandardMaterial({
   map: tex('assets/textures/grass_diff.jpg', true, 16),
   normalMap: tex('assets/textures/grass_nor.jpg', false, 16),
@@ -1434,6 +1460,10 @@ const THEMES = {
   harbor: { ground: harborGroundMat, wall: harborWallMat, fog: [0xaac6d6, 72, 175], sun: [0xfff4e0, 3.5], hemi: [0xcfe2ee, 0x4a5560, 0.85], decor: 'harbor', bullet: B_DAY },
   canyon: { ground: canyonGroundMat, wall: canyonWallMat, fog: [0xe2aa7a, 60, 160], sun: [0xffd090, 2.9], hemi: [0xffd9b0, 0x8a4a30, 0.6], decor: 'canyon', bullet: [0xffd27a, 0xff8a5a, 0xffb060] },
 };
+for (const mat of [grassMat, sandMat, snowMat, asphaltMat, harborGroundMat, canyonGroundMat]) {
+  if (mat.normalMap) mat.normalScale.set(0.38, 0.38);
+  if (mat.aoMap) mat.aoMapIntensity = 0.5;
+}
 function applyTheme(name) {
   const th = THEMES[name] || THEMES.default;
   ground.material = th.ground;
@@ -1453,7 +1483,11 @@ function applyTheme(name) {
 const walls = [];
 let openCells = [];
 let wallInst = null;
-const wallGeo = new THREE.BoxGeometry(CELL, WALL_H, CELL);
+const wallShape = new THREE.Shape();
+const wallInset = CELL / 2 - 0.08;
+wallShape.moveTo(-wallInset,-wallInset); wallShape.lineTo(wallInset,-wallInset); wallShape.lineTo(wallInset,wallInset); wallShape.lineTo(-wallInset,wallInset); wallShape.closePath();
+const wallGeo = new THREE.ExtrudeGeometry(wallShape, { depth: WALL_H - 0.16, bevelEnabled: true, bevelThickness: 0.08, bevelSize: 0.08, bevelSegments: 1, steps: 1 });
+wallGeo.rotateX(-Math.PI / 2); wallGeo.translate(0, -WALL_H / 2 + 0.08, 0);
 
 // ---------------------------------------------------------------- yıkılabilir siper + tema tehlikeleri
 // deterministik yerleşim: tüm kooperatif istemcileri (ve tekrar oynanışlar) aynı düzeni kursun
@@ -1752,6 +1786,31 @@ function doTeleport(h) {
   sfxPower();
 }
 
+let arenaMarkings = null;
+function buildArenaMarkings(mapIdx) {
+  if (arenaMarkings) {
+    scene.remove(arenaMarkings);
+    arenaMarkings.traverse(o => { if (o.isMesh) { if (o.isInstancedMesh) o.dispose(); o.geometry.dispose(); o.material.dispose(); } });
+    arenaMarkings = null;
+  }
+  if (mapIdx < 13) return;
+  arenaMarkings = new THREE.Group();
+  const color = mapIdx === 15 ? 0x416f85 : mapIdx === 14 ? 0xf2c374 : 0xdfd4b2;
+  const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.46, depthWrite: false });
+  const cells = openCells.filter(c => (c.r === 1 || c.r === ROWS - 2) && c.c > 1 && c.c < COLS - 2);
+  const lines = new THREE.InstancedMesh(new THREE.PlaneGeometry(CELL * .55, .16), mat, cells.length);
+  const transform = new THREE.Matrix4(), q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1,0,0), -Math.PI/2);
+  for (let i=0;i<cells.length;i++) {
+    transform.compose(new THREE.Vector3(cells[i].x,.025,cells[i].z),q,new THREE.Vector3(1,1,1)); lines.setMatrixAt(i,transform);
+  }
+  lines.instanceMatrix.needsUpdate = true; arenaMarkings.add(lines);
+  const c = openCells.find(c => c.r === 6 && c.c === 6) || openCells.find(c => c.r === 3 && c.c === 6);
+  if (c) {
+    const ring = new THREE.Mesh(new THREE.RingGeometry(1.15,1.26,32),mat.clone()); ring.rotation.x=-Math.PI/2; ring.position.set(c.x,.025,c.z);arenaMarkings.add(ring);
+  }
+  scene.add(arenaMarkings);
+}
+
 function buildArena(mapIdx) {
   clearCovers(); clearHazards();
   const wallMaterial = applyTheme(MAPS[mapIdx].theme);
@@ -1780,6 +1839,7 @@ function buildArena(mapIdx) {
   }
   wallInst.instanceMatrix.needsUpdate = true;
   scene.add(wallInst);
+  buildArenaMarkings(mapIdx);
 }
 buildArena(0);
 
@@ -1787,6 +1847,8 @@ buildArena(0);
 function buildTank(def) {
   const src = (def.model && loadedModels[def.model]) ? loadedModels[def.model] : tankGltf.scene;
   const g = src.clone(true);
+  g.userData.turretTop = def.turretTop || 1.83;
+  g.userData.decalWidth = ['scout','sniper','lynx'].includes(def.id) ? 0.82 : 1.04;
   g.traverse(o => {
     if (o.isMesh) {
       o.castShadow = o.receiveShadow = true;
@@ -1818,7 +1880,7 @@ const accThumbs = {}; // aksesuar kartı görselleri (aynı offscreen renderer)
 function ensureThumbGl() {
   if (thumbGl) return;
   thumbGl = new THREE.WebGLRenderer({ alpha: true, antialias: true });
-  thumbGl.setSize(320, 200); thumbGl.setPixelRatio(1); // VARLIK FAZ1: 240×150 → 320×200 (kart görseli daha keskin)
+  thumbGl.setSize(480, 300); thumbGl.setPixelRatio(1); // VARLIK FAZ1: 240×150 → 320×200 (kart görseli daha keskin)
   thumbGl.toneMapping = THREE.ACESFilmicToneMapping;
   thumbGl.shadowMap.enabled = true; thumbGl.shadowMap.type = THREE.PCFSoftShadowMap;
   thumbScene = new THREE.Scene();
@@ -1835,7 +1897,7 @@ function renderAccThumb(a) {
     ensureThumbGl();
     const g = a.glb ? (loadedAcc[a.id] ? loadedAcc[a.id].clone(true) : null) : a.build();
     if (!g) return null; // GLB henüz inmedi → çağıran ensureAcc sonrası yeniler
-    g.rotation.y = Math.PI * 0.15;
+    g.rotation.y = a.glb ? -Math.PI * 0.90 : Math.PI * 0.15;
     thumbScene.add(g);
     const box = new THREE.Box3().setFromObject(g), size = new THREE.Vector3(), ctr = new THREE.Vector3();
     box.getSize(size); box.getCenter(ctr);
@@ -1849,12 +1911,17 @@ function renderAccThumb(a) {
     return url;
   } catch (e) { return null; } // üretilemezse kart emojiyle kalır
 }
-function renderTankThumb(base) {
-  if (tankThumbs[base.id]) return tankThumbs[base.id];
+function renderTankThumb(base, outfit = false) {
+  if (!outfit && tankThumbs[base.id]) return tankThumbs[base.id];
   if (base.model && !loadedModels[base.model]) return null; // özel model henüz inmedi — çağıran ensureModel sonrası yeniler
   try {
     ensureThumbGl();
     const m = buildTank(base);
+    if (outfit) {
+      applySkin(m, profile.skin, base.id); applyTracks(m, profile.track); applyDecal(m, profile.decal, profile.decalSide);
+      applyAccessory(m, profile.accessory, base);
+      if (profile.accSlot2) applyAccessory(m, profile.accessory2, base, 2);
+    }
     m.rotation.y = Math.PI * 0.78; // çeyrek açı: namlu sola-öne, gövde okunur
     thumbScene.add(m);
     const box = new THREE.Box3().setFromObject(m), size = new THREE.Vector3(), ctr = new THREE.Vector3();
@@ -1864,8 +1931,11 @@ function renderTankThumb(base) {
     thumbCam.lookAt(ctr.x, ctr.y - size.y * 0.06, ctr.z);
     thumbGl.render(thumbScene, thumbCam);
     const url = thumbGl.domElement.toDataURL('image/png');
-    thumbScene.remove(m); disposeTank(m);
-    tankThumbs[base.id] = url;
+    thumbScene.remove(m);
+    if (m.userData.accMesh) disposeSubtree(m.userData.accMesh);
+    if (m.userData.accMesh2) disposeSubtree(m.userData.accMesh2);
+    disposeTank(m);
+    if (!outfit) tankThumbs[base.id] = url;
     return url;
   } catch (e) { return null; } // thumbnail üretilemezse kart renk şeridiyle kalır (oyun etkilenmez)
 }
@@ -1980,6 +2050,11 @@ function buildJetpack() {
   return g;
 }
 const ACCESSORIES = [
+  ...WORKSHOP_ACCESSORIES,
+  { id: 'rescuepack', name: { tr: 'Sıhhiye Çantası', en: 'Medical Pack' }, icon: '✚', price: 1100, r: 'r', glb: 'assets/acc_rescuepack.glb', mount: { x: 0, y: 1.5, z: 0.32 } },
+  { id: 'cargorack', name: { tr: 'Sefer Sandıkları', en: 'Expedition Cargo' }, icon: '▣', price: 900, r: 'c', glb: 'assets/acc_cargorack.glb', mount: { x: 0, y: 1.1, z: 1.12 } },
+  { id: 'searchlight', name: { tr: 'Keşif Projektörü', en: 'Recon Searchlight' }, icon: '◉', price: 1200, r: 'r', glb: 'assets/acc_searchlight.glb', mount: { x: 0.22, y: 1.5, z: 0.2 } },
+  { id: 'fieldradio', name: { tr: 'Saha Telsizi', en: 'Field Radio' }, icon: '📻', price: 650, r: 'c', glb: 'assets/acc_fieldradio.glb', mount: { x: 0, y: 1.5, z: 0.28 } },
   { id: 'surf', name: { tr: 'Sörf Tahtası', en: 'Surfboard' }, icon: '🏄', price: 1300, r: 'c', build: buildSurf, mount: { x: 0, y: 1.6, z: 0.12, rz: 0.1 } },
   { id: 'flag', name: { tr: 'Bayrak', en: 'Flag' }, icon: '🚩', price: 800, r: 'c', build: buildFlag, mount: { x: -0.5, y: 0.86, z: 1.15 } },
   { id: 'cone', name: { tr: 'Parti Şapkası', en: 'Party Hat' }, icon: '🎉', price: 700, r: 'c', build: buildCone, mount: { x: 0, y: 1.48, z: 0.12 } },
@@ -2015,7 +2090,8 @@ const accById = id => ACCESSORIES.find(a => a.id === id);
 // VARLIK FAZ 5: GLB aksesuar yükleyici — a.glb varsa sahne bir kez iner (loadedAcc), takılırken klonlanır; meshler userData.shared (disposeSubtree atlar)
 const loadedAcc = {}, _accLoading = {};
 function ensureAcc(id) {
-  const a = accById(id);
+  const a = typeof id === 'object' ? id : accById(id);
+  if (a) id = a.id;
   if (!a || !a.glb || loadedAcc[id]) return Promise.resolve();
   if (!_accLoading[id]) _accLoading[id] = _modelLoader.loadAsync(a.glb).then(g => {
     g.scene.traverse(n => {
@@ -2028,7 +2104,7 @@ function ensureAcc(id) {
   return _accLoading[id];
 }
 // kule-üstü oturan aksesuarlar (tank kule yüksekliğine göre kaydırılır); diğerleri gövdeye sabit
-const ACC_TURRET_SLOT = new Set(['surf', 'cone', 'tophat', 'duck', 'crown', 'disco', 'radar', 'gift', 'mushroom', 'snowman', 'xmas', 'speeder', 'gemcrown']);
+const ACC_TURRET_SLOT = new Set([...WORKSHOP_ACCESSORIES.filter(a => a.slot === 't').map(a => a.id), 'rescuepack', 'searchlight', 'fieldradio', 'surf', 'cone', 'tophat', 'duck', 'crown', 'disco', 'radar', 'gift', 'mushroom', 'snowman', 'xmas', 'speeder', 'gemcrown']);
 function disposeSubtree(o) { o.traverse(n => { if (n.isMesh && !n.userData.shared) { /* shared: GLB aksesuar klonu — kaynağı paylaşır, dispose ETME */ if (n.geometry) n.geometry.dispose(); if (n.material) (Array.isArray(n.material) ? n.material : [n.material]).forEach(m => m.dispose()); } }); }
 // tank klonu temizliği (GPU sızıntısı fix): yalnız örneğe ÖZEL kaynaklar bırakılır (userData.owned malzeme klonları,
 // ownGeo işaretli geometriler — boss halkaları). Paylaşılan glTF geometri/malzemesine dokunmak diğer klonları bozar.
@@ -2061,6 +2137,9 @@ function applyAccessory(root, accId, tankDef, slot) {
   // kule-üstü aksesuar → tankın kule yüksekliğine göre kaydır (büyük tanklarda hizalı)
   if (ACC_TURRET_SLOT.has(a.id)) y += (((tankDef && tankDef.turretTop) || 1.5) - 1.5);
   g.position.set(mt.x || 0, y, mt.z || 0);
+  if (tankDef?.rearDeckTop && ['cargorack', 'flag', 'spoiler', 'jetpack', 'rover', 'turbopack'].includes(a.id)) {
+    g.position.y = a.id === 'cargorack' ? tankDef.rearDeckTop : y + tankDef.rearDeckTop - 0.72;
+  }
   if (mt.rx) g.rotation.x = mt.rx; if (mt.ry) g.rotation.y = mt.ry; if (mt.rz) g.rotation.z = mt.rz;
   if (mt.s) g.scale.setScalar(mt.s);
   root.add(g); root.userData[key] = g;
@@ -2461,7 +2540,7 @@ function applySkin(mesh, skinId, tankId) {
   const col = skinColor(s); // boya tonu (FAZ3)
   mesh.traverse(o => {
     if (o.isMesh && o.material && o.material.name === 'TankPaint') {
-      o.material = o.material.clone();
+      if (!o.material.userData.owned) o.material = o.material.clone();
       o.material.userData.owned = true;
       o.material.color.setHex(col);
       o.material.metalness = s.metal != null ? s.metal : 0.15;
@@ -2492,7 +2571,7 @@ const trackById = id => TRACKS.find(x => x.id === id) || TRACKS[0];
 function applyTracks(mesh, trackId) {
   const s = trackById(trackId); if (s.id === 'default') return;
   mesh.traverse(o => {
-    if (!o.isMesh || !o.material || (o.material.name !== 'TankWheel' && o.material.name !== 'Tracks')) return;
+    if (!o.isMesh || !o.material || (o.material.name !== 'TankWheel' && o.material.name !== 'Tracks' && o.material.name !== 'TankTracks')) return;
     o.material = o.material.clone(); o.material.userData.owned = true;
     o.material.color.setHex(s.color); o.material.metalness = s.metal != null ? s.metal : 0.1; o.material.roughness = s.rough != null ? s.rough : 0.7;
     if (s.glow) { o.material.emissive.setHex(s.color); o.material.emissiveIntensity = s.glow; } else o.material.emissiveIntensity = 0;
@@ -2522,6 +2601,7 @@ const EXPLOSIONS = [
   { id: 'goldblast', name: { tr: 'Altın Patlama', en: 'Gold Blast' }, price: 0, r: 'e', hot: [0xffe066, 0xffb020, 0xffffff], ring: 0xffe066, big: 1.4, collection: 'explosions' }, // K3 ödülü
 ];
 const TITLES = [
+  ...WORKSHOP_SETS.map(s => ({ id: s.title, name: s.titleName, col: s.color })),
   { id: 'dragonlord', name: { tr: 'Ejderha Efendisi', en: 'Dragon Lord' }, col: '#ff7a3a' },
   { id: 'fleetlord', name: { tr: 'Filo Efendisi', en: 'Fleet Lord' }, col: '#6fe0ff' },     // K3: tüm tanklar
   { id: 'collector', name: { tr: 'Koleksiyoncu', en: 'Collector' }, col: '#ffd76a' },       // K3: tüm koleksiyon
@@ -2586,6 +2666,8 @@ function renderIdentity() { // profil paneli başı: avatar + isim + unvan + roz
   }
   el.appendChild(av);
 }
+const projectileById = id => PROJECTILES.find(p => p.id === id) || PROJECTILES[0];
+const decalById = id => DECALS.find(p => p.id === id) || DECALS[0];
 const trailById = id => TRAILS.find(x => x.id === id) || TRAILS[0];
 const explosionById = id => EXPLOSIONS.find(x => x.id === id) || EXPLOSIONS[0];
 const titleById = id => TITLES.find(x => x.id === id);
@@ -2599,6 +2681,8 @@ function setPlayerTank(overrideDef) {
   if (player.mesh) { scene.remove(player.mesh); disposeTank(player.mesh); }
   player.mesh = buildTank(def);
   applySkin(player.mesh, profile.skin, def.id);
+  applyDecal(player.mesh, profile.decal, profile.decalSide);
+  ensureAcc(projectileById(profile.projectile));
   applyTracks(player.mesh, profile.track); // KOZMETİK 2.0: palet kaplaması
   applyAccessory(player.mesh, profile.accessory, def);
   if (profile.accSlot2 && profile.accessory2 && accSlotType(profile.accessory2) !== accSlotType(profile.accessory)) applyAccessory(player.mesh, profile.accessory2, def, 2); // 2. yuva
@@ -2619,7 +2703,7 @@ function setPlayerTank(overrideDef) {
   playerExplPal = explosionById(profile.explosion); if (playerExplPal.id === 'default') playerExplPal = null;
 }
 await ensureModel(tankById(profile.selected).model); // seçili tank özel modelliyse açılışta yükle
-await Promise.all([ensureAcc(profile.accessory), ensureAcc(profile.accessory2)]); // takılı GLB aksesuarlar açılışta hazır (VARLIK FAZ 5)
+await Promise.all([ensureAcc(profile.accessory), ensureAcc(profile.accessory2), ensureAcc(projectileById(profile.projectile))]); // takılı GLB aksesuarlar açılışta hazır (VARLIK FAZ 5)
 setPlayerTank();
 
 let enemies = [];
@@ -2654,7 +2738,14 @@ const TEAM_SPAWNS = [[[1, 11], [1, 1]], [[11, 11], [11, 1]]]; // takım0 sol ken
 function fire(owner, angOff = 0, playerShot = null) {
   const isPlayer = owner === player;
   const a = owner.a + angOff;
-  const mesh = new THREE.Mesh(bulletGeo, isPlayer ? (playerShotCustom ? customShotMat : playerBulletMat) : enemyBulletMat);
+  const shotDef = projectileById(isPlayer && (mode === 'solo' || mode === 'coop') ? profile.projectile : 'default');
+  const cosmetic = shotDef.glb && loadedAcc[shotDef.id];
+  const mesh = cosmetic ? new THREE.Group() : new THREE.Mesh(bulletGeo, isPlayer ? (playerShotCustom ? customShotMat : playerBulletMat) : enemyBulletMat);
+  if (cosmetic) {
+    const visual = cosmetic.clone(true); visual.scale.setScalar(0.24);
+    visual.traverse(o => { if (o.isMesh) o.castShadow = o.receiveShadow = false; });
+    mesh.add(visual); mesh.userData.shotVisual = visual;
+  }
   const bx = owner.x + fwdX(a) * 2.6;
   const bz = owner.z + fwdZ(a) * 2.6;
   mesh.position.set(bx, 1.13, bz);
@@ -2892,7 +2983,7 @@ const healthEl = $('health'), scoreEl = $('score'), waveEl = $('wave');
 const msgEl = $('msg'), flashEl = $('flash'), bannerEl = $('wavebanner');
 const duelStatusEl = $('duelstatus'), coinsEl = $('coins');
 
-function updateCoinBar() { coinsEl.textContent = profile.coins; updateTokenBar(); updateGemBar(); const gp = document.querySelector('#gembar .gem-plus'); if (gp) gp.style.display = IAP_ENABLED ? '' : 'none'; /* P0-1 */ }
+function updateCoinBar() { coinsEl.textContent = profile.coins; updateTokenBar(); updateGemBar(); const gp = document.querySelector('#gembar .gem-plus'); if (gp) gp.style.display = IAP_ENABLED ? '' : 'none'; /* P0-1 */ updateNextGoal(); }
 function updateTokenBar() { const el = $('tokens'); if (el) el.textContent = profile.tokens || 0; }
 function updateGemBar() { const el = $('gems'); if (el) el.textContent = profile.gems || 0; }
 function grantTokens(n, silent) {
@@ -2905,13 +2996,15 @@ function grantTokens(n, silent) {
 // Jeton makinesi (tek havuzlu gacha) → kategori sandıkları + tema seti sandığı. Havuz ve oranlar görünür (RL Sideswipe modeli),
 // kopya → coin (salvage), kategori sandıklarında 30'da garanti Efsanevi, set sandığında her açılış yeni öğe (kopya yok). Yalnız jeton ile açılır.
 const KINDS = {
+  decal: { list: () => DECALS, owned: () => profile.decals, icon: '✎' },
+  projectile: { list: () => PROJECTILES, owned: () => profile.projectiles, icon: '◉' },
   skin: { list: () => SKINS, owned: () => profile.skins, icon: '🎨' },
   acc: { list: () => ACCESSORIES, owned: () => (profile.accessories = profile.accessories || []), icon: '🎩' },
   track: { list: () => TRACKS, owned: () => profile.tracks, icon: '⚙️' },
   trail: { list: () => TRAILS, owned: () => profile.trails, icon: '🔥' },
   explosion: { list: () => EXPLOSIONS, owned: () => profile.explosions, icon: '💥' },
 };
-const SETS = { dragon: { name: { tr: 'Ejderha Seti', en: 'Dragon Set' }, icon: '🐉', items: [{ kind: 'skin', id: 'dragon' }, { kind: 'acc', id: 'dragonwings' }, { kind: 'trail', id: 'dragonfire' }, { kind: 'explosion', id: 'dragonblast' }], title: 'dragonlord' } };
+const SETS = { ...Object.fromEntries(WORKSHOP_SETS.map(s => [s.id, s])), dragon: { name: { tr: 'Ejderha Seti', en: 'Dragon Set' }, icon: '🐉', items: [{ kind: 'skin', id: 'dragon' }, { kind: 'acc', id: 'dragonwings' }, { kind: 'trail', id: 'dragonfire' }, { kind: 'explosion', id: 'dragonblast' }], title: 'dragonlord' } };
 const itemOf = (kind, id) => KINDS[kind].list().find(x => x.id === id);
 const ownsItem = (kind, id) => KINDS[kind].owned().includes(id);
 function setProgress(setId) { const st = SETS[setId]; const have = st.items.filter(it => ownsItem(it.kind, it.id)).length; return { have, total: st.items.length }; }
@@ -2926,6 +3019,7 @@ function checkSets() { // set tamamlanınca unvan (bir kez); satın alma ve sand
   syncAvatars(); // K6: set/koleksiyon avatarları
 }
 const CHESTS = [
+  ...WORKSHOP_SETS.map(s => ({ ...s, cost: 2, set: s.id, pool: () => s.items.filter(x => !ownsItem(x.kind,x.id)).map(x => ({ kind: x.kind, it: itemOf(x.kind,x.id) })) })),
   { id: 'skin', icon: '🎨', name: { tr: 'Kaplama Sandığı', en: 'Skin Chest' }, cost: 1, pool: () => SKINS.filter(x => x.id !== 'default' && !x.event && !x.set && !x.collection).map(x => ({ kind: 'skin', it: x })) },
   { id: 'acc', icon: '🎩', name: { tr: 'Aksesuar Sandığı', en: 'Accessory Chest' }, cost: 1, pool: () => ACCESSORIES.filter(x => !x.set && !x.collection).map(x => ({ kind: 'acc', it: x })) },
   { id: 'track', icon: '⚙️', name: { tr: 'Palet Sandığı', en: 'Track Chest' }, cost: 1, pool: () => TRACKS.filter(x => x.id !== 'default' && !x.collection).map(x => ({ kind: 'track', it: x })) },
@@ -2976,6 +3070,8 @@ function openChest(ch, free) {
 }
 function chestSwatch(kind, it) { // açılış kartı görseli: aksesuar → 3B thumb, kaplama/palet → renk/desen, efekt → gradyan
   const hex = v => '#' + (v || 0).toString(16).padStart(6, '0');
+  if (kind === 'decal') return it.id === 'default' ? '<span>—</span>' : `<img class="decal-swatch" src="${decalImage(it.id)}" alt="">`;
+  if (kind === 'projectile') { const u = it.glb ? renderAccThumb(it) : ''; return u ? `<img class="tankthumb" src="${u}" alt="">` : `<span style="font-size:36px">${it.icon}</span>`; }
   if (kind === 'acc') { const u = renderAccThumb(it); return u ? `<img class="tankthumb" src="${u}" alt="">` : `<span style="font-size:44px">${it.icon}</span>`; }
   if (kind === 'skin' || kind === 'track') {
     const h = hex(it.color != null ? it.color : 0x5a6b3a);
@@ -2992,7 +3088,7 @@ async function runChest(ch, free) { // açılış ritüeli: sandık sallanır �
   const res = openChest(ch, free); if (!res) return;
   chestBusy = true;
   const ov = $('chestopen'), box = $('co-box'), card = $('co-card'), btns = $('co-btns');
-  ov.classList.add('show'); box.textContent = ch.icon; box.className = 'co-box shake'; card.className = 'card co-card'; card.innerHTML = ''; btns.innerHTML = '';
+  ov.classList.add('show'); box.innerHTML = ch.glb && renderAccThumb(ch) ? `<img src="${renderAccThumb(ch)}" alt="">` : ch.icon; box.className = 'co-box shake'; card.className = 'card co-card'; card.innerHTML = ''; btns.innerHTML = '';
   sfxUI(); haptic('LIGHT');
   await waitMs(650);
   const rar = RARITY[res.pick.it.r]; box.style.setProperty('--rc', rar.col); box.className = 'co-box burst';
@@ -3018,15 +3114,16 @@ function refreshAfterChest() {
 }
 function renderChests(wrap) {
   const t = T();
-  const head = document.createElement('div'); head.className = 'cname'; head.style.cssText = 'width:100%;text-align:center;color:#ffd76a;margin:4px 0'; head.innerHTML = iconize(`${t.chestsTitle} · 🎰 ${profile.tokens || 0}`); wrap.appendChild(head);
+  const head = document.createElement('div'); head.className = 'catalog-heading'; head.innerHTML = iconize(`${t.chestsTitle} · 🎰 ${profile.tokens || 0}`); wrap.appendChild(head);
   for (const ch of CHESTS) {
     const o = chestOdds(ch), pool = ch.pool(), pr = ch.set ? setProgress(ch.set) : null, done = !!(ch.set && pr.have >= pr.total);
     const ownedN = pool.filter(p => ownsItem(p.kind, p.it.id)).length;
-    const card = document.createElement('div'); card.className = 'card chest' + (ch.set ? ' sel' : '');
-    card.innerHTML = `<div class="cname">${ch.icon} ${ch.nameFn ? ch.nameFn() : ch.name[lang]}</div><div class="cswatch" style="height:64px;display:flex;align-items:center;justify-content:center;font-size:44px;background:radial-gradient(circle at 50% 40%,${ch.season ? '#1c2a4a,#0a0e1c' : '#3a3016,#12100a'})">${ch.icon}</div>` +
+    const card = document.createElement('div'); card.className = 'card chest' + (ch.set ? ' sel' : ''); card.dataset.theme = ch.set || ch.id;
+    card.innerHTML = `<div class="cname">${ch.glb ? '' : ch.icon} ${ch.nameFn ? ch.nameFn() : ch.name[lang]}</div><div class="cswatch" style="height:64px;display:flex;align-items:center;justify-content:center;font-size:44px;background:radial-gradient(circle at 50% 40%,${ch.season ? '#1c2a4a,#0a0e1c' : '#3a3016,#12100a'})">${ch.icon}</div>` +
       (ch.season ? `<div class="cstat" style="text-align:center;color:#9fd">${t.seasonChestDesc}</div>` : '') +
       `<div class="cstat" style="text-align:center">${ch.set ? (done ? t.chestDone : t.chestLeft(pr.total - pr.have, pr.total)) : `${o.n} ${t.chestItems} · ${RARITY.c[lang]} ${pct(o.c)} · ${RARITY.r[lang]} ${pct(o.r)} · ${RARITY.e[lang]} ${pct(o.e)}`}</div>` +
       (ch.set ? '' : `<div class="cstat" style="text-align:center;color:#9fd">${t.chestOwned(ownedN, o.n)} · ${t.pityLine(Math.max(1, (ch.pity || CHEST_PITY) - ((profile.chestPity || {})[ch.id] || 0)))}</div>`);
+    if (ch.glb) { const swatch = card.querySelector('.cswatch'); swatch.style.height = '112px'; const showBox = () => { const u = renderAccThumb(ch); if (u && swatch.isConnected) swatch.innerHTML = `<img class="tankthumb" src="${u}" alt="">`; }; ensureAcc(ch).then(showBox); }
     const btn = document.createElement('button'); btn.className = 'mbtn small gold'; btn.innerHTML = iconize(t.chestOpen(ch.cost));
     btn.disabled = done || (profile.tokens || 0) < ch.cost; btn.onclick = () => runChest(ch, false);
     card.appendChild(btn);
@@ -3035,7 +3132,7 @@ function renderChests(wrap) {
       let list = card.querySelector('.chest-pool'); if (list) { list.remove(); return; }
       list = document.createElement('div'); list.className = 'chest-pool';
       const all = ch.set ? SETS[ch.set].items.map(x => ({ kind: x.kind, it: itemOf(x.kind, x.id) })) : pool;
-      list.innerHTML = all.map(p => `<span style="color:${RARITY[p.it.r].col}">${ownsItem(p.kind, p.it.id) ? '✓ ' : ''}${p.it.name[lang]}</span>`).join(' · ');
+      list.innerHTML = (ch.set ? `<p>${lang === 'tr' ? 'Eksik parçalar eşit olasılıklı: her biri' : 'Equal odds among missing items:'} ${pool.length ? (100 / pool.length).toFixed(1) : '0'}%. ${lang === 'tr' ? 'Set bitince kutu kapanır.' : 'Complete sets cannot be opened.'}</p>` : '') + all.map(p => `<span style="color:${RARITY[p.it.r].col}">${ownsItem(p.kind, p.it.id) ? '✓ ' : ''}${p.it.name[lang]}</span>`).join(' · ');
       card.appendChild(list);
     };
     card.appendChild(pb);
@@ -3124,9 +3221,11 @@ function renderMachine() { // garaj kaplama sekmesi: sandıklara kısa yol (eski
   $('tm-go').onclick = () => openShop();
 }
 function updateStats() {
-  const brt = profile.bestRunTime ? ` &nbsp;·&nbsp; ⏱ ${fmtTime(profile.bestRunTime)}` : ''; // en hızlı zafer (rekor vitrini)
   const tt = profile.title ? titleById(profile.title) : null; // KOZMETİK 2.0: unvan
-  $('statsline').innerHTML = `${avatarIcon()} ` + (tt ? `<span style="color:${tt.col}">🏷️ ${tt.name[lang]}</span> &nbsp;·&nbsp; ` : '') + `🏆 D.${profile.bestWave}${brt} &nbsp;·&nbsp; ⚔️ ${profile.kills} &nbsp;·&nbsp; 🥇 ${profile.wins} &nbsp;·&nbsp; 🏅`;
+  const homeStats = [[profile.bestWave,lang === 'tr' ? 'En iyi dalga' : 'Best wave'],[profile.kills,lang === 'tr' ? 'İmha' : 'Eliminations'],[profile.wins,lang === 'tr' ? 'Zafer' : 'Victories']];
+  if(profile.bestRunTime) homeStats.push([fmtTime(profile.bestRunTime),lang === 'tr' ? 'En iyi süre' : 'Best time']);
+  $('statsline').innerHTML = (tt ? `<span class="home-player-title" style="color:${tt.col}">${tt.name[lang]}</span>` : '') + homeStats.map(([n,label])=>`<span class="home-stat"><strong>${n}</strong><span>${label}</span></span>`).join('');
+  $('statsline').setAttribute('aria-label',`${lang === 'tr' ? 'Komutan profilini aç' : 'Open commander profile'}${tt ? ' · '+tt.name[lang] : ''}${profile.bestRunTime ? ' · '+fmtTime(profile.bestRunTime) : ''}`);
 }
 let toastT = 0, statsCheckT = 2;
 // TOAST KUYRUĞU (denetim bulgusu: tek #toast elementinde bildirimler birbirini eziyordu —
@@ -3159,7 +3258,7 @@ function checkFtue() {
 // FTUE: yeni oyuncuya kontrol ipuçları (tutorial ekranı yerine oyun içi)
 let ftueHintOn = false, ftueHintT = 0;
 function showFtueHint() {
-  if ((profile.games || 0) > 3) return;
+  if (tutActive() || (profile.games || 0) > 3) return;
   const el = $('ftuehint');
   el.innerHTML = IS_TOUCH ? T().ftueHintTouch : T().ftueHintDesk;
   el.style.display = 'block'; el.style.opacity = '1';
@@ -3211,10 +3310,11 @@ function tutEvent(id, amt) {
 function tutFinish() {
   $('tutcard').classList.remove('on');
   tut = null;
+  const firstCompletion = !profile.tutorialDone;
   profile.tutorialDone = 1;
-  addCoins(100);
+  if (firstCompletion) addCoins(100);
   saveProfile();
-  showToast(T().tutDone, 4200);
+  showToast(firstCompletion ? T().tutDone : (lang === 'tr' ? 'Eğitim tamamlandı' : 'Training complete'), 4200);
   track('tutorial_done');
 }
 function tutUpdate() {
@@ -3321,6 +3421,13 @@ function showHarvest(opts) {
   $('res-title').textContent = opts.title;
   $('res-title').style.color = opts.won === false ? '#ff8a6a' : '#7dff9b';
   $('res-sub').innerHTML = opts.sub || '';
+  $('res-summary').innerHTML = [[fmtTime(lastMatch.dur), lang === 'tr' ? 'SÜRE' : 'TIME'], [lastMatch.kills, lang === 'tr' ? 'İMHA' : 'KILLS'], [mode === 'solo' ? (soloEndless ? wave : Math.min(wave, runWaves)) : '—', lang === 'tr' ? 'DALGA' : 'WAVE']].map(([value,label]) => `<div><strong>${value}</strong><span>${label}</span></div>`).join('');
+  const readyQuests = dailyQuests().filter(q => !q.claimed && q.prog >= (questDef(q.id)?.goal ?? Infinity)).length;
+  const nextCareer = CAREER_STEPS.find(s => !(profile.careerClaims || []).includes(s.id));
+  const next = $('res-next'); next.style.display = readyQuests || nextCareer ? '' : 'none';
+  next.textContent = readyQuests ? (lang === 'tr' ? `${readyQuests} görev ödülün hazır →` : `${readyQuests} quest rewards ready →`) : nextCareer ? `${nextCareer.name[lang]} · ${careerProgress(profile,nextCareer)}/${nextCareer.goal} →` : '';
+  next.onclick = () => { openMenu(); questView = readyQuests ? 'daily' : 'career'; $('btn-quests').click(); };
+
   $('res-rewards').innerHTML = iconize(`+${gained} XP` + (opts.coins ? ` &nbsp;·&nbsp; +🪙${opts.coins}` : ''));
   $('res-lvl').textContent = (lang === 'tr' ? 'Sv ' : 'Lv ') + preLvl;
   if (opts.replay) { $('res-again').style.display = ''; $('res-again').textContent = t.againBtn; harvestReplay = opts.replay; }
@@ -3369,6 +3476,8 @@ function updateLevelBar() {
 }
 // ---------------------------------------------------------------- günlük görevler (3/gün, gece yenilenir)
 const QUESTS = [
+  { id: 'play1', type: 'match', goal: 1, reward: 30, text: { tr: '1 maç oyna', en: 'Play 1 match' } },
+  { id: 'wave3', type: 'wave', goal: 3, reward: 45, text: { tr: '3 dalga temizle', en: 'Clear 3 waves' } },
   { id: 'play3', type: 'match', goal: 3, reward: 50, text: { tr: '3 maç oyna', en: 'Play 3 matches' } },
   { id: 'kill15', type: 'kill', goal: 15, reward: 60, text: { tr: '15 tank patlat', en: 'Destroy 15 tanks' } },
   { id: 'win2', type: 'win', goal: 2, reward: 80, text: { tr: '2 maç kazan', en: 'Win 2 matches' } },
@@ -3381,16 +3490,14 @@ function dailyQuests() {
   const dk = questDayKey();
   if (!profile.quests || profile.quests.date !== dk) {
     const seed = [...dk].reduce((a, c) => a + c.charCodeAt(0), 0);
-    const start = seed % QUESTS.length;
-    const list = [0, 1, 2].map(k => ({ id: QUESTS[(start + k) % QUESTS.length].id, prog: 0, claimed: false }));
+    const list = dailyQuestIds(profile.bestWave || 1, seed).map(id => ({ id, prog: 0, claimed: false }));
     profile.quests = { date: dk, list };
     saveProfile();
   }
   return profile.quests.list;
 }
-function questProgress(type, amount) {
-  amount = amount || 1;
-  if (amount <= 0) return;
+function questProgress(type, amount = 1) {
+  if (!Number.isFinite(amount) || amount <= 0) return;
   let changed = false;
   for (const q of dailyQuests()) {
     const def = questDef(q.id);
@@ -3410,29 +3517,24 @@ function questProgress(type, amount) {
     if ($('panel-quests').classList.contains('show')) renderQuests();
   }
 }
-function claimQuest(qid) {
-  const q = dailyQuests().find(x => x.id === qid);
-  const def = questDef(qid);
-  if (!q || !def || q.claimed || q.prog < def.goal) return;
-  q.claimed = true;
-  addCoins(def.reward); grantXp(25); grantSeasonXp(25); grantTokens(1, true);
-  showToast(`✅ ${def.text[lang]}  +🪙${def.reward} +25XP +🎰1`, 3400);
-  sfxCoin(); haptic('LIGHT');
-  track('quest_claim', { id: qid });
-  // tüm günlük görevler alınınca günlük sandık (günde bir)
-  if (!profile.quests.chest && dailyQuests().every(x => x.claimed)) {
-    profile.quests.chest = true;
-    addCoins(120); grantTokens(2, true); // chestMsg zaten +🎰2 diyor
-    showToast(T().chestMsg, 4200); track('daily_chest');
-  }
+function claimQuest(qid) { claimQuests([qid]); }
+function claimQuests(ids) {
+  dailyQuests();
+  const rewards = collectQuestRewards(profile.quests, QUESTS, ids);
+  if (!rewards.claimed.length) return;
+  // Persist the claim flags with the balance; repeated taps cannot grant twice.
+  addCoins(rewards.coins); grantXp(rewards.xp); grantSeasonXp(rewards.seasonXp); grantTokens(rewards.tokens, true);
   saveProfile();
-  updateNavDots();
-  renderQuests();
+  showToast(`${lang === 'tr' ? 'Ödüllerin hazır' : 'Rewards collected'} · +🪙${rewards.coins} +${rewards.xp}XP +🎰${rewards.tokens}`, 3800);
+  sfxCoin(); haptic('LIGHT');
+  for (const id of rewards.claimed) track('quest_claim', { id });
+  if (rewards.chest) track('daily_chest');
+  updateNavDots(); renderQuests(); updateHome();
 }
 // nav kırmızı-nokta: alınabilir ödül varken GÖREVLER butonunda yanar (denetim: claim yüzeyi görünmezdi)
 function updateNavDots() {
-  const claimable = (profile.quests && profile.quests.list || []).some(q => { const d = questDef(q.id); return d && !q.claimed && q.prog >= d.goal; });
-  $('btn-quests').classList.toggle('claim', claimable);
+  const claimable = dailyQuests().some(q => { const d = questDef(q.id); return d && !q.claimed && q.prog >= d.goal; });
+  $('btn-quests').classList.toggle('claim', claimable || CAREER_STEPS.some(s => !(profile.careerClaims || []).includes(s.id) && careerProgress(profile, s) >= s.goal));
 }
 // ---------------------------------------------------------------- sezon (30 kademe, ücretsiz ray, oynayarak dolar)
 const SEASON_TIER_XP = 90, SEASON_LEN = 30; // denetim: 120 XP/kademe = 46 zafer/sezon çok dikti → ~30 zafer (görev XP'si de artık sayılıyor)
@@ -3514,12 +3616,14 @@ function renderSeason() {
   const epoch = Date.UTC(2026, 0, 1);
   const endMs = epoch + s.id * 6 * 7 * 86400000;
   const daysLeft = Math.max(0, Math.ceil((endMs - Date.now()) / 86400000));
+  $('season-head').dataset.season = String(s.id).padStart(2,'0');
   $('season-head').innerHTML = `<div class="sh-name">${seasonName(s.id)}</div>` +
     `<div class="sh-sub">${t.seasonTier} ${s.tier}/${SEASON_LEN} &nbsp;·&nbsp; ⏳ ${t.daysLeft(daysLeft)}</div>` +
+    `<div class="sh-progress"><span>${s.tier >= SEASON_LEN ? (lang === 'tr' ? 'Sezon yolu tamamlandı' : 'Season track complete') : (lang === 'tr' ? 'Sıradaki kademe' : 'Next tier') + ' ' + (s.tier+1)}</span><span>${s.tier >= SEASON_LEN ? '✓' : `${s.xp}/${SEASON_TIER_XP} XP`}</span></div>` +
     `<div class="sh-bar"><div class="sh-fill" style="width:${pct}%"></div></div>` +
     (s.premium ? `<div style="margin-top:8px;color:#ffd76a;font-weight:bold">${t.premActive}</div>` : `<button id="season-prem" class="mbtn small gold${(profile.gems || 0) < PREMIUM_PRICE ? ' cant' : ''}" style="margin-top:8px">${t.premBuy}</button>`);
   const pb = $('season-prem'); if (pb) pb.onclick = buyPremium;
-  $('season-track').innerHTML = iconize(SEASON_REWARDS.map((r, i) => {
+  $('season-track').innerHTML = `<div class="season-labels"><span>#</span><span>${lang === 'tr' ? 'STANDART' : 'STANDARD'}</span><span>${lang === 'tr' ? 'KOMUTAN' : 'COMMANDER'}</span><span></span></div>` + iconize(SEASON_REWARDS.map((r, i) => {
     const tier = i + 1, got = tier <= s.tier, cur = tier === s.tier + 1, pr = premiumReward(tier);
     return `<div class="strow${got ? ' got' : cur ? ' cur' : ''}"><span class="st-t">${tier}</span><span class="st-r">${rewardText(r)}</span><span class="st-r" style="opacity:${s.premium ? 1 : .55};color:#ffd76a">👑 ${rewardText(pr)}</span><span class="st-s">${got ? '✅' : cur ? '▶' : '🔒'}</span></div>`;
   }).join(''));
@@ -3545,23 +3649,35 @@ async function renderLeaderboard(period) {
     return `<div class="lbrow${me}"><span class="lbrank">${medal}</span><span class="lbname">${r.av ? esc(r.av) + ' ' : ''}${esc(r.name)}${tt ? ` <span class="lbtitle" style="color:${tt.col}">${tt.name[lang]}</span>` : ''}</span><span class="lbscore">${period === 'speed' ? '⏱ ' + fmtTime(r.score) : '🌊 ' + r.score}</span></div>`;
   }).join('');
 }
+let questView = 'daily';
 function renderQuests() {
+  $('qtab-daily').textContent = lang === 'tr' ? 'GÜNLÜK' : 'DAILY';
+  $('qtab-career').textContent = lang === 'tr' ? 'KOMUTAN YOLU' : 'COMMANDER PATH';
+  $('qtab-daily').classList.toggle('on', questView === 'daily');
+  $('qtab-career').classList.toggle('on', questView === 'career');
+  if (questView === 'career') return renderCareer();
+  $('title').textContent = T().questsTitle;
+  $('submsg').textContent = T().questsSub;
   const list = dailyQuests(), t = T();
-  const chest = profile.quests.chest ? t.chestDone : t.chestReady;
-  const header = `<div class="qhead"><span>${t.streakLabel(profile.streak || 1)}</span><span class="${profile.quests.chest ? 'qchest-done' : ''}">${chest}</span></div>`;
+  const completed = list.filter(q => q.claimed).length;
+  const readyCount = list.filter(q => !q.claimed && q.prog >= (questDef(q.id)?.goal ?? Infinity)).length;
+  const chest = profile.quests.chest ? t.chestDone : (lang === 'tr' ? `Günlük sandık · ${completed}/${list.length}` : `Daily chest · ${completed}/${list.length}`);
+  const header = `<div class="qhead"><span>${t.streakLabel(profile.streak || 1)}</span><span class="${profile.quests.chest ? 'qchest-done' : ''}">${chest}</span></div><div class="quest-summary"><div class="quest-stamps" aria-label="${completed}/3">${list.map((q,i)=>`<span class="${q.claimed?'done':''}">${q.claimed?'✓':String(i+1).padStart(2,'0')}</span>`).join('')}<small>${completed}/3 ${lang === 'tr' ? 'tamamlandı' : 'completed'}</small></div><strong>${lang === 'tr' ? 'Üç hedef, bir sandık' : 'Three goals, one chest'}</strong><span>${lang === 'tr' ? 'Hepsini tamamla: +120 altın ve +2 jeton.' : 'Complete all: +120 gold and +2 tokens.'}</span><small>${lang === 'tr' ? 'Görevler her gün yenilenir. Kaldığın yerden oynamaya devam edebilirsin.' : 'New goals each day. Your overall progress stays with you.'}</small></div>${readyCount ? `<button class="mbtn gold" id="claim-all">${lang === 'tr' ? 'Hazır ödülleri al' : 'Collect ready rewards'} (${readyCount})</button>` : ''}`;
   // FAZ1 C-6 #3: sandık alındıysa ve bugün ikiye katlanmadıysa ödüllü reklam butonu (günde 1)
   const chestX2 = (profile.quests.chest && profile.chestX2Day !== todayKey() && canOfferRewarded()) ? `<button id="chest-x2" class="mbtn small" style="margin:6px auto 2px;display:block">${t.chestX2}</button>` : '';
-  $('questlist').innerHTML = header + chestX2 + list.map(q => {
+  $('questlist').innerHTML = iconize(header + chestX2 + list.map(q => {
     const def = questDef(q.id);
+    if (!def) return '';
     const pct = Math.min(100, (q.prog / def.goal) * 100);
     const ready = !q.claimed && q.prog >= def.goal;
     return `<div class="qrow${q.claimed ? ' done' : ''}${ready ? ' ready' : ''}">
-      <div class="qtext"><span>${q.claimed ? '✅ ' : ''}${def.text[lang]}</span><span class="qrew">+🪙${def.reward}</span></div>
+      <div class="qtext"><span>${q.claimed ? '✅ ' : ''}${def.text[lang]}</span><span class="qrew">+🪙${def.reward} · +25 XP · +🎰1</span></div>
       <div class="qbar"><div class="qfill" style="width:${pct}%"></div></div>
       ${ready ? `<button class="mbtn small gold qclaim" data-q="${q.id}">🎁 ${t.claimBtn}</button>` : `<div class="qprog">${q.prog}/${def.goal}</div>`}
     </div>`;
-  }).join('');
+  }).join(''));
   for (const b of $('questlist').querySelectorAll('.qclaim')) b.onclick = () => claimQuest(b.dataset.q);
+  const all = $('claim-all'); if (all) all.onclick = () => claimQuests(list.map(q => q.id));
   const cx = $('chest-x2'); if (cx) cx.onclick = async () => {
     cx.disabled = true; cx.textContent = t.adLoading;
     const ok = await watchRewarded('chest');
@@ -3737,15 +3853,122 @@ function updateHUD() {
   }
 }
 
+// The home screen uses the selected model's cached studio portrait, not an extra live renderer.
+let homePortraitKey = '';
+function updateHome() {
+  const tr = lang === 'tr', base = tankById(profile.selected);
+  const claims = (profile.careerClaims || []).length;
+  $('home-career').textContent = `${tr ? 'KOMUTAN YOLU' : 'COMMANDER PATH'} · ${claims}/${CAREER_STEPS.length} ${tr ? 'ödül' : 'rewards'} ↗`;
+  $('home-career').style.display = claims < CAREER_STEPS.length ? '' : 'none';
+  $('hangar-kicker').textContent = tr ? 'HANGAR / GÖREVE HAZIR' : 'HANGAR / READY TO DEPLOY';
+  document.querySelector('.hangar-serial').textContent = `${String(TANKS.indexOf(base)+1).padStart(2,'0')} / ${TANKS.length}`;
+  document.querySelector('.hangar-watermark').textContent = base.name[lang].toLocaleUpperCase(tr ? 'tr-TR' : 'en-US');
+  $('hangar-link').textContent = tr ? 'GARAJA GİT ↗' : 'OPEN GARAGE ↗';
+  $('home-tank').setAttribute('aria-label', `${base.name[lang]} · ${tr ? 'Garajı aç' : 'Open garage'}`);
+  $('home-tank-name').textContent = base.name[lang];
+  $('home-tank-role').textContent = `${tr ? 'Zırh' : 'Armor'} ${base.health} · ${tr ? 'Hız' : 'Speed'} ${base.speed}`;
+  $('btn-single').innerHTML = gi('crosshair') + (tr ? ' HARİTA SEÇ' : ' CHOOSE MAP');
+  $('btn-quickplay').innerHTML = gi('play') + ' ' + T().quickPlay;
+  const portraitKey = JSON.stringify([base.id, profile.skin, profile.track, profile.accessory, profile.accSlot2 && profile.accessory2, profile.decal, profile.decalSide, profile.dye]);
+  if (homePortraitKey !== portraitKey) {
+    homePortraitKey = portraitKey;
+    const img = $('home-tank-img'); img.hidden = true;
+    Promise.all([ensureModel(base.model), ensureAcc(profile.accessory), ensureAcc(profile.accSlot2 && profile.accessory2)]).then(() => {
+      if (homePortraitKey !== portraitKey) return;
+      const url = renderTankThumb(base, true);
+      if (url) { img.src = url; img.hidden = false; }
+      else homePortraitKey = ''; // retry when a model becomes available
+    }).catch(() => { if (homePortraitKey === portraitKey) homePortraitKey = ''; });
+  }
+  const list = dailyQuests();
+  const pending = list.filter(q => !q.claimed && questDef(q.id));
+  const focus = pending.find(q => q.prog >= questDef(q.id).goal) || pending[0];
+  const card = $('home-mission');
+  if (focus) {
+    const def = questDef(focus.id), ready = focus.prog >= def.goal;
+    card.classList.toggle('ready', ready);
+    card.innerHTML = `<span class="mission-top">${tr ? 'GÜNLÜK HEDEF' : 'DAILY GOAL'}<span>${ready ? (tr ? 'ÖDÜLÜ AL ↗' : 'CLAIM ↗') : `${Math.min(focus.prog, def.goal)}/${def.goal}`}</span></span><strong>${def.text[lang]}</strong><span class="mission-bottom">+${def.reward} ${tr ? 'altın' : 'gold'} · +25 XP · +1 ${tr ? 'jeton' : 'token'}</span><span class="mission-track"><i style="width:${Math.min(100, focus.prog / def.goal * 100)}%"></i></span>`;
+  } else {
+    card.classList.remove('ready');
+    card.innerHTML = `<span class="mission-top">${tr ? 'GÜNLÜK HEDEFLER' : 'DAILY GOALS'}<span>✓</span></span><strong>${tr ? 'Bugünün ödülleri tamam' : 'Today’s rewards collected'}</strong><span class="mission-bottom">${tr ? 'Şimdi sıradaki haritada kendi rekorunu dene.' : 'Try a new map or beat your personal best.'}</span>`;
+  }
+}
+function mapPreview(mp) {
+  const palettes = {
+    default: ['#162c2a', '#658677', '#a5c6ae'], stadium: ['#203d38', '#7bb68c', '#b9e2aa'],
+    desert: ['#68462e', '#c59b69', '#f3d49a'], snow: ['#375763', '#a3c8d7', '#e6f5fb'],
+    night: ['#101d32', '#435675', '#87a9d6'], lava: ['#381f25', '#79473d', '#efad74'],
+    space: ['#191d38', '#555b89', '#adaee6'], city: ['#283339', '#6c7c82', '#bbc4c6'],
+    harbor: ['#173746', '#527a89', '#a5c7d1'], canyon: ['#4a2e27', '#ad7456', '#e3ac7b'],
+  };
+  const [ground, wall, edge] = palettes[mp.theme || 'default'] || palettes.default;
+  const n = mp.grid.length, w = mp.grid[0].length;
+  let cells = '';
+  mp.grid.forEach((row, r) => [...row].forEach((cell, c) => {
+    if (cell === '#') cells += `<rect x="${c * 10 + 1}" y="${r * 10 + 1}" width="8" height="8" rx="1" fill="${wall}"/><path d="M${c * 10 + 1} ${r * 10 + 1}h8" stroke="${edge}" stroke-width="1"/>`;
+  }));
+  return `<svg viewBox="0 0 ${w * 10} ${n * 10}" role="img" aria-label="${esc(mp.name[lang])} — ${lang === 'tr' ? 'harita düzeni' : 'map layout'}"><rect width="100%" height="100%" fill="${ground}"/>${cells}</svg>`;
+}
+function mapTactic(index) {
+  const hints = [
+    ['Merkezde siper, kenarlarda kaçış yolu.', 'Central cover, open escape routes.'],
+    ['Açık görüş. Hareket etmeyi bırakma.', 'Open sightlines. Keep moving.'],
+    ['Geniş kanatlardan rakibi çevrele.', 'Flank through wide outer lanes.'],
+    ['Buzda dönüşlerini erken planla.', 'Plan your turns early on the ice.'],
+    ['Dar geçitlerde sektirme atışını dene.', 'Try ricochets in narrow passages.'],
+    ['Sıcak bölgelerden uzak rota seç.', 'Choose a route away from hot zones.'],
+    ['Açık boşlukları hızlı geç.', 'Cross exposed gaps quickly.'],
+    ['Az siper, bol manevra alanı.', 'Little cover, plenty of room to dodge.'],
+    ['Köşeleri kullan, düz hatta kalma.', 'Use corners and break sightlines.'],
+    ['Sokak aralarında pusuya dikkat.', 'Watch for ambushes in the streets.'],
+    ['Konteynerler arasındaki hatları kullan.', 'Use the lanes between containers.'],
+    ['Dar boğazı tut veya kanattan dolaş.', 'Hold the choke or circle the flank.'],
+    ['Koridorları kontrol ederek ilerle.', 'Advance by controlling corridors.'],
+    ['İki kanat rotası, merkezde çapraz ateş.', 'Two flanking routes, central crossfire.'],
+    ['Merkezde dar hat, yanlarda geniş manevra.', 'A narrow centre with wide flanking lanes.'],
+    ['İstasyon siperleri arasında buzlu geçişler.', 'Icy crossings between station cover.'],
+  ];
+  return (hints[index] || hints[0])[lang === 'tr' ? 0 : 1];
+}
+
 // panel yönetimi
-const NAV_MAP = { 'panel-garage': 'btn-garage', 'panel-quests': 'btn-quests', 'panel-shop': 'btn-shop-nav', 'panel-lb': 'btn-lb', 'panel-season': 'btn-season' };
+const NAV_MAP = { 'panel-main': 'btn-home-nav', 'panel-garage': 'btn-garage', 'panel-quests': 'btn-quests', 'panel-shop': 'btn-shop-nav', 'panel-lb': 'btn-lb', 'panel-season': 'btn-season' };
+function refreshMenuChrome(id = document.querySelector('.panel.show')?.id) {
+  const tr = lang === 'tr';
+  const sections = {
+    'panel-main':['00 / KOMUTA MERKEZİ','00 / COMMAND CENTRE',''],
+    'panel-garage':['01 / ENVANTER','01 / INVENTORY',tr ? 'Tankını seç. Kendi imzanı bırak.' : 'Choose your tank. Make it yours.'],
+    'panel-quests':['02 / OPERASYONLAR','02 / OPERATIONS',tr ? 'Bir sonraki hedefin, bir sonraki ödülün.' : 'Your next objective. Your next reward.'],
+    'panel-shop':['03 / İKMAL NOKTASI','03 / SUPPLY DEPOT',tr ? 'Yeni parçalar. Yeni kombinasyonlar.' : 'New gear. New combinations.'],
+    'panel-lb':['04 / REKABET','04 / COMPETITION',tr ? 'Rekorunu geliştir, sıralamada yüksel.' : 'Beat your best. Climb the ranks.'],
+    'panel-season':['05 / SEZON YOLCULUĞU','05 / SEASON JOURNEY',tr ? 'Her seferde ilerle. Ödülleri topla.' : 'Make every run count. Earn your rewards.'],
+    'panel-maps':['OPERASYON HARİTASI','OPERATION MAP',tr ? 'Arazini tanı. Rotanı belirle.' : 'Know the terrain. Plan your route.'],
+    'panel-profile':['KOMUTAN DOSYASI','COMMANDER DOSSIER',tr ? 'Başarıların ve savaş kimliğin.' : 'Your achievements and combat identity.'],
+    'panel-duel':['DÜELLO ARENASI','DUEL ARENA',tr ? 'Antrenman yap veya arkadaşına meydan oku.' : 'Train your skills or challenge a friend.'],
+    'panel-coop':['BİRLİKTE SAVAŞ','FIGHT TOGETHER',tr ? 'Takımını kur. Aynı hedefe ilerle.' : 'Build your squad. Fight for one objective.'],
+  };
+  const section = sections[id];
+  $('menu-kicker').textContent = section ? section[tr ? 0 : 1] : '';
+  $('menu-intro').textContent = section?.[2] || '';
+  $('menu-intro').hidden = !section?.[2];
+  $('brand-label').textContent = tr ? 'KOMUTA MERKEZİ' : 'COMMAND CENTRE';
+  $('btn-home-nav').querySelector('.nlbl').textContent = tr ? 'ÜS' : 'HOME';
+  $('bottomnav').setAttribute('aria-label',tr ? 'Ana menü' : 'Main navigation');
+}
 let lastPanelTracked = '';
 function showPanel(id) {
   if (id !== 'panel-main' && id !== lastPanelTracked) track('panel_open', { p: id.replace('panel-', '') }); // meta ekran ziyaret hunisi
   lastPanelTracked = id;
+  msgEl.scrollTop = 0;
+  msgEl.classList.toggle('home', id === 'panel-main');
+  if (id === 'panel-main') updateHome();
   for (const p of ['panel-main', 'panel-maps', 'panel-garage', 'panel-duel', 'panel-coop', 'panel-profile', 'panel-rematch', 'panel-result', 'panel-quests', 'panel-lb', 'panel-season', 'panel-showroom', 'panel-shop'])
     $(p).classList.toggle('show', p === id);
-  for (const [p, b] of Object.entries(NAV_MAP)) $(b).classList.toggle('on', p === id); // alt nav aktif sekme
+  for (const [p, b] of Object.entries(NAV_MAP)) {
+    $(b).classList.toggle('on', p === id);
+    if(p === id) $(b).setAttribute('aria-current','page'); else $(b).removeAttribute('aria-current');
+  }
+  refreshMenuChrome(id);
 }
 function openMenu() {
   matchSeq++; // eski maçın gecikmiş timer'larını geçersiz kıl
@@ -3835,8 +4058,9 @@ function applyLang() {
   $('set-how').textContent = t.howBtn;
   $('gt-tanks').textContent = t.tabTanks;
   $('gt-skins').textContent = t.tabSkins + gateSuffix('skins');
-  $('gt-acc').textContent = t.accTab + gateSuffix('acc'); // ölü anahtar bağlandı (EN'de 'AKSESUAR' kalıyordu)
-  $('gt-tracks').textContent = t.tabTracks; $('gt-fx').textContent = t.tabFx; $('gt-col').textContent = t.tabCol; // KOZMETİK 2.0
+  $('gt-acc').textContent = t.accTab; // ölü anahtar bağlandı (EN'de 'AKSESUAR' kalıyordu)
+  $('gt-tracks').textContent = t.tabTracks; $('gt-fx').textContent = t.tabFx; $('gt-col').textContent = t.tabCol;
+  $('gt-decals').textContent = lang === 'tr' ? 'DESEN' : 'DECALS'; $('gt-projectiles').textContent = lang === 'tr' ? 'MERMİ' : 'SHOTS'; $('gt-crates').textContent = lang === 'tr' ? 'KUTULAR' : 'CRATES'; // KOZMETİK 2.0
   $('btn-back-maps').textContent = t.back;
   $('btn-back-garage').textContent = t.back;
   $('btn-back-profile').textContent = t.back;
@@ -3846,6 +4070,23 @@ function applyLang() {
   $('lang-tr').classList.toggle('on', lang === 'tr');
   $('lang-en').classList.toggle('on', lang === 'en');
   if (state === 'menu' && $('panel-main').classList.contains('show')) $('submsg').textContent = t.sub;
+  updateHome(); updateNextGoal(); updateLevelBar(); updateStats(); renderEventBtn();
+  { const ws = weeklySpec(); $('btn-weekly').textContent = `${t.weeklyLbl}: ${MAPS[ws.map].name[lang]} · ${t.modNames[ws.mod]}${mapUnlocked(ws.map) ? '' : ' 🔓'}`; }
+  if ($('panel-main').classList.contains('show')) $('title').textContent = t.title;
+  if ($('panel-garage').classList.contains('show')) $('title').textContent = t.garage;
+  if ($('panel-shop').classList.contains('show')) { $('title').textContent = t.shopTitle; renderShop(); }
+  if ($('panel-season').classList.contains('show')) { $('title').textContent = t.navSeason; renderSeason(); }
+  if ($('panel-maps').classList.contains('show')) { $('title').textContent = t.chooseMap; $('submsg').textContent = t.bestWave(profile.bestWave); renderKits(); }
+  if ($('panel-lb').classList.contains('show')) renderLeaderboard(lbPeriod);
+  if ($('panel-profile').classList.contains('show')) { $('title').textContent = t.profileTitle; renderIdentity(); renderAchievements(); }
+  if ($('panel-duel').classList.contains('show')) {
+    $('title').textContent = pendingMode === 'ball' ? t.ballBtn : t.duel;
+    $('submsg').textContent = pendingMode === 'ball' ? t.ballSub(BALL_TARGET) : t.duelSub(KILL_TARGET);
+    renderDuelMaps();
+  }
+  if ($('panel-quests').classList.contains('show')) { $('title').textContent = t.questsTitle; $('submsg').textContent = t.questsSub; renderQuests(); }
+  $('btn-settings-menu').innerHTML = gi('gear');
+  refreshMenuChrome();
   updateHUD();
 }
 
@@ -3872,7 +4113,7 @@ function ensureShowroom() {
   // döner platform + parlayan halka
   const base = new THREE.Mesh(new THREE.CylinderGeometry(3.1, 3.4, 0.5, 56), new THREE.MeshStandardMaterial({ color: 0x1a222c, roughness: 0.45, metalness: 0.7 }));
   base.position.y = 0.25; base.castShadow = base.receiveShadow = true; showroomScene.add(base);
-  srRingMat = new THREE.MeshStandardMaterial({ color: 0x1ec8b0, emissive: 0x1ec8b0, emissiveIntensity: 1.5, toneMapped: false });
+  srRingMat = new THREE.MeshStandardMaterial({ color: 0x5d9c94, emissive: 0x5d9c94, emissiveIntensity: 0.65 });
   const ring = new THREE.Mesh(new THREE.TorusGeometry(3.08, 0.05, 12, 64), srRingMat);
   ring.rotation.x = Math.PI / 2; ring.position.y = 0.5; showroomScene.add(ring);
   showroomTurn = new THREE.Group(); showroomTurn.position.y = SHOWROOM_PIVOT_Y; showroomScene.add(showroomTurn);
@@ -3905,10 +4146,19 @@ function buildShowroomTank() {
     if (showroomTankMesh.userData.accMesh) disposeSubtree(showroomTankMesh.userData.accMesh);
     disposeTank(showroomTankMesh); // TankPaint/kaplama klonu + klonlanmış glow malzemeleri (owned işaretli)
   }
+  if (showroom.mode === 'projectile') {
+    const it = projectileById(showroom.cosmeticId);
+    const g = loadedAcc[it.id] ? loadedAcc[it.id].clone(true) : new THREE.Mesh(bulletGeo, playerBulletMat);
+    g.scale.setScalar(it.id === 'default' ? 6 : 1.2); g.position.y = 1.3;
+    showroomTankMesh = g; showroomTurn.add(g); showroom.centerY = 1.65; showroom.fitRadius = 3.0;
+    return;
+  }
   const def = effTank(showroom.tankId);
   const m = buildTank(def);
   // seçili tankta oyuncunun kaplaması, diğerlerinde varsayılan görünüm
   applySkin(m, showroom.tankId === profile.selected ? profile.skin : 'default', showroom.tankId);
+  if (showroom.mode === 'decal') applyDecal(m, showroom.cosmeticId, showroom.decalSide);
+  else if (showroom.tankId === profile.selected) applyDecal(m, profile.decal, profile.decalSide);
   if (showroom.tankId === profile.selected) applyTracks(m, profile.track); // KOZMETİK 2.0
   applyAccessory(m, showroom.accId, def); // önizlenen/takılı aksesuar
   if (showroom.mode === 'tank' && showroom.tankId === profile.selected && profile.accSlot2 && profile.accessory2) applyAccessory(m, profile.accessory2, def, 2); // 2. yuva vitrinde
@@ -3924,27 +4174,29 @@ function buildShowroomTank() {
   // kamerayı modelin boyutuna göre çerçevele
   const box = new THREE.Box3().setFromObject(m), size = new THREE.Vector3(); box.getSize(size);
   showroom.centerY = SHOWROOM_PIVOT_Y + (box.min.y + box.max.y) / 2;
-  const portrait = innerWidth < innerHeight;
-  showroom.radius = Math.max(size.x, size.z, size.y) * (portrait ? 2.5 : 1.95) + 1.6;
+  showroom.fitRadius = Math.max(Math.hypot(Math.max(Math.abs(box.min.x), Math.abs(box.max.x)), Math.max(Math.abs(box.min.z), Math.abs(box.max.z))), size.y * 0.65);
   // ışıkları model boyutuna ölçekle (Titan/Obüs gibi büyük modeller sönük kalıyordu) + premium altın halka
   const bigR = Math.max(size.x, size.y, size.z), ls = Math.max(1, bigR / 3.4);
   srKey.position.set(4 * ls, 9 * ls, 6 * ls); srKey.intensity = 3.0 + (ls - 1) * 3.2;
   srRim.position.set(-6 * ls, 4 * ls, -7 * ls); srRim.intensity = 2.4 + (ls - 1) * 2.8;
   srAccent.position.set(-4 * ls, 2.6 * ls, 3.5 * ls); srAccent.distance = 20 * ls; srAccent.intensity = 26 * ls;
   const premium = !!tankById(showroom.tankId).gem;
-  srRingMat.color.setHex(premium ? 0xffc23a : 0x1ec8b0);
-  srRingMat.emissive.setHex(premium ? 0xffc23a : 0x1ec8b0);
+  srRingMat.color.setHex(premium ? 0xcda968 : 0x5d9c94);
+  srRingMat.emissive.setHex(premium ? 0xcda968 : 0x5d9c94);
 }
 function frameShowroomCam() {
-  const R = showroom.radius, e = showroom.elev, ty = showroom.centerY;
   showroomCam.aspect = innerWidth / innerHeight; showroomCam.updateProjectionMatrix();
+  const halfV = THREE.MathUtils.degToRad(showroomCam.fov * 0.5);
+  const halfH = Math.atan(Math.tan(halfV) * showroomCam.aspect);
+  const R = (showroom.fitRadius || 3) / Math.sin(Math.min(halfH, halfV)) * (showroom.mode === 'decal' ? 0.92 : 1.10);
+  const e = showroom.elev, ty = showroom.centerY;
   showroomCam.position.set(0, ty + R * Math.sin(e), R * Math.cos(e));
   showroomCam.lookAt(0, ty - R * 0.06, 0); // hedefi biraz aşağı al → tank çerçevede yukarı otursun (alt boşluğu stat paneli örter)
 }
 function updateShowroom(dt) {
   if (!showroom.dragging) {
     showroom.rot += showroom.vel; showroom.vel *= 0.90;
-    if (Math.abs(showroom.vel) < 0.002) { showroom.vel = 0; showroom.rot += dt * 0.35; } // boşta yavaş oto-dönüş
+    if (Math.abs(showroom.vel) < 0.002) { showroom.vel = 0; if (showroom.mode !== 'decal') showroom.rot += dt * 0.35; } // side decals stay visible until the player rotates them
   }
   showroomTurn.rotation.y = showroom.rot;
   // premium parçalar vitrinde nabız gibi parlar (klonlanmış malzemeler — oyun içine sızmaz)
@@ -3958,11 +4210,12 @@ function renderShowroomUI() {
   $('sr-hint').textContent = lang === 'tr' ? '↔ çevirmek için sürükle' : '↔ drag to rotate';
   const act = $('sr-action');
   if (showroom.mode === 'acc') return renderShowroomAcc(t, act);
+  if (showroom.mode === 'decal' || showroom.mode === 'projectile') return renderWorkshopShowroom(act);
   const base = tankById(showroom.tankId), def = effTank(showroom.tankId);
   const owned = profile.owned.includes(base.id), sel = profile.selected === base.id;
   $('sr-name').textContent = base.name[lang];
   const fireRate = 1 / def.cool;
-  $('sr-stats').innerHTML =
+  $('sr-stats').innerHTML = `<p class="showroom-role">${ROLE_NAMES[tankRole(base)][lang === 'tr' ? 0 : 1]} · ${ROLE_TIPS[tankRole(base)][lang === 'tr' ? 0 : 1]}</p>` +
     `<div class="cstat">${t.sHealth}${barHTML(def.health / STAT_MAX.health)}</div>` +
     `<div class="cstat">${t.sSpeed}${barHTML(def.speed / STAT_MAX.speed)}</div>` +
     `<div class="cstat">${t.sFire}${barHTML(fireRate / STAT_MAX.fire)}</div>` + mechLine(def);
@@ -3986,22 +4239,25 @@ function renderShowroomUI() {
 }
 function renderShowroomAcc(t, act) {
   const a = accById(showroom.accId); if (!a) return;
-  const owned = (profile.accessories || []).includes(a.id), equipped = profile.accessory === a.id;
+  const owned = (profile.accessories || []).includes(a.id), equipped = profile.accessory === a.id || profile.accessory2 === a.id;
+  act.disabled = false;
   const rar = RARITY[a.r];
   $('sr-name').textContent = `${a.icon} ${a.name[lang]}`;
   $('sr-stats').innerHTML = `<div class="cstat" style="text-align:center;color:${rar.col};font-weight:bold">${rar[lang]}</div>`;
   act.className = 'mbtn sr-btn' + (a.gem || a.r === 'e' ? ' gold' : '');
   if (equipped) {
     act.textContent = t.accRemove; act.disabled = false;
-    act.onclick = () => { profile.accessory = ''; saveProfile(); setPlayerTank(); renderShowroomUI(); };
+    act.onclick = () => { unequipAccessory(a.id); showroom.accId = ''; buildShowroomTank(); closeShowroom(); };
   } else if (owned) {
     act.textContent = t.accEquip; act.disabled = false;
-    act.onclick = () => { profile.accessory = a.id; saveProfile(); setPlayerTank(); renderShowroomUI(); };
+    act.onclick = () => { equipAccessory(a.id); renderShowroomUI(); };
   } else {
     act.innerHTML = iconize(`${t.buy} · ${a.gem ? '💎' + a.gem : '🪙' + a.price}`);
     act.classList.toggle('cant', a.gem ? (profile.gems || 0) < a.gem : profile.coins < a.price);
     if (a.gem) act.className += ' breath';
+    if (!gateOk('acc')) { act.textContent = t.lockedLv(LEVEL_GATES.acc); act.disabled = true; act.onclick = null; return; }
     act.onclick = () => {
+      if (!gateOk('acc')) return;
       if (a.gem) { if ((profile.gems || 0) < a.gem) return showToast(T().noMoney); profile.gems -= a.gem; } else { if (profile.coins < a.price) return showToast(T().noMoney); profile.coins -= a.price; }
       profile.accessories = profile.accessories || []; profile.accessories.push(a.id); checkSets(); profile.accessory = a.id;
       track('soft_purchase', { t: 'acc', id: a.id, cur: a.gem ? 'g' : 'c', amt: a.gem || a.price });
@@ -4010,7 +4266,7 @@ function renderShowroomAcc(t, act) {
   }
 }
 function enterShowroomView() {
-  showroom.active = true; showroom.rot = -0.5; showroom.vel = 0; showroom.elev = 0.42;
+  showroom.active = true; showroom.rot = Math.PI * (showroom.mode === 'decal' ? (showroom.decalSide === 'right' ? -0.60 : 0.60) : 0.78); showroom.vel = 0; showroom.elev = showroom.mode === 'decal' ? 0.26 : 0.42;
   buildShowroomTank();
   $('title').style.display = 'none'; $('submsg').style.display = 'none'; $('keys').style.display = 'none';
   $('coinbar').style.visibility = 'hidden'; $('langsw').style.visibility = 'hidden';
@@ -4027,7 +4283,7 @@ async function openShowroom(tankId) {
   enterShowroomView();
 }
 async function openAccShowroom(accId) {
-  await ensureAcc(accId); // GLB aksesuar önizleme öncesi hazır (VARLIK FAZ 5)
+  await Promise.all([ensureAcc(accId), ensureModel(tankById(profile.selected).model)]); // GLB aksesuar önizleme öncesi hazır (VARLIK FAZ 5)
   ensureShowroom();
   showroom.mode = 'acc'; showroom.tankId = profile.selected; showroom.accId = accId;
   enterShowroomView();
@@ -4040,14 +4296,60 @@ function closeShowroom() {
   openGarage();
 }
 
+function tankRole(base) {
+  if (['scout', 'phantom', 'lynx', 'hover'].includes(base.id)) return 'light';
+  if (['heavy', 'mamut', 'bastion', 'boxer', 'titan', 'guardian'].includes(base.id)) return 'heavy';
+  if (['sniper', 'arty', 'twin'].includes(base.id)) return 'specialist';
+  return 'balanced';
+}
+const ROLE_NAMES = { balanced: ['ÇOK YÖNLÜ', 'ALL-ROUNDER'], light: ['KEŞİF', 'RECON'], heavy: ['ZIRHLI', 'ARMORED'], specialist: ['UZMAN', 'SPECIALIST'] };
+const ROLE_TIPS = { balanced: ['Her mesafede dengeli başlangıç.', 'A balanced choice for any engagement.'], light: ['Hareket et, kanattan yaklaş, mesafeni koru.', 'Stay mobile, flank and keep your distance.'], heavy: ['Siperden ilerle, koridorları kontrol et.', 'Advance through cover and hold the lanes.'], specialist: ['Silahının avantajına göre mevzi al.', 'Position around your weapon’s strengths.'] };
+let garageFilter = 'all';
+function renderTankFilters() {
+  const el = $('tankfilters');
+  const labels = [['all', 'TÜMÜ', 'ALL'], ['owned', 'FİLOM', 'OWNED'], ['light', 'KEŞİF', 'RECON'], ['heavy', 'ZIRHLI', 'ARMORED'], ['specialist', 'UZMAN', 'SPECIALIST']];
+  el.innerHTML = labels.map(([id, tr, en]) => `<button class="filter-chip${garageFilter === id ? ' active' : ''}" data-filter="${id}" aria-pressed="${garageFilter === id}">${lang === 'tr' ? tr : en}</button>`).join('');
+  for (const b of el.querySelectorAll('button')) b.onclick = () => { garageFilter = b.dataset.filter; renderGarage(); };
+}
+function careerRewardLabel(step) {
+  const parts = [];
+  if (step.coins) parts.push(`+${step.coins} ${lang === 'tr' ? 'altın' : 'gold'}`);
+  if (step.tokens) parts.push(`+${step.tokens} ${lang === 'tr' ? 'jeton' : 'tokens'}`);
+  if (step.gems) parts.push(`+${step.gems} ${lang === 'tr' ? 'elmas' : 'gem'}`);
+  if (step.accessory) parts.push(accById(step.accessory).name[lang]);
+  return parts.join(' · ');
+}
+function renderCareer() {
+  $('title').textContent = lang === 'tr' ? 'KOMUTAN YOLU' : 'COMMANDER PATH';
+  $('submsg').textContent = lang === 'tr' ? 'Süresi dolmayan hedefler. Kendi hızında ilerle.' : 'Goals that never expire. Progress at your own pace.';
+  $('questlist').innerHTML = `<div class="career-intro"><span>01 — 05</span><strong>${lang === 'tr' ? 'İlk seferden ilk zafere' : 'From first orders to first victory'}</strong><p>${lang === 'tr' ? 'Oynadıkça açılan beş kalıcı ödül. Önceki ilerlemen de sayılır.' : 'Five permanent rewards earned through play. Your past progress counts.'}</p></div>` + CAREER_STEPS.map((step,i) => {
+    const done = (profile.careerClaims || []).includes(step.id), n = careerProgress(profile, step), ready = n >= step.goal;
+    return `<div class="career-step${done ? ' done' : ''}"><span class="career-number">${done ? '✓' : String(i+1).padStart(2,'0')}</span><div><strong>${step.name[lang]}</strong><p>${step.text[lang]}</p><span class="career-reward">${careerRewardLabel(step)}</span><div class="qbar"><div class="qfill" style="width:${100*n/step.goal}%"></div></div><small>${n}/${step.goal}</small>${step.accessory && !done && (profile.accessories || []).includes(step.accessory) ? `<p class="duplicate-note">${lang === 'tr' ? `Bu parça sende var: yerine ${step.duplicateCoins} altın.` : `Already owned: receive ${step.duplicateCoins} gold instead.`}</p>` : ''}${done ? '' : `<button class="mbtn small" data-career="${step.id}" ${ready || step.id === 'training' ? '' : 'disabled'}>${ready ? T().claimBtn : step.id === 'training' ? (lang === 'tr' ? 'EĞİTİME GİT' : 'START TRAINING') : (lang === 'tr' ? 'DEVAM EDİYOR' : 'IN PROGRESS')}</button>`}</div></div>`;
+  }).join('');
+  for (const b of $('questlist').querySelectorAll('[data-career]')) b.onclick = () => {
+    if (b.dataset.career === 'training' && !profile.tutorialDone) { startSolo(0); startTutorial(); hideFtueHint(); return; }
+    const reward = collectCareerReward(profile, b.dataset.career);
+    if (!reward) return;
+    if (reward.coins) addCoins(reward.coins);
+    if (reward.tokens) grantTokens(reward.tokens, true);
+    if (reward.gems) addGems(reward.gems);
+    saveProfile(); checkSets(); updateNavDots(); updateHome(); renderCareer();
+    sfxPower(); haptic('LIGHT');
+    showToast(`${lang === 'tr' ? 'Komutan ödülü alındı' : 'Commander reward collected'}${reward.accessory ? ' · ' + accById(reward.accessory).name[lang] : ''}`, 3400);
+    track('career_claim', { id: b.dataset.career });
+  };
+}
+
 function renderGarage() {
+  renderTankFilters();
   const t = T();
   $('tokenmachine').innerHTML = ''; // makine sadece kaplama sekmesinde
   const wrap = $('cardwrap-garage');
-  wrap.className = 'card-list';
-  wrap.className = 'card-list';
+  wrap.className = 'card-list fleet-cards';
   wrap.innerHTML = '';
   for (const base of TANKS) {
+    if (garageFilter === 'owned' && !profile.owned.includes(base.id)) continue;
+    if (!['all', 'owned'].includes(garageFilter) && tankRole(base) !== garageFilter) continue;
     const owned = profile.owned.includes(base.id);
     const sel = profile.selected === base.id;
     const def = effTank(base.id);
@@ -4060,12 +4362,13 @@ function renderGarage() {
       ? `<div class="cswatch cswatch-3d has-thumb"><img class="tankthumb" src="${thumb}" alt=""><span class="cs-3d">🔍 3B</span></div>`
       : `<div class="cswatch cswatch-3d" style="background:linear-gradient(135deg,${hex},#1a1a1a)"><span class="cs-3d">🔍 3B</span></div>`;
     card.innerHTML =
-      `<div class="cname">${base.name[lang]}</div>` +
-      swatchHTML +
+      `<div class="tank-role">${ROLE_NAMES[tankRole(base)][lang === 'tr' ? 0 : 1]}<span>${owned ? (lang === 'tr' ? 'FİLONDA' : 'OWNED') : ''}</span></div><div class="cname">${base.name[lang]}</div>` +
+      swatchHTML + `<p class="role-tip">${ROLE_TIPS[tankRole(base)][lang === 'tr' ? 0 : 1]}</p>` +
       `<div class="cstat">${t.sHealth}${barHTML(def.health / STAT_MAX.health)}</div>` +
       `<div class="cstat">${t.sSpeed}${barHTML(def.speed / STAT_MAX.speed)}</div>` +
       `<div class="cstat">${t.sFire}${barHTML(fireRate / STAT_MAX.fire)}</div>` + mechLine(def) + masteryLine(base);
-    card.querySelector('.cswatch').onclick = () => openShowroom(base.id); // görsele dokun → 3B inceleme
+    const preview = card.querySelector('.cswatch'); preview.setAttribute('role', 'button'); preview.tabIndex = 0; preview.setAttribute('aria-label', `${base.name[lang]} · ${lang === 'tr' ? '3B incele' : 'inspect in 3D'}`); preview.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openShowroom(base.id); } };
+    preview.onclick = () => openShowroom(base.id); // görsele dokun → 3B inceleme
     { const mb = card.querySelector('[data-mastery]'); if (mb) mb.onclick = () => buyMastery(base.id); }
     if (!thumb && base.model) ensureModel(base.model).then(() => { // tembel model indi → kart görselini yerinde tazele
       const u = renderTankThumb(base);
@@ -4128,9 +4431,10 @@ function renderGarage() {
 }
 let garageTab = 'tanks';
 function renderGarageTabs() {
-  for (const [id, tab] of [['gt-tanks', 'tanks'], ['gt-skins', 'skins'], ['gt-acc', 'acc'], ['gt-tracks', 'tracks'], ['gt-fx', 'fx'], ['gt-col', 'col']]) $(id).classList.toggle('on', garageTab === tab);
+  $('tankfilters').hidden = garageTab !== 'tanks';
+  for (const [id, tab] of [['gt-decals', 'decals'], ['gt-projectiles', 'projectiles'], ['gt-crates', 'crates'], ['gt-tanks', 'tanks'], ['gt-skins', 'skins'], ['gt-acc', 'acc'], ['gt-tracks', 'tracks'], ['gt-fx', 'fx'], ['gt-col', 'col']]) $(id).classList.toggle('on', garageTab === tab);
   { const on = document.querySelector('#garagetabs .mbtn.on'); if (on && on.scrollIntoView) try { on.scrollIntoView({ inline: 'center', block: 'nearest' }); } catch (e) {} } /* LANSMAN: aktif sekme görünür */
-  if (garageTab === 'tanks') renderGarage(); else if (garageTab === 'skins') renderSkins(); else if (garageTab === 'tracks') renderTracks(); else if (garageTab === 'fx') renderFx(); else if (garageTab === 'col') renderCollection(); else renderAccessories();
+  if (garageTab === 'tanks') renderGarage(); else if (garageTab === 'skins') renderSkins(); else if (garageTab === 'tracks') renderTracks(); else if (garageTab === 'fx') renderFx(); else if (garageTab === 'decals') renderWorkshopCategory('decal'); else if (garageTab === 'projectiles') renderWorkshopCategory('projectile'); else if (garageTab === 'crates') { $('tokenmachine').innerHTML = ''; const w = $('cardwrap-garage'); w.className = 'card-list'; w.innerHTML = ''; renderChests(w); } else if (garageTab === 'col') renderCollection(); else renderAccessories();
 }
 function openGarage() {
   $('title').textContent = T().garage;
@@ -4190,8 +4494,9 @@ function renderAccessories() {
   const wrap = $('cardwrap-garage');
   wrap.className = 'card-list';
   wrap.innerHTML = '';
+  const intro = document.createElement('p'); intro.className = 'catalog-note'; intro.textContent = lang === 'tr' ? 'Sadece görünüm değişir. Bir parçaya dokun, tankında dene.' : 'Cosmetic only. Tap a piece to preview it on your tank.'; wrap.appendChild(intro);
   // FAZ3: 2. yuva kilidi (60💎) — başlık butonu
-  if (!profile.accSlot2) {
+  if (!profile.accSlot2 && gateOk('acc')) {
     const sb = document.createElement('button'); sb.className = 'mbtn small gold' + ((profile.gems || 0) < 60 ? ' cant' : ''); sb.style.cssText = 'width:100%;max-width:360px;margin:0 auto 6px'; sb.textContent = t.slot2Buy;
     sb.onclick = () => { if ((profile.gems || 0) < 60) return showToast(t.noMoney); profile.gems -= 60; profile.accSlot2 = true; saveProfile(); updateGemBar(); sfxPower(); showToast(t.slot2Got, 3800); track('gem_spend', { sink: 'slot2', n: 60 }); renderAccessories(); };
     wrap.appendChild(sb);
@@ -4213,7 +4518,8 @@ function renderAccessories() {
       (ath
         ? `<div class="cswatch cswatch-3d has-thumb"><img class="tankthumb" src="${ath}" alt=""><span class="cs-3d">🔍 3B</span></div>`
         : `<div class="cswatch cswatch-3d" style="background:radial-gradient(circle at 50% 42%,#2b3440,#12161c);display:flex;align-items:center;justify-content:center;font-size:30px"><span>${a.icon}</span><span class="cs-3d">🔍 3B</span></div>`);
-    card.querySelector('.cswatch').onclick = () => openAccShowroom(a.id); // ikona dokun → 3B önizleme (tanka takılı hali)
+    const preview = card.querySelector('.cswatch'); preview.setAttribute('role', 'button'); preview.tabIndex = 0; preview.setAttribute('aria-label', `${a.name[lang]} · ${lang === 'tr' ? 'tankta dene' : 'preview on tank'}`); preview.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openAccShowroom(a.id); } };
+    preview.onclick = () => openAccShowroom(a.id); // ikona dokun → 3B önizleme (tanka takılı hali)
     if (!ath && a.glb) ensureAcc(a.id).then(() => { // tembel GLB indi → kart görselini yerinde tazele
       const u = renderAccThumb(a), sw = card.querySelector('.cswatch');
       if (u && sw && sw.isConnected) { sw.style.cssText = ''; sw.classList.add('has-thumb'); sw.innerHTML = `<img class="tankthumb" src="${u}" alt=""><span class="cs-3d">🔍 3B</span>`; }
@@ -4231,9 +4537,60 @@ function renderAccessories() {
         equipAccessory(a.id); sfxCoin(); updateCoinBar(); renderAccessories();
       };
     }
+    if (!owned && !gateOk('acc')) { btn.disabled = true; btn.textContent = `${lang === 'tr' ? 'SEVİYE' : 'LEVEL'} ${LEVEL_GATES.acc} · ${a.gem ? '💎' + a.gem : '🪙' + a.price}`; }
     card.appendChild(btn); wrap.appendChild(card);
   }
 }
+// ---------------------------------------------------------------- Workshop: decals are a separate layer, projectiles are cosmetic geometry.
+function renderWorkshopCategory(kind) {
+  $('tokenmachine').innerHTML = '';
+  const wrap = $('cardwrap-garage'); wrap.className = 'card-list workshop-list'; wrap.innerHTML = '';
+  const list = KINDS[kind].list(), tr = lang === 'tr';
+  const intro = document.createElement('div'); intro.className = 'workshop-intro';
+  intro.innerHTML = `<span>${kind === 'decal' ? (tr ? 'GÖVDE SANATI' : 'BODY ART') : (tr ? 'ATIŞ KOLEKSİYONU' : 'SHOT COLLECTION')}</span><strong>${KINDS[kind].owned().filter(x => x !== 'default').length}/${list.length - 1} ${tr ? 'parça sende' : 'collected'}</strong><p>${kind === 'decal' ? (tr ? 'Boyanın üzerine ayrı bir desen. Sol, sağ veya iki yanına uygula.' : 'A separate layer over your paint. Apply to the left, right or both sides.') : (tr ? 'Kartopu başlangıç hediyen. Hasar, hız ve sekme değişmez. Düellolarda standart görünüm kullanılır.' : 'Snowball is your welcome gift. Damage, speed and ricochets stay the same. Duels use the standard shell.')}</p>`;
+  wrap.appendChild(intro);
+  for (const it of list) {
+    const card = cosmeticCard(kind,it,kind,() => renderWorkshopCategory(kind)); card.classList.add('workshop-card');
+    const preview = document.createElement('button'); preview.className = 'workshop-preview';
+    preview.setAttribute('aria-label',`${it.name[lang]} · ${tr ? '3B dene' : '3D preview'}`);
+    preview.innerHTML = chestSwatch(kind,it) + `<span>${tr ? '3B DENE' : '3D PREVIEW'} ↗</span>`;
+    preview.onclick = () => openWorkshopShowroom(kind,it.id);
+    card.querySelector('.cswatch').replaceWith(preview);
+    if (kind === 'projectile' && it.glb) ensureAcc(it).then(() => { if(preview.isConnected) preview.innerHTML = chestSwatch(kind,it) + `<span>${tr ? '3B DENE' : '3D PREVIEW'} ↗</span>`; });
+    wrap.appendChild(card);
+  }
+}
+async function openWorkshopShowroom(kind,id) {
+  await Promise.all([ensureModel(tankById(profile.selected).model),ensureAcc(profile.accessory),kind === 'projectile' ? ensureAcc(projectileById(id)) : Promise.resolve()]);
+  ensureShowroom();showroom.mode=kind;showroom.cosmeticId=id;showroom.tankId=profile.selected;showroom.accId=profile.accessory;showroom.decalSide=profile.decalSide;
+  enterShowroomView();
+}
+function renderWorkshopShowroom(act) {
+  const kind=showroom.mode, it=itemOf(kind,showroom.cosmeticId), tr=lang==='tr';
+  $('sr-name').textContent=it.name[lang];
+  const sideChanged=kind==='decal' && profile.decalSide!==showroom.decalSide;
+  const owned=ownsItem(kind,it.id),equipped=profile[kind]===it.id&&!sideChanged;
+  $('sr-stats').innerHTML=`<p class="showroom-role">${tr ? 'YALNIZCA GÖRÜNÜM' : 'COSMETIC ONLY'}</p><p class="workshop-preview-note">${kind==='decal' ? (tr ? 'Mevcut boyanın üzerine uygulanır.' : 'Layers over your current paint.') : (tr ? 'Bu, merminin büyütülmüş görünümü. Savaş değerlerini değiştirmez.' : 'An enlarged view of your projectile. Combat stats stay unchanged.')}</p>`;
+  if(kind==='decal') {
+    const row=document.createElement('div');row.className='decal-sides';
+    for(const [id,label] of [['left',tr?'SOL':'LEFT'],['both',tr?'İKİ YAN':'BOTH'],['right',tr?'SAĞ':'RIGHT']]) {
+      const b=document.createElement('button');b.className='mbtn small'+(showroom.decalSide===id?' gold':'');b.textContent=label;b.setAttribute('aria-pressed',showroom.decalSide===id);
+      b.onclick=()=>{showroom.decalSide=id;showroom.rot=id==='right'?-Math.PI*.60:Math.PI*.60;showroom.vel=0;buildShowroomTank();renderShowroomUI();};row.appendChild(b);
+    }
+    $('sr-stats').appendChild(row);
+  }
+  act.disabled=equipped;act.className='mbtn sr-btn'+(!owned?' gold':'');
+  act.innerHTML=equipped?T().selected:owned?(tr?'UYGULA':'APPLY'):iconize(`${T().buy} · 🪙${it.price}`);
+  act.onclick=()=>{
+    if(!ownsItem(kind,it.id)) {
+      if(profile.coins<it.price)return showToast(T().noMoney);
+      profile.coins-=it.price;KINDS[kind].owned().push(it.id);track('soft_purchase',{t:kind,id:it.id,cur:'c',amt:it.price});sfxCoin();checkSets();
+    }
+    profile[kind]=it.id;if(kind==='decal')profile.decalSide=showroom.decalSide;
+    saveProfile();setPlayerTank();updateCoinBar();updateHome();renderShowroomUI();
+  };
+}
+
 // ---------------------------------------------------------------- KOZMETİK 2.0: PALET sekmesi + EFEKT sekmesi (iz / patlama / unvan)
 function cosmeticCard(kind, it, key, rerender) { // ortak kart: swatch + SEÇ / SATIN AL (coin ya da elmas); default satırı ücretsiz
   const t = T(), owned = it.id === 'default' || KINDS[kind].owned().includes(it.id), equipped = profile[key] === it.id;
@@ -4389,22 +4746,15 @@ function renderMaps() {
     ordered.push({ header: `<div style="width:100%;text-align:center;color:${done ? '#7dff9b' : '#ffd76a'};font-weight:bold;letter-spacing:1px;margin:10px 0 0;font-size:13.5px">📖 ${t.chapterWord} ${ci + 1} · ${ch.name[lang]} — ${wins}/${ch.maps.length} ${t.chVictories}${done ? ' ✅' : ''}</div>` });
     ch.maps.map(idx => ({ mp: MAPS[idx], idx })).sort((a, b) => a.mp.req - b.mp.req || a.idx - b.idx).forEach(x => ordered.push(x));
   });
+  const extras = MAPS.map((mp, idx) => ({ mp, idx })).filter(({ idx }) => chapterOf(idx) < 0);
+  if (extras.length) ordered.push({ header: `<div class="map-extra-title">${lang === 'tr' ? 'YENİ · TAKTİK ROTALAR' : 'NEW · TACTICAL ROUTES'}</div>` }, ...extras);
   ordered.forEach(({ mp, idx, header }) => {
     if (header) { const h = document.createElement('div'); h.innerHTML = header; h.style.cssText = 'width:100%'; wrap.appendChild(h); return; }
     const unlocked = mapUnlocked(idx);
     const card = document.createElement('div');
     card.className = 'card' + (unlocked ? '' : ' locked');
-    // mini önizleme (ızgara)
-    let mini = '<div style="display:inline-block;line-height:0;margin:6px 0">';
-    for (let r = 0; r < mp.grid.length; r += 1) {
-      for (let c = 0; c < mp.grid[r].length; c += 1) {
-        const on = mp.grid[r][c] === '#';
-        mini += `<span style="display:inline-block;width:9px;height:9px;background:${on ? '#6b5535' : '#2c3a1e'}"></span>`;
-      }
-      mini += '<br>';
-    }
-    mini += '</div>';
-    card.innerHTML = `<div class="cname">${QUICK_MAPS.includes(idx) ? '⭐ ' : ''}${mp.name[lang]}</div>${mini}`;
+    const mini = mapPreview(mp);
+    card.innerHTML = `<div class="map-preview">${mini}<span class="map-status">${unlocked ? (lang === 'tr' ? 'AÇIK' : 'OPEN') : (lang === 'tr' ? 'KİLİTLİ' : 'LOCKED')}</span></div><div class="cname">${mp.name[lang]}</div><p class="map-note">${mapTactic(idx)}</p>`;
     const btn = document.createElement('button');
     btn.className = 'mbtn small';
     if (unlocked) { btn.textContent = t.single; btn.onclick = () => startSolo(idx); }
@@ -4475,7 +4825,7 @@ function gameOver() {
     title: t.over, won: null,
     sub: t.overSub(score, wave, roundCoins) + '<br>' + cheer,
     xpKind: 'wave', xpOpts: { wave }, coins: roundCoins,
-    replay: () => startSolo(lastSoloMap),
+    replay: ((map, spec) => () => startSolo(map, spec))(lastSoloMap, weeklyRun && { ...weeklyRun }),
   });
 }
 // sonlu koşu zaferi: 10 dalga bitti → tören + bonus (+günde 1 kez 💎) + sonsuz moda devam seçeneği
@@ -4498,11 +4848,11 @@ function soloVictory() {
   }
   // zafer süresi (speedrun rekabeti): en hızlı 10-dalga koşusu profile.bestRunTime'da tutulur
   const runDur = Math.max(1, Math.round(clock.elapsedTime - soloRunStart));
-  const timeRec = !profile.bestRunTime || runDur < profile.bestRunTime;
+  const timeRec = isStandardTimeRecord(runDur, profile.bestRunTime, weeklyRun);
   if (!weeklyRun) submitTime(runDur); // hız tablosu: yalnız standart 10 dalga sayılır (modlu koşular adil değil)
   if (!weeklyRun && eventLive() && activeEvent.type === 'speedRace') { grantTokens(2, true); gemTxt += ' &nbsp;·&nbsp; ⏱ +🎰2'; track('event_complete', { type: 'speedRace' }); }
   if (timeRec) profile.bestRunTime = runDur;
-  const timeTxt = '<br>' + (timeRec ? t.timeNewRec(fmtTime(runDur)) : t.timeLine(fmtTime(runDur), fmtTime(profile.bestRunTime)));
+  const timeTxt = '<br>' + (weeklyRun ? `⏱ ${fmtTime(runDur)}` : timeRec ? t.timeNewRec(fmtTime(runDur)) : t.timeLine(fmtTime(runDur), fmtTime(profile.bestRunTime)));
   let bonusXp = 0;
   if (!profile.firstWin) { profile.firstWin = 1; bonusXp = 40; showToast(t.firstWinXp, 3200); } // FAZ0: ilk zafer +40 XP
   { // FAZ1 A-6: harita zaferi + bölüm tamamlama ödülü
@@ -4521,7 +4871,7 @@ function soloVictory() {
     title: t.victoryTitle, won: true,
     sub: t.victorySub(score, roundCoins, runWaves) + gemTxt + timeTxt,
     xpKind: 'wave', xpOpts: { wave, bonus: bonusXp }, coins: roundCoins,
-    replay: () => startSolo(lastSoloMap),
+    replay: ((map, spec) => () => startSolo(map, spec))(lastSoloMap, weeklyRun && { ...weeklyRun }),
     endless: () => resumeEndless(),
   });
 }
@@ -5446,10 +5796,15 @@ function handleTeamNet(m) {
 }
 
 // ---------------------------------------------------------------- menü olayları
-$('lang-tr').addEventListener('click', () => { lang = 'tr'; track('lang_switch', { to: 'tr' }); applyLang(); if ($('panel-garage').classList.contains('show')) renderGarage(); if ($('panel-maps').classList.contains('show')) renderMaps(); });
-$('lang-en').addEventListener('click', () => { lang = 'en'; track('lang_switch', { to: 'en' }); applyLang(); if ($('panel-garage').classList.contains('show')) renderGarage(); if ($('panel-maps').classList.contains('show')) renderMaps(); });
+$('lang-tr').addEventListener('click', () => { lang = 'tr'; track('lang_switch', { to: 'tr' }); applyLang(); if ($('panel-garage').classList.contains('show')) renderGarageTabs(); if ($('panel-maps').classList.contains('show')) renderMaps(); });
+$('lang-en').addEventListener('click', () => { lang = 'en'; track('lang_switch', { to: 'en' }); applyLang(); if ($('panel-garage').classList.contains('show')) renderGarageTabs(); if ($('panel-maps').classList.contains('show')) renderMaps(); });
 // HIZLI OYNA = solo dalga koşusu (FTUE ile tutarlı; bot düellosu ARKADAŞLA DÜELLO menüsünden hâlâ erişilir).
 // Öne çıkan haritalar arasında döner (kilitliler atlanır).
+$('home-tank').addEventListener('click', () => openGarage());
+$('home-mission').addEventListener('click', () => { questView = 'daily'; $('btn-quests').click(); });
+$('home-career').addEventListener('click', () => { questView = 'career'; $('btn-quests').click(); });
+$('qtab-daily').onclick = () => { questView = 'daily'; renderQuests(); };
+$('qtab-career').onclick = () => { questView = 'career'; renderQuests(); };
 $('btn-quickplay').addEventListener('click', () => {
   track('quickplay_click');
   const pool = QUICK_MAPS.filter(mapUnlocked);
@@ -5496,7 +5851,7 @@ $('res-rewarded').addEventListener('click', async () => {
 $('btn-quests').addEventListener('click', () => { const t = T(); $('title').textContent = t.questsTitle; $('submsg').textContent = t.questsSub; renderQuests(); showPanel('panel-quests'); });
 $('btn-back-quests').addEventListener('click', openMenu);
 $('btn-lb').addEventListener('click', () => { const t = T(); $('title').textContent = V1_SIMPLE ? t.lbWeekTitle : t.lbTitle; $('submsg').textContent = ''; showPanel('panel-lb'); renderLeaderboard(V1_SIMPLE ? 'week' : 'day'); });
-$('btn-season').addEventListener('click', () => { $('title').textContent = ''; $('submsg').textContent = ''; renderSeason(); showPanel('panel-season'); });
+$('btn-season').addEventListener('click', () => { $('title').textContent = T().navSeason; $('submsg').textContent = ''; renderSeason(); showPanel('panel-season'); });
 $('btn-back-season').addEventListener('click', openMenu);
 $('lbt-day').addEventListener('click', () => renderLeaderboard('day'));
 $('lbt-week').addEventListener('click', () => renderLeaderboard('week'));
@@ -5537,9 +5892,11 @@ function renderCoopMaps() { renderMapPicker('coopmapsrow', renderCoopMaps); }
 $('btn-duel').addEventListener('click', () => { if (!gateOk('duel')) return showToast(T().lockedLv(LEVEL_GATES.duel)); pendingMode = 'duel'; myRoomCode = null; $('btn-duel-share').style.display = 'none'; duelStatusEl.textContent = ''; $('title').textContent = T().duel; $('submsg').textContent = T().duelSub(KILL_TARGET); $('duelmapsrow').style.display = 'flex'; renderDuelMaps(); showPanel('panel-duel'); });
 $('btn-ball').addEventListener('click', () => { pendingMode = 'ball'; myRoomCode = null; $('btn-duel-share').style.display = 'none'; duelStatusEl.textContent = ''; $('title').textContent = T().ballBtn; $('submsg').textContent = T().ballSub(BALL_TARGET); $('duelmapsrow').style.display = 'none'; showPanel('panel-duel'); });
 $('btn-garage').addEventListener('click', openGarage);
+$('btn-home-nav').addEventListener('click', openMenu);
+for (const [id, tab] of [['gt-decals','decals'],['gt-projectiles','projectiles'],['gt-crates','crates']]) $(id).onclick = () => { garageTab = tab; renderGarageTabs(); };
 $('gt-tanks').addEventListener('click', () => { garageTab = 'tanks'; renderGarageTabs(); });
 $('gt-skins').addEventListener('click', () => { if (!gateOk('skins')) return showToast(T().lockedLv(LEVEL_GATES.skins)); garageTab = 'skins'; renderGarageTabs(); });
-$('gt-acc').addEventListener('click', () => { if (!gateOk('acc')) return showToast(T().lockedLv(LEVEL_GATES.acc)); garageTab = 'acc'; renderGarageTabs(); });
+$('gt-acc').addEventListener('click', () => { garageTab = 'acc'; renderGarageTabs(); });
 $('gt-tracks').addEventListener('click', () => { garageTab = 'tracks'; renderGarageTabs(); }); // KOZMETİK 2.0
 $('gt-fx').addEventListener('click', () => { garageTab = 'fx'; renderGarageTabs(); });
 $('gt-col').addEventListener('click', () => { garageTab = 'col'; renderGarageTabs(); });
@@ -5635,6 +5992,13 @@ function updateSettingsLabels() {
   $('set-resume').textContent = t.resumeW;
   $('set-quit').textContent = t.toMenuW;
   $('set-close').textContent = t.closeW;
+  for (const id of ['set-sound','set-music','set-quality','set-haptic','set-autofire','set-stick','set-notifs']) {
+    const b = $(id), [label,value] = b.textContent.split(':');
+    b.innerHTML = `<span>${label}</span><span class="setting-value">${value.trim()}</span>`;
+  }
+  for (const [id,on] of [['set-haptic',settings.haptics],['set-autofire',settings.autoFire],['set-notifs',settings.notifs]]) {
+    $(id).setAttribute('role','switch'); $(id).setAttribute('aria-checked',String(!!on));
+  }
 }
 function openSettings() {
   const inGame = state === 'play';
@@ -5775,6 +6139,7 @@ function updateBlitz(e, dt, tgt) {
   e.mesh.position.set(e.x, 0, e.z); e.mesh.rotation.y = e.a;
 }
 function updateEnemy(e, dt, tgt) {
+  if (tutActive() && tut.step < 2) { e.cool = Math.max(e.cool, 0.8); return; }
   if (e.type === 'boss_blitz') return updateBlitz(e, dt, tgt);
   e.cool -= dt; e.thinkT -= dt;
   const tp = tgt || player;
@@ -6013,6 +6378,7 @@ function tick() {
   if (state === 'play' && !paused && !buildChoosing) {
     if (player.alive) {
       player.cool -= dt; player.inv -= dt;
+      if (tutActive() && tut.step < 2) player.inv = Math.max(player.inv, 0.15);
       if (mechIs('stealth')) { // Hayalet: 2.5 sn ateşsiz → gizlenir (boya opaklığı 0.45, düşman görüşü ×0.45)
         player.noFireT = (player.noFireT || 0) + dt;
         const st = player.noFireT > 2.5;
@@ -6112,6 +6478,7 @@ function tick() {
 
     for (let i = bullets.length - 1; i >= 0; i--) {
       const b = bullets[i];
+      if (b.mesh.userData.shotVisual) { b.mesh.userData.shotVisual.rotation.x += dt * 7; b.mesh.userData.shotVisual.rotation.z += dt * 3; }
       b.life -= dt;
       let dead = b.life <= 0;
       if (b.lob) { // Obüs havan mermisi: parabol, duvar/varil yok sayılır, inişte alan hasarı
@@ -6322,8 +6689,8 @@ function tick() {
   }
 
   const portrait = camera.aspect < 1;
-  const camBack = portrait ? 10 : 11.5;
-  _camTarget.set(player.x - fwdX(player.a) * camBack, portrait ? 15 : 9.0, player.z - fwdZ(player.a) * camBack); // kare başı alloc yok
+  const camBack = portrait ? 13 : 11.5;
+  _camTarget.set(player.x - fwdX(player.a) * camBack, portrait ? 21 : 9.0, player.z - fwdZ(player.a) * camBack); // kare başı alloc yok
   camera.position.lerp(_camTarget, 1 - Math.exp(-4 * dt));
   shake = Math.max(0, shake - dt * 1.2);
   if (shake > 0) {
@@ -6331,7 +6698,7 @@ function tick() {
     camera.position.y += (Math.random() - 0.5) * shake * 0.6;
     camera.position.z += (Math.random() - 0.5) * shake;
   }
-  const ahead = portrait ? 7 : 6;
+  const ahead = portrait ? 5.5 : 6;
   camera.lookAt(player.x + fwdX(player.a) * ahead, 1.0, player.z + fwdZ(player.a) * ahead);
 
   tickCamoAnim(); // animasyonlu desen (KOZMETİK 2.0)

@@ -1,0 +1,122 @@
+[
+  {
+    "id": "tank_guardian_mk2",
+    "triangles": 3804,
+    "meshes": 12,
+    "bytes": 267804,
+    "tank": "guardian",
+    "family": "fortress",
+    "turretTop": 1.99,
+    "rearDeckTop": 1.12
+  },
+  {
+    "id": "tank_sniper_mk2",
+    "triangles": 3780,
+    "meshes": 12,
+    "bytes": 267096,
+    "tank": "sniper",
+    "family": "rail",
+    "turretTop": 1.52,
+    "rearDeckTop": 1.12
+  },
+  {
+    "id": "tank_phantom_mk2",
+    "triangles": 3380,
+    "meshes": 12,
+    "bytes": 236288,
+    "tank": "phantom",
+    "family": "stealth",
+    "turretTop": 1.62,
+    "rearDeckTop": 1.12
+  },
+  {
+    "id": "tank_goldking_mk2",
+    "triangles": 3620,
+    "meshes": 14,
+    "bytes": 253920,
+    "tank": "goldking",
+    "family": "royal",
+    "turretTop": 2.07,
+    "rearDeckTop": 1.12
+  },
+  {
+    "id": "tank_twin_mk2",
+    "triangles": 3544,
+    "meshes": 12,
+    "bytes": 246920,
+    "tank": "twin",
+    "family": "double",
+    "turretTop": 1.76,
+    "rearDeckTop": 1.12
+  },
+  {
+    "id": "tank_arty_mk2",
+    "triangles": 3692,
+    "meshes": 12,
+    "bytes": 255048,
+    "tank": "arty",
+    "family": "siege",
+    "turretTop": 1.84,
+    "rearDeckTop": 1.12
+  },
+  {
+    "id": "tank_mamut_mk2",
+    "triangles": 4196,
+    "meshes": 12,
+    "bytes": 294696,
+    "tank": "mamut",
+    "family": "ram",
+    "turretTop": 1.95,
+    "rearDeckTop": 1.12
+  },
+  {
+    "id": "tank_bastion_mk2",
+    "triangles": 4068,
+    "meshes": 14,
+    "bytes": 288608,
+    "tank": "bastion",
+    "family": "shield",
+    "turretTop": 2.07,
+    "rearDeckTop": 1.12
+  },
+  {
+    "id": "tank_lynx_mk2",
+    "triangles": 3632,
+    "meshes": 12,
+    "bytes": 251876,
+    "tank": "lynx",
+    "family": "lightdouble",
+    "turretTop": 1.74,
+    "rearDeckTop": 1.12
+  },
+  {
+    "id": "tank_boxer_mk2",
+    "triangles": 3780,
+    "meshes": 12,
+    "bytes": 264372,
+    "tank": "boxer",
+    "family": "rounded",
+    "turretTop": 1.83,
+    "rearDeckTop": 1.12
+  },
+  {
+    "id": "tank_hover_mk2",
+    "triangles": 2644,
+    "meshes": 13,
+    "bytes": 182796,
+    "tank": "hover",
+    "family": "antigravity",
+    "turretTop": 1.66,
+    "rearDeckTop": 1.12
+  },
+  {
+    "id": "tank_titan_mk2",
+    "triangles": 4468,
+    "meshes": 14,
+    "bytes": 311216,
+    "tank": "titan",
+    "family": "reactor",
+    "turretTop": 2.1,
+    "rearDeckTop": 1.12
+  }
+]

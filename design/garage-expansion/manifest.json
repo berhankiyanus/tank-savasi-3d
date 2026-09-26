@@ -1,0 +1,128 @@
+[
+  {
+    "id": "acc_dragonhelm",
+    "triangles": 170,
+    "meshes": 3,
+    "bytes": 16296,
+    "kind": "accessory"
+  },
+  {
+    "id": "acc_championcup",
+    "triangles": 980,
+    "meshes": 2,
+    "bytes": 74384,
+    "kind": "accessory"
+  },
+  {
+    "id": "acc_icecrown",
+    "triangles": 386,
+    "meshes": 2,
+    "bytes": 27500,
+    "kind": "accessory"
+  },
+  {
+    "id": "acc_holodrone",
+    "triangles": 840,
+    "meshes": 3,
+    "bytes": 64904,
+    "kind": "accessory"
+  },
+  {
+    "id": "acc_turbopack",
+    "triangles": 636,
+    "meshes": 4,
+    "bytes": 46052,
+    "kind": "accessory"
+  },
+  {
+    "id": "acc_rallyrack",
+    "triangles": 484,
+    "meshes": 3,
+    "bytes": 33992,
+    "kind": "accessory"
+  },
+  {
+    "id": "shot_snowball",
+    "triangles": 140,
+    "meshes": 1,
+    "bytes": 15572,
+    "kind": "projectile"
+  },
+  {
+    "id": "shot_football",
+    "triangles": 420,
+    "meshes": 2,
+    "bytes": 16316,
+    "kind": "projectile"
+  },
+  {
+    "id": "shot_basketball",
+    "triangles": 1224,
+    "meshes": 2,
+    "bytes": 63468,
+    "kind": "projectile"
+  },
+  {
+    "id": "shot_tennisball",
+    "triangles": 936,
+    "meshes": 2,
+    "bytes": 46224,
+    "kind": "projectile"
+  },
+  {
+    "id": "shot_beachball",
+    "triangles": 360,
+    "meshes": 1,
+    "bytes": 15528,
+    "kind": "projectile"
+  },
+  {
+    "id": "shot_meteor",
+    "triangles": 160,
+    "meshes": 2,
+    "bytes": 18800,
+    "kind": "projectile"
+  },
+  {
+    "id": "shot_crystalshot",
+    "triangles": 56,
+    "meshes": 2,
+    "bytes": 6844,
+    "kind": "projectile"
+  },
+  {
+    "id": "shot_plasmacore",
+    "triangles": 944,
+    "meshes": 2,
+    "bytes": 62272,
+    "kind": "projectile"
+  },
+  {
+    "id": "crate_forge",
+    "triangles": 484,
+    "meshes": 6,
+    "bytes": 40976,
+    "kind": "crate"
+  },
+  {
+    "id": "crate_stadium",
+    "triangles": 412,
+    "meshes": 6,
+    "bytes": 36096,
+    "kind": "crate"
+  },
+  {
+    "id": "crate_arcticlab",
+    "triangles": 484,
+    "meshes": 6,
+    "bytes": 42156,
+    "kind": "crate"
+  },
+  {
+    "id": "crate_neonlab",
+    "triangles": 484,
+    "meshes": 6,
+    "bytes": 42128,
+    "kind": "crate"
+  }
+]

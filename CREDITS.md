@@ -39,3 +39,20 @@ Bu oyunda kullanılan üçüncü taraf varlıklar ve lisansları. Third-party as
 - Capacitor — MIT. https://capacitorjs.com
 
 Lisans metinleri: CC0 https://creativecommons.org/publicdomain/zero/1.0/ · CC BY 3.0 https://creativecommons.org/licenses/by/3.0/ (Zsky ve KolosStudios modelleri: atıf + değiştirildi notu) · OFL https://openfontlicense.org
+
+## Yeni özgün aksesuar / Original accessory (2026-09-26)
+- `assets/acc_fieldradio.glb`: Saha Telsizi, bu proje için Blender’da özgün modellendi. Düzenlenebilir kaynak: `design/Saha-Telsizi.blend`; üretim betiği: `design/build_field_radio.py`. Dış model veya doku kullanılmadı.
+
+## Zırhlı filo güncellemesi / Armored fleet update (2026-09-26)
+- `assets/tank_recruit_mk2.glb`, `tank_scout_mk2.glb`, `tank_heavy_mk2.glb`: bu proje için Blender’da özgün oluşturulan yeni gövde, palet/süspansiyon, kule, optik ve namlu tasarımları. Mevcut oynanış kimliklerini kullanır.
+- `assets/acc_rescuepack.glb`, `acc_cargorack.glb`, `acc_searchlight.glb`: bu proje için özgün modellenmiş kozmetik ekipmanlar.
+- Kaynak: `design/armored-update/Armored-Fleet.blend`; üretim ve GLB malzeme adlandırma betiği: `design/armored-update/build_armored_fleet.py`. Dış model/doku kullanılmadı.
+# Tam filo güncellemesi — 26 Eylül 2026
+
+Muhafız, Nişancı, Hayalet, Altın Kral, İkiz Namlu, Obüs, Mamut, Burç, Vaşak, Boksör, Hover Tank ve Titan için yeni özgün modeller Blender'da üretildi. Oyun `tank_*_mk2.glb` dosyalarını kullanır. Düzenlenebilir kaynak `design/complete-fleet/Complete-Fleet.blend`, üretim betiği ve manifest aynı klasördedir. Önceki üç Mk2 tank modeli `design/armored-update/` altında korunur. Eski üçüncü taraf modeller çalışma klasöründe tarihsel kaynak olarak tutulur; aşağıdaki atıflar bu kaynaklar için geçerliliğini korur.
+# Garaj Atölyesi — 26 Eylül 2026
+
+Altı yeni aksesuar, sekiz mermi modeli ve dört kutu Blender'da özgün olarak üretildi. Düzenlenebilir kaynak: `design/garage-expansion/Garage-Workshop.blend`; üretim betiği ve manifest aynı klasörde. Sekiz özgün vektör desen `garage-content.mjs` içinde bulunur. Yeni öğeler herhangi bir başka oyundan alınmış model, logo veya kaplama içermez.
+
+### Command interface update (2026-09-26)
+Original 24×24 line symbols, command emblem, hangar layout and menu styling authored for this project. Existing third-party asset credits above continue to apply.

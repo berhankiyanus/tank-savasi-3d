@@ -2,19 +2,19 @@
   "appId": "com.berhankiyanus.tanksavasi",
   "appName": "Tank Savaşı 3D",
   "webDir": "www",
-  "backgroundColor": "#0d1409",
+  "backgroundColor": "#101a28",
   "server": {
     "androidScheme": "https"
   },
   "plugins": {
     "SplashScreen": {
       "launchShowDuration": 400,
-      "backgroundColor": "#0d1409",
+      "backgroundColor": "#101a28",
       "showSpinner": false
     },
     "LocalNotifications": {
       "smallIcon": "ic_stat_tank",
-      "iconColor": "#7dff9b"
+      "iconColor": "#75e0ce"
     }
   }
 }
