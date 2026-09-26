@@ -6,7 +6,7 @@
 
 ## Tamamlanan düzeltmeler
 
-- Kamera mesafesi %12 artırıldı. Sabit dünya yönü, bağımsız nişan ve hareket yönüne bakış korunuyor. Dört yönde 8,5 birim öndeki hedef izdüşüm testinde görünür; tank küçük yatay telefonlarda okunabilirlik alt sınırında kalıyor. Mesafe güncellemesi iPhone 15'teki **TREAD Ses Testi** uygulamasına 20:00'da kuruldu.
+- Kamera mesafesi %12 artırıldı. Sabit dünya yönü, bağımsız nişan ve hareket yönüne bakış korunuyor. Dört yönde 8,5 birim öndeki hedef izdüşüm testinde görünür; tank küçük yatay telefonlarda okunabilirlik alt sınırında kalıyor. Kamera ve son hazırlık düzeltmeleri iPhone 15'teki **TREAD Ses Testi** uygulamasına 20:53'te kuruldu; bu özel Debug sürümü, dağıtım imzalı App Store paketi değildir.
 - Kullanım ölçümü ve solo skor paylaşımı ayrı, varsayılan kapalı tercihler oldu. Eski kayıtlara sessizce izin verilmez. Ölçüm kapatılınca yeni olay gönderilmez, yerel ölçüm kimliği kaldırılır. Ölçüm kimliği solo sıralama kimliğinden ayrıdır.
 - Yerel solo kayıt, geçiş yedeği ve tercihleri silme işlemi eklendi; ana menüde iki ayrı eylem gerektirir. Arena hesabının ayrı kaldığı açıklanır. Mevcut kayıtlar otomatik silinmedi.
 - Türkçe/İngilizce destek sayfası, gizlilik politikası ve lisanslar uygulama içinde ve çevrimdışı erişilebilir. Destek adresi mevcut gizlilik politikasındaki geliştirici adresidir.
@@ -29,6 +29,7 @@
 | Lisans kapısı | 115 onaylı, 20 yayın dışı varlık; dosya bütünlüğü ve bağımlılık kilidi denetleniyor. Yeni AudioHero dosyaları bu onaya dahil değildir. |
 | iOS Release | Yerel iOS arşivi oluşturuldu. Dağıtım imzası/Apple sunucu doğrulaması değildir. |
 | iOS simulator | iPhone 17 Pro Max üzerinde native ana menü açıldı; gerçek 2868×1320 görüntü JPEG olarak kaydedildi. iPad simülatörü açılışta takıldı; iPad native doğrulaması tamamlanmadı. Tarayıcı ekranları App Store görseli sayılmaz. |
+| Render önizlemesi | `517ca24` yayımlandı; ana oyun, kamera, gizlilik, destek ve servis çalışanı dosyaları yerel kaynakla aynı. Özel ses manifesti HTTP 404. |
 | Canlı Arena | 26 Eylül kontrolü HTTP 200, `available:false`, `development:false`, kapasite 25. **Yayın engeli.** |
 | App Store Connect | Tarayıcı giriş sayfası açıldı; hesap oturumu olmadığı için üyelik, kayıt ve ad rezervasyonu doğrulanamadı. |
 

@@ -30,3 +30,7 @@ Xcode'da **App** şemasını ve bağlı **Berhan İphone’u / iPhone 15** cihaz
 Bu projenin Release/arşiv derlemesi bilerek kapalıdır. Standart `ios/App/App.xcodeproj`, `www/`, Render ve yayın varlık listesine AudioHero sesleri eklenmez. Ticari lisans cevabı geldikten sonra yayın yolu ayrıca hazırlanacak.
 
 Resmi kurulum rehberi: [Apple — Running your app on simulated or physical devices](https://developer.apple.com/documentation/xcode/running-your-app-on-simulated-or-physical-devices).
+
+## Son güncelleme — 26 Eylül 20:53
+
+Kamera mesafesi %12 artırılmış, gizlilik/destek/oyuncu güvenliği düzeltmelerini içeren 1.1.0 (2) özel Debug sürümü iPhone 15'e yeniden yüklendi. Mevcut uygulamanın kayıtları silinmedi. Bu kurulum fiziksel performans, ses beğenisi veya App Store dağıtım imzası kabulü değildir.

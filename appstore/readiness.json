@@ -12,8 +12,8 @@
     },
     {
       "id": "public-support-privacy",
-      "status": "pending",
-      "reason": "Updated support/privacy pages exist in the native package; deploy the same revision to Render and verify both public URLs before submission."
+      "status": "verified",
+      "reason": "26 Sep 2026: Render serves support.html and privacy.html with HTTP 200 and exact local byte matches after deployment 517ca24. Main, camera, privacy helper, HTTP helper and service worker also match. Private audio manifest returns 404."
     },
     {
       "id": "audio-selection",
