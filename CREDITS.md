@@ -6,6 +6,8 @@ Güncelleme: 26 Eylül 2026. Bu liste güncel web ve Capacitor mobil paketini ka
 
 15 Mk2 tank: `design/armored-update/` ve `design/complete-fleet/` içindeki Blender üretim betikleri. Saha Telsizi: `design/build_field_radio.py`. Kurtarma çantası, yük sandıkları ve projektör: `design/armored-update/`. Altı atölye aksesuarı, sekiz mermi, dört kutu: `design/garage-expansion/`. Kodla çizilen kaplamalar: `garage-content.mjs`, `garage-visuals.mjs`. Şehir, liman, kanyon dekorları için kurtarılan üretim kayıtları denetim kanıtlarında listelidir. Ses ve müzik Web Audio ile sentezlenir; hazır ses dosyası paketlenmez.
 
+15 yüksek ayrıntılı garaj türevi: `design/premium-fleet/refine_fleet.py`. Bunlar incelenmiş Mk2 geometrilerinden bu projede türetildi; kaynak ve çıktı özetleri `design/premium-fleet/manifest.json` içinde kayıtlıdır. Üç rekabetçi haritanın zemin çizgileri ve ana üssün atölye yapıları kodla oluşturulur. Yeni hazır varlık veya dış ses paketi eklenmedi.
+
 Yeni keşif atölyesi arka planı ve uygulama simgesi: `design/identity/build_outpost.py`, `app-icon.svg`, `build_identity.cjs`. Geometri ve malzemeler bu proje için oluşturuldu. Arayüzdeki 22 SVG sembolü `index.html` içindedir. Bu üretim açıklaması, dünyada benzeri olmadığına veya hukuki tescile dair bir garanti değildir.
 
 ## Kenney — CC0 1.0

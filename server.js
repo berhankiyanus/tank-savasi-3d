@@ -51,7 +51,7 @@ let pgPool = null;
 if (process.env.DATABASE_URL) {
   try {
     const { Pool } = require('pg');
-    pgPool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false }, max: 3 });
+    pgPool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: process.env.DATABASE_SSL === 'disable' && process.env.NODE_ENV !== 'production' ? false : { rejectUnauthorized: true, ...(process.env.DATABASE_CA ? { ca: process.env.DATABASE_CA } : {}) }, max: 3 });
     pgPool.query('CREATE TABLE IF NOT EXISTS lb (period text, cid text, name text, score int, PRIMARY KEY (period, cid))').then(() => pgPool.query('ALTER TABLE lb ADD COLUMN IF NOT EXISTS av text, ADD COLUMN IF NOT EXISTS ti text')).catch(() => {})
       .then(() => pgPool.query('CREATE TABLE IF NOT EXISTS days (day text, pid text, PRIMARY KEY (day, pid))'))
       .then(() => console.log('[PG] kalıcı depo hazır'))
@@ -280,13 +280,15 @@ function handleReq(req, res) {
   });
 }
 // tek isteğin beklenmedik hatası süreci ve diğer odaları düşürmesin
-const server = http.createServer((req, res) => {
-  try { handleReq(req, res); }
+let rankedService = null;
+const server = http.createServer(async (req, res) => {
+  try { if (req.url.startsWith('/api/arena/')) { if (!rankedService) { res.writeHead(503); res.end(); return; } if(await rankedService.http(req,res)) return; } handleReq(req, res); }
   catch (e) { console.error('[HTTP]', e && e.message); try { res.writeHead(500); res.end(); } catch {} }
 });
 
 // ---- odalar (düello/top = 2 kişi otomatik başlar; kooperatif = 2-4 kişi, host başlatır) ----
-const wss = new WebSocket.Server({ server });
+const wss = new WebSocket.Server({ noServer: true });
+server.on('upgrade', (req, socket, head) => { if (req.url === '/ranked') return; if (process.env.LEGACY_ROOMS !== '1') { socket.destroy(); return; } wss.handleUpgrade(req,socket,head,ws=>wss.emit('connection',ws,req)); });
 const rooms = new Map(); // kod -> { list:[{ws,pid}], started, pidC, auto }
 const MAX_PLAYERS = 4;
 
@@ -372,4 +374,9 @@ wss.on('connection', ws => {
   ws.on('close', () => { leaveRoom(ws); });
 });
 
-server.listen(PORT, () => console.log(`Tank sunucusu ${PORT} portunda dinliyor`));
+import('./net/ranked.mjs').then(({installRanked}) => {
+  const development = process.env.NODE_ENV !== 'production' && process.env.RANKED_DEV === '1';
+  rankedService = installRanked(server,{pool:pgPool,development,enabled:development || process.env.RANKED_ENABLED === '1',cleanName});
+  process.on('SIGTERM',()=>{rankedService.close();server.close(()=>process.exit(0));});
+  server.listen(PORT, () => console.log(`Tank sunucusu ${PORT} portunda dinliyor`));
+}).catch(e=>{console.error(e);process.exitCode=1;});

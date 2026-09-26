@@ -36,7 +36,7 @@ export const CAREER_STEPS = [
   { id: 'firstkills', stat: 'kills', goal: 10, coins: 100, name: { tr: 'Cepheye hazır', en: 'Combat ready' }, text: { tr: 'Toplam 10 düşman tankı yok et', en: 'Destroy 10 enemy tanks in total' } },
   { id: 'breakthrough', stat: 'bestWave', goal: 3, accessory: 'fieldradio', duplicateCoins: 100, name: { tr: 'Bağlantı kuruldu', en: 'Connection established' }, text: { tr: 'Dalga 3’e ulaş · Saha Telsizi kazan', en: 'Reach wave 3 · earn the Field Radio' } },
   { id: 'fleet', stat: 'owned', goal: 2, tokens: 2, name: { tr: 'Kendi filon', en: 'Your own fleet' }, text: { tr: 'İki farklı tanka sahip ol', en: 'Own two different tanks' } },
-  { id: 'victory', stat: 'wins', goal: 1, accessory: 'rescuepack', duplicateCoins: 150, gems: 1, name: { tr: 'İlk zafer', en: 'First victory' }, text: { tr: 'Bir maç kazan · Sıhhiye Çantası kazan', en: 'Win a match · earn the Medical Pack' } },
+  { id: 'victory', stat: 'wins', goal: 1, accessory: 'rescuepack', duplicateCoins: 150, gems: 1, name: { tr: 'İlk zafer', en: 'First victory' }, text: { tr: 'Bir maç kazan · Kurtarma Çantası kazan', en: 'Win a match · earn the Rescue Pack' } },
 ];
 
 export function careerProgress(profile, step) {

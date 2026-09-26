@@ -18,121 +18,36 @@
 </style>
 </head>
 <body>
-
 <h1>Tank Savaşı 3D — Gizlilik Politikası</h1>
-<p class="updated">Son güncelleme: 20 Eylül 2026</p>
-<p class="lang">English version below ↓</p>
-
-<p>Tank Savaşı 3D ("uygulama"), Berhan Kıyanus tarafından geliştirilir ve gizliliğinize saygı duyar. Bu politika,
-uygulamanın hangi verileri işlediğini açıklar. Kısaca: <strong>hesap yok, e-posta/telefon/konum yok, reklam kimliği yok.</strong></p>
-
-<h2>Topladığımız veriler</h2>
-<ul>
-  <li><strong>Rastgele cihaz kimliği:</strong> Uygulama ilk açılışta rastgele bir kimlik üretir (<code>tankcid</code>) ve
-    cihazınızda saklar. Bu kimlik sizinle, hesabınızla veya reklam kimliğiyle eşleştirilemez; yalnızca aynı cihazı
-    tekilleştirmek (günlük oyuncu sayısı, ilk gün / yedinci gün geri dönüş oranı) ve lider tablosunda kendi skorunuzu
-    güncellemek için kullanılır. Sunucuda en fazla 30 gün tutulur.</li>
-  <li><strong>Anonim kullanım olayları:</strong> Oyunu geliştirmek için isimsiz olaylar kaydederiz — oyunun yüklendiği an,
-    hangi modun oynandığı, maç süresi ve sonucu, harcanan oyun içi para. Olaylara oturum kimliği ve yukarıdaki rastgele
-    cihaz kimliği eşlik eder; kişisel veri içermez.</li>
-  <li><strong>Lider tablosu bilgileri:</strong> Bir koşu bittiğinde takma adınız (kendi yazdığınız isim), skorunuz veya
-    bitirme süreniz, seçili avatar ve unvanınız sunucuya gönderilir ve lider tablosunda <strong>herkese görünür</strong>.
-    Bu kayıtlar en fazla 30 gün saklanır. Takma ad yazmazsanız "Oyuncu" + rastgele sayı kullanılır. Uygunsuz isimler
-    otomatik filtrelenir; gördüğünüz bir ismi aşağıdaki e-posta ile bildirebilirsiniz.</li>
-  <li><strong>Cihazınızda kalan oyun ilerlemesi:</strong> Altın, elmas, tanklar, kaplamalar, ayarlar ve sezon ilerlemesi
-    yalnızca cihazınızın yerel deposunda (<code>localStorage</code>) tutulur; sunucuya gönderilmez. Uygulama silinirse bu
-    veriler de silinir (bulut kaydı yoktur).</li>
-</ul>
-
-<h2>Toplamadığımız veriler</h2>
-<ul>
-  <li>Ad-soyad, e-posta, telefon veya gerçek kimlik bilgisi <strong>istemiyoruz</strong> (hesap yok).</li>
-  <li>Konum, kişiler, fotoğraf, mikrofon veya kamera erişimi <strong>yok</strong>.</li>
-  <li>Reklam kimliği veya cihazlar arası takip <strong>yok</strong>. Uygulamada şu an reklam bulunmaz; ileride reklam
-    eklenirse bu politika ve mağaza beyanı güncellenir ve uygulama içinde bildirilir.</li>
-  <li>Gerçek parayla satın alma <strong>yok</strong>.</li>
-</ul>
-
-<h2>Çok oyunculu mod</h2>
-<p>Bir arkadaşınızla oynarken tankınızın konumu ve takma adınız, aynı odadaki oyunculara gerçek zamanlı iletilir.
-Bu bilgiler maç sonunda saklanmaz.</p>
-
-<h2>Verilerin saklanması ve paylaşımı</h2>
-<p>Sunucu <a href="https://render.com">Render</a> üzerinde çalışır; veriler HTTPS/WSS ile şifreli iletilir. Hiçbir veriyi
-satmayız, üçüncü taraflarla pazarlama amacıyla paylaşmayız ve profil oluşturmayız.</p>
-
-<h2>Silme talebi</h2>
-<p>Lider tablosu kaydınızın ve cihaz kimliğinize bağlı sayaçların silinmesini istemek için takma adınızı (ve mümkünse
-Ayarlar'da görünen sürüm bilgisini) yazarak bize e-posta gönderin; 30 gün içinde silinir. Cihazınızdaki ilerlemeyi
-uygulamayı kaldırarak ya da uygulama verilerini temizleyerek silebilirsiniz.</p>
-
-<h2>Çocuklar</h2>
-<p>Uygulama 13 yaş ve üzeri için tasarlanmıştır; çocuklardan bilerek kişisel veri toplamaz. Takma ad alanına gerçek
-adınızı yazmanızı önermeyiz.</p>
-
-<h2>Değişiklikler</h2>
-<p>Bu politika değiştiğinde tarih güncellenir; önemli değişiklikler uygulama içinde duyurulur.</p>
-
+<p class="updated">Son güncelleme: 26 Eylül 2026 · Geliştirme / beta sürümü</p>
+<p>Geliştirici: Berhan Kıyanus. Bu sayfa oyunun yerel kayıtlarını ve isteğe bağlı çevrim içi Arena hizmetinin veri işlemesini açıklar. Arena hizmeti yapılandırılmamışsa çevrim içi hesap ve eşleştirme kullanılamaz. Gerçek para satışı ve reklam hizmeti bu sürümde kapalıdır.</p>
+<h2>Cihazdaki kayıtlar</h2>
+<p>Solo ilerleme, eski altın ve elmas bakiyeleri, eski envanter, kombinler ve ayarlar cihazda saklanır. Kayıt sürümü değişirken cihazda bir önceki sürümün yedeği tutulur. Bunlar Arena kurtarma koduyla başka cihaza taşınmaz.</p>
+<h2>Arena hesabı ve maçlar</h2>
+<p>Arena'ya bağlanırken rastgele hesap kimliği ve oturum anahtarı oluşturulur. Sunucu takma ad, derece, maç sayısı, zaferler, doğrulanmış maç sonuçları, Arena kredileri, Arena kozmetikleri ve hedef ilerlemesini saklar. Hesap silinene kadar bu kayıtlar korunur. Maç sırasında hareket ve nişan girdileri sunucuya gönderilir; doğrulanan durum rakibe iletilir. Sunucu maçların tamamının girdi kaydını tutmaz.</p>
+<p>Takma ad ve rekabetçi derece lig tablosunda görünür. Gerçek ad veya iletişim bilgisi yazmayın. Oturum anahtarı iOS uygulamasında Keychain'de, tarayıcı önizlemesinde siteye ait yerel depoda saklanır; sunucuda yalnız özeti tutulur. İsteğinizle oluşturulan tek kullanımlık kurtarma kodunun da sunucuda yalnız özeti saklanır. Bu kodu bilen kişi Arena hesabınızı geri yükleyebilir; paylaşmayın.</p>
+<h2>Ölçüm ve bağlantı</h2>
+<p>Oyunun açılması, kullanılan ekran ve mod, maç tamamlama, eğitim adımları ve oyun içi kaynak kullanımı gibi olaylar rastgele cihaz ve oturum kimlikleriyle ölçülür. Bu kimlikler gerçek adınızı istemez, ancak aynı cihazdaki etkinliklerin ilişkilendirilmesini sağlar. Solo lider tablosu takma ad, skor, avatar ve unvan içerir. Günlük oyuncu sayaçları 30 günlük temizleme sürecine tabidir; haftalık ve sezonluk skorların yaşam süresi ilgili kayıt dönemine bağlıdır. Arena maç kayıtları ayrı hesap verisidir.</p>
+<p>Bağlantı sırasında IP adresi sunucuya ulaşır ve istek sınırlandırması için bellekte kullanılır. Barındırma sağlayıcısı kendi hizmet günlüklerini işleyebilir. Canlı önizleme Render üzerinde sunulur. Canlı bağlantılar HTTPS/WSS kullanır; yerel geliştirme önizlemesi bu kapsamda değildir.</p>
+<h2>İzinler ve satış</h2>
+<p>Konum, kişiler, fotoğraf, mikrofon ve kamera erişimi istenmez. Reklam kimliği toplanmaz. Bildirimler isteğe bağlıdır. Bu sürüm kart bilgisi işlemez ve gerçek satın alma kabul etmez. Ödeme veya reklam hizmeti açılmadan önce politika ve mağaza beyanları yeniden güncellenecektir.</p>
+<h2>Silme ve kurtarma</h2>
+<p>Ayarlar → Arena Hesabı → Arena Hesabını Sil işlemiyle Arena hesabınızı silebilirsiniz. İkinci onay gerekir ve devam eden maç varken silme yapılamaz. Oturum ve kurtarma anahtarları geçersizleşir; Arena bakiyesi ve sunucu envanteri silinir. Geçmiş maçlardan hesap kimliğiniz çıkarılır; rakibin kendi sonuç kaydı korunur. Solo yerel kayıtlar ayrı kalır. Hizmet kapalıysa talebinizi aşağıdaki adrese iletebilirsiniz. Kimliği doğrulamadan başka bir oyuncunun kaydını silmeyiz.</p>
+<p>Cihazdaki kayıtlar uygulama/site verileri temizlenerek kaldırılabilir. iOS Keychain kaydı uygulamayı kaldırdıktan sonra kalabileceğinden Arena hesabını silmek için uygulama içindeki işlemi kullanın. Uygulama kaldırılması tek başına sunucudaki hesabı silmez.</p>
 <h2>İletişim</h2>
-<p>Sorular ve silme talepleri için: <a href="mailto:berhankiyanus123@gmail.com">berhankiyanus123@gmail.com</a></p>
-
+<p>Gizlilik soruları, kayıt talepleri ve uygunsuz takma ad bildirimleri: <a href="mailto:berhankiyanus123@gmail.com">berhankiyanus123@gmail.com</a>. Önemli veri işleme değişikliklerinde bu sayfa ve uygulama bilgilendirmeleri güncellenir.</p>
 <hr>
-
 <h1>Tank Battle 3D — Privacy Policy</h1>
-<p class="updated">Last updated: September 20, 2026</p>
-
-<p>Tank Battle 3D ("the app") is developed by Berhan Kıyanus and respects your privacy. In short:
-<strong>no accounts, no email/phone/location, no advertising id.</strong></p>
-
-<h2>Data we collect</h2>
-<ul>
-  <li><strong>Random device identifier:</strong> On first launch the app generates a random id (<code>tankcid</code>) and
-    stores it on your device. It cannot be linked to you, an account or an advertising id; it is used only to count
-    unique devices (daily players, day-1 / day-7 return rates) and to update your own leaderboard entry. It is kept on
-    the server for at most 30 days.</li>
-  <li><strong>Anonymous usage events:</strong> To improve the game we log anonymous events — when the game loads, which
-    mode is played, match duration and outcome, in-game currency spent. Events carry a session id and the random device
-    id above; they contain no personal data.</li>
-  <li><strong>Leaderboard entries:</strong> When a run ends, your nickname (the name you typed), your score or finish
-    time, and your selected avatar and title are sent to the server and are <strong>publicly visible</strong> on the
-    leaderboard. Entries are kept for at most 30 days. If you do not enter a nickname, "Player" + a random number is
-    used. Inappropriate names are filtered automatically; you can report a name via the email below.</li>
-  <li><strong>Game progress stored on your device:</strong> Coins, gems, tanks, skins, settings and season progress are
-    kept only in your device's local storage (<code>localStorage</code>); they are never sent to our servers. Uninstalling
-    the app deletes them (there is no cloud save).</li>
-</ul>
-
-<h2>Data we do NOT collect</h2>
-<ul>
-  <li>No name, email, phone or real identity (there are no accounts).</li>
-  <li>No location, contacts, photos, microphone or camera access.</li>
-  <li>No advertising id or cross-device tracking. The app currently shows no ads; if ads are added later, this policy
-    and the store listing will be updated and announced in the app.</li>
-  <li>No real-money purchases.</li>
-</ul>
-
-<h2>Multiplayer</h2>
-<p>When playing with a friend, your tank position and nickname are relayed in real time to players in the same room.
-This information is not stored after the match.</p>
-
-<h2>Storage and sharing</h2>
-<p>The server runs on <a href="https://render.com">Render</a>; data is transmitted encrypted (HTTPS/WSS). We do not sell
-any data, share it with third parties for marketing, or build profiles.</p>
-
-<h2>Deletion requests</h2>
-<p>To delete your leaderboard entry and the counters tied to your device id, email us with your nickname (and, if
-possible, the version shown in Settings); it will be deleted within 30 days. Progress on your device can be removed by
-uninstalling the app or clearing its data.</p>
-
-<h2>Children</h2>
-<p>The app is designed for ages 13 and up and does not knowingly collect personal data from children. We recommend not
-using your real name as a nickname.</p>
-
-<h2>Changes</h2>
-<p>The date above is updated when this policy changes; significant changes are announced in the app.</p>
-
-<h2>Contact</h2>
-<p>Questions and deletion requests: <a href="mailto:berhankiyanus123@gmail.com">berhankiyanus123@gmail.com</a></p>
-
-</body>
-</html>
+<p class="updated">Updated September 26, 2026 · Development / beta version</p>
+<p>Developer: Berhan Kıyanus. Solo saves, legacy currencies, inventory, loadouts and settings stay on the device. A migration backup is stored locally. Arena recovery does not restore these solo saves. Arena accounts are available only when the online service is configured. Real-money payments and advertising services are disabled in this version.</p>
+<h2>Arena account</h2>
+<p>Connecting creates a random account identifier and session credential. The server stores your nickname, rating, matches, wins, verified results, Arena credits, earned Arena cosmetics and objectives until account deletion. Movement and aiming inputs are processed by the server and validated match states are sent to your opponent; a complete input recording is not stored. Nicknames and ratings appear in the league table. Avoid using your real name or contact details.</p>
+<p>The iOS app stores the session in Keychain; the browser preview uses site-local storage. The server stores hashes of session and one-use recovery credentials. A recovery code is created only on request. Anyone holding it can recover your Arena account; keep it private.</p>
+<h2>Measurement and hosting</h2>
+<p>Opening the game, screen and mode use, tutorials, match completion and in-game resource use may be measured with random device and session identifiers. These identifiers can link activity on the same device. Solo leaderboards contain nickname, score, avatar and title. Daily player counters have a 30-day cleanup process; weekly and seasonal score records follow their record periods. Arena records are separate account data. IP addresses reach the server and are used in memory for request limits; the hosting provider may keep service logs. The public preview is hosted on Render. Public connections use HTTPS/WSS; local development connections may not.</p>
+<h2>Permissions</h2>
+<p>The app does not request location, contacts, photos, microphone or camera access and does not collect an advertising identifier. Notifications are optional. This version does not process payment cards or accept real purchases. This policy and store disclosures must be updated before advertising or payment services are activated.</p>
+<h2>Deletion</h2>
+<p>Settings → Arena Account → Delete Arena Account permanently removes the Arena account after a second confirmation. Active matches must finish first. Credentials are invalidated, the server wallet and inventory are deleted, and your account identifier is removed from historical results while the opponent's own result remains. Local solo saves remain separate. Clearing app/site data removes local saves. Uninstalling does not delete the server account, and iOS Keychain credentials may survive uninstalling; use the in-app deletion action.</p>
+<p>For privacy questions, unavailable-service deletion requests and nickname reports: <a href="mailto:berhankiyanus123@gmail.com">berhankiyanus123@gmail.com</a>. Ownership must be verified before another player's data can be removed. Material changes will be reflected here and in the app.</p>
+</body></html>

@@ -7,3 +7,8 @@ www/
 ios/
 android/
 resources/src-assets/
+
+design/premium-fleet/*.blend*
+
+!native/ios/
+!native/ios/ArenaVault.swift

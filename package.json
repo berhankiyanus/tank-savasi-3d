@@ -10,7 +10,8 @@
     "open:ios": "npx cap open ios",
     "open:android": "npx cap open android",
     "test": "node --test tests/*.test.mjs",
-    "audit:release": "node legal/verify-release.cjs"
+    "audit:release": "node legal/verify-release.cjs",
+    "sync:ios": "node build-www.js && npx cap sync ios && node tools/prepare-ios.cjs"
   },
   "engines": {
     "node": ">=18"

@@ -17,7 +17,7 @@ function verifyRelease(){
  validateRecords(require('./native-art-register.json').files);
  for(const f of files)if(!fs.existsSync(path.join(ROOT,f)))throw Error('Missing release file '+f);
  const allowed=new Set(files);
- for(const f of ['main.js','index.html','sw.js','polish.css','garage-content.mjs','garage-visuals.mjs','manifest.json']){
+ for(const f of files.filter(f=>!f.startsWith('libs/')&&/\.(m?js|html|css|json)$/.test(f))){
   const s=fs.readFileSync(path.join(ROOT,f),'utf8');
   for(const m of s.matchAll(/assets\/[a-zA-Z0-9_./-]+\.(?:glb|hdr|jpg|png|ttf|woff2)/g))if(!allowed.has(m[0]))throw Error('Unapproved runtime reference '+m[0]+' in '+f);
  }

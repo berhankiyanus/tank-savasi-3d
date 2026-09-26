@@ -466,8 +466,8 @@
 </div>
 
 <div id="touchui">
-  <div id="stick"><div id="knob"></div></div>
-  <div id="firebtn">ATEŞ</div>
+  <div id="stick" aria-label="Hareket / Move"><i id="knob"></i><span>HAREKET</span></div>
+  <div id="aimstick" aria-label="Nişan ve ateş / Aim and fire"><i></i><span>NİŞAN</span></div><span id="firebtn" hidden></span>
 </div>
 
 <div id="msg" class="hud">
@@ -490,6 +490,12 @@
   <p id="menu-intro" class="menu-intro"></p>
 
   <!-- ana menü -->
+    <div id="panel-queue" class="panel">
+    <div class="queue-card"><span class="eyebrow">ARENA / 01</span><h2 id="queue-title">RAKİP ARANIYOR</h2><p id="queue-status" role="status" aria-live="polite">Bağlanıyor…</p><div id="queue-time">00:00</div><p id="queue-rules">1v1 · 3 dakika · 5 imha · Eşit güç</p><button id="queue-cancel" class="mbtn">İPTAL</button><button id="queue-practice" class="mbtn small">BOT ANTRENMANI</button></div>
+  </div>
+  <div id="panel-league" class="panel"><div class="league-hero"><span class="eyebrow">REKABETÇİ 1v1</span><h2 id="league-rating">YERLEŞTİRME</h2><p id="league-status">İlk beş maçınla dereceni belirle.</p></div><div id="league-list" role="status"></div><button id="league-play" class="mbtn play">SAVAŞA GİR</button><button id="league-solo" class="mbtn small">SOLO REKORLARI</button></div>
+  <div id="panel-arena-result" class="panel"><span class="eyebrow">MAÇ RAPORU</span><h2 id="arena-result-title"></h2><div id="arena-result-score"></div><p id="arena-result-detail"></p><p id="arena-result-reward"></p><button id="arena-again" class="mbtn play">YENİ RAKİP BUL</button><button id="arena-home" class="mbtn">ÜSSE DÖN</button></div>
+
   <div id="panel-main" class="panel show">
     <div class="lobby-side">
     <div id="namerow"><svg class="gi"><use href="#gi-shield"/></svg> <input id="playername" maxlength="12" placeholder="İsmin" autocomplete="off"></div>
@@ -534,6 +540,7 @@
 
   <!-- garaj -->
   <div id="panel-garage" class="panel">
+    <div id="garage-groups" aria-label="Özelleştirme kategorileri"></div>
     <div id="garagetabs">
       <button class="mbtn small on" id="gt-tanks">TANKLAR</button>
       <button class="mbtn small" id="gt-decals">DESEN</button><button class="mbtn small" id="gt-projectiles">MERMİ</button><button class="mbtn small" id="gt-crates">KUTULAR</button><button class="mbtn small" id="gt-skins">KAPLAMALAR</button>
@@ -543,7 +550,7 @@
       <button class="mbtn small" id="gt-col">KOLEKSİYON</button>
     </div>
     <div id="tokenmachine"></div>
-    <div id="tankfilters" class="tank-filters"></div>
+    <div id="garage-preview" aria-label="Seçili tank"><span class="preview-note">PvP · EŞİT GÜÇ</span><button id="garage-inspect" class="mbtn small">3B İNCELE</button></div><div id="loadout-bar"></div><div id="tankfilters" class="tank-filters"></div>
     <div id="cardwrap-garage" class="card-list"></div>
     <button class="mbtn small" id="btn-back-garage">‹ GERİ</button>
   </div>
@@ -647,7 +654,7 @@
 
   <!-- günlük görevler -->
   <div id="panel-quests" class="panel">
-    <div class="quest-tabs"><button id="qtab-daily" class="mbtn small">GÜNLÜK</button><button id="qtab-career" class="mbtn small">KOMUTAN YOLU</button></div><div id="questlist"></div>
+    <div class="quest-tabs"><button id="qtab-daily" class="mbtn small">GÜNLÜK</button><button id="qtab-season" class="mbtn small">SEZON</button><button id="qtab-career" class="mbtn small">KOMUTAN YOLU</button></div><div id="arena-progress"></div><details id="solo-objectives"><summary>SOLO HEDEFLERİ / SOLO OBJECTIVES</summary><div id="questlist"></div></details>
     <button class="mbtn small" id="btn-back-quests">‹ GERİ</button>
   </div>
 
@@ -682,6 +689,7 @@
 
 <div id="toast" class="hud"></div>
 
+<div id="rotate-hint" role="status">↻<strong>Telefonunu çevir</strong><span>İki el. Tam kontrol.</span></div>
 <div id="settings" class="hud hidden">
   <div class="setbox">
     <h2 id="set-title">AYARLAR</h2>

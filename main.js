@@ -1,3 +1,12 @@
+import { advancePractice } from './game/practice.mjs';
+import { readSession,saveSession,clearSession } from './net/session.mjs';
+import { ARENA_CATALOG } from './game/arena-catalog.mjs';
+import { createControls } from './game/controls.mjs';
+import { RULES as ARENA_RULES, createMatch,acceptInput,step as stepArena,snapshot as snapshotArena } from './game/combat.mjs';
+import { RankedClient } from './net/client.mjs';
+import { RankedView } from './game/ranked-view.mjs';
+import { installTurretPivot, aimTank, enhanceMaterials } from './game/presentation.mjs';
+import { migratePremium, captureLoadout, restoreLoadout } from './game/premium-profile.mjs';
 import { DECALS, PROJECTILES, WORKSHOP_ACCESSORIES, WORKSHOP_SETS, migrateWorkshop } from './garage-content.mjs';
 import { applyDecal, decalImage } from './garage-visuals.mjs';
 import { dailyQuestIds, collectQuestRewards, isStandardTimeRecord, CAREER_STEPS, careerProgress, collectCareerReward } from './game-progress.mjs';
@@ -41,7 +50,7 @@ const L = {
     overNewRec: b => `🏆 YENİ REKOR — Dalga ${b}!`, overCheer: b => `Rekorun: Dalga ${b} — bir daha dene!`,
     connLostTitle: '📡 BAĞLANTI KOPTU', connLostSub: 'Sunucuyla bağlantı kesildi — kazanımların kaydedildi.',
     vulnTxt: 'SAVUNMASIZ!',
-    tutTitle: 'EĞİTİM', tutSteps: ['Tankı sür', 'Ateş et', 'Mermiyi duvardan sektir', 'Varili patlat'],
+    tutTitle: 'EĞİTİM', tutSteps: ['Sol çubukla hareket et', 'Sağ çubukla nişan al ve ateş et', 'Mermiyi duvardan sektir', 'Varili patlat'],
     tutDone: '🎓 Eğitim tamam! +🪙100',
     shopNote: '💎 Elmaslar seviye atlayarak, sezon kademeleriyle ve günün ilk zaferiyle kazanılır; premium tank ve aksesuar alır.',
     freeGems: '🎁 Ücretsiz 💎 kazan: her 5. seviyede +2 · sezon kademeleri 8/16/24 · günün ilk koşu zaferi +1',
@@ -50,7 +59,7 @@ const L = {
     questsTitle: 'GÜNLÜK GÖREVLER', questsSub: 'Her gece yenilenir',
     lbTitle: 'LİDER TABLOSU', lbDaily: 'BUGÜN', lbWeekly: 'BU HAFTA', lbEmpty: 'Henüz skor yok — ilk sen ol!', lbLoad: 'Yükleniyor...',
     appName: 'Tank Savaşı 3D', appNameUp: 'TANK SAVAŞI 3D', privacyClose: 'KAPAT',
-    howBtn: '❓ Nasıl Oynanır', howTitle: 'Nasıl oynanır', howBody: '<ul><li><b>Kontroller:</b> sol joystick sür ve dön, sağ buton ateş (Oto Ateş ayarlardan açılır).</li><li><b>Sekme:</b> mermin duvardan 2 kez seker — köşedeki düşmanı görmeden vur. İki sekmeli vuruş = <b>MEGA SEKME</b> bonusu.</li><li><b>Boss:</b> her 5. dalga. Kırmızı halka = saldırı hazırlığı, ardından kısa <b>savunmasız</b> an (yeşil halka) — o an vur.</li><li><b>Yükseltme:</b> 2/4/6/8/10. dalgada kart seç; 10. dalgayı geç → zafer, altın ve elmas.</li><li><b>Sefer kitleri:</b> kalkan/mıknatıs/tamir, koşu öncesi harita ekranından.</li><li><b>Garaj:</b> altınla tank ve yükseltme, jetonla sandık, elmasla premium tank/aksesuar.</li></ul>',
+    howBtn: '❓ Nasıl Oynanır', howTitle: 'Nasıl oynanır', howBody: '<ul><li><b>Kontroller:</b> sol çubuk ekran yönünde hareket eder; sağ çubuk kuleyi bağımsız yönlendirir ve dışarı çekildiğinde ateş eder. Bilgisayarda WASD + fare kullan.</li><li><b>Sekme:</b> mermin duvardan 2 kez seker — köşedeki düşmanı görmeden vur. İki sekmeli vuruş = <b>MEGA SEKME</b> bonusu.</li><li><b>Boss:</b> her 5. dalga. Kırmızı halka = saldırı hazırlığı, ardından kısa <b>savunmasız</b> an (yeşil halka) — o an vur.</li><li><b>Yükseltme:</b> 2/4/6/8/10. dalgada kart seç; 10. dalgayı geç → zafer, altın ve elmas.</li><li><b>Sefer kitleri:</b> kalkan/mıknatıs/tamir, koşu öncesi harita ekranından.</li><li><b>Garaj:</b> altınla tank ve yükseltme, jetonla sandık, elmasla premium tank/aksesuar.</li></ul>',
     defaultName: 'Oyuncu', nameBad: '🚫 Bu isim kullanılamaz', lbReport: '🚩 Uygunsuz isim bildir',
     gpuLost: '⚠️ Grafik sürücüsü sıfırlandı, bekleyin…', gpuReload: '↻ Grafik geri gelmedi — yeniden yüklemek için dokun',
     seasonWord: 'Sezon', seasonTier: 'Kademe', seasonTierUp: (n, r) => `🎟️ Sezon ${n}. kademe: ${r}`, seasonClosed: (id, t) => `🎟️ Sezon ${id} kapandı — ${t}. kademeye ulaştın. Yeni sezon başladı!`, firstWinXp: '🎉 İlk zafer bonusu +40 XP',
@@ -75,7 +84,7 @@ const L = {
     gachaNew: s => `🎁 YENİ KAPLAMA! ${s}`, gachaDup: (s, c) => `🔁 ${s} zaten var → +🪙${c}`, tokenGot: n => `🎰 +${n} jeton!`,
     ftueGift: s => `🎁 İlk düşmanını yok ettin! "${s}" kaplaması kazandın — Garaj → Kaplamalar'dan tak`,
     ftueHintDesk: 'W/↑ ilerle · S/↓ geri · A/D dön · BOŞLUK ateş 🔫',
-    ftueHintTouch: 'Sol joystick: sür & dön · Sağ buton: ateş 🔫',
+    ftueHintTouch: 'Sol çubuk: hareket · Sağ çubuk: nişan ve ateş',
     ftueWelcome: 'Hoş geldin! Sür ve ateş et 🔫',
     single: 'TEK OYUNCU', duel: 'ARKADAŞLA DÜELLO', garage: 'GARAJ', back: '‹ GERİ',
     navQuests: 'GÖREVLER', navLb: 'LİDER', navSeason: 'SEZON', navShop: 'DÜKKAN',
@@ -147,7 +156,7 @@ const L = {
     overNewRec: b => `🏆 NEW RECORD — Wave ${b}!`, overCheer: b => `Your best: Wave ${b} — try again!`,
     connLostTitle: '📡 CONNECTION LOST', connLostSub: 'Lost connection to the server — your rewards were saved.',
     vulnTxt: 'VULNERABLE!',
-    tutTitle: 'TUTORIAL', tutSteps: ['Drive the tank', 'Fire your cannon', 'Bounce a shot off a wall', 'Blow up a barrel'],
+    tutTitle: 'TUTORIAL', tutSteps: ['Move with the left stick', 'Aim and fire with the right stick', 'Bounce a shot off a wall', 'Blow up a barrel'],
     tutDone: '🎓 Tutorial complete! +🪙100',
     shopNote: '💎 Gems are earned by leveling up, season tiers and the first victory of the day; they buy premium tanks and accessories.',
     freeGems: '🎁 Earn free 💎: +2 every 5th level · season tiers 8/16/24 · first run victory each day +1',
@@ -156,7 +165,7 @@ const L = {
     questsTitle: 'DAILY QUESTS', questsSub: 'Refreshes every night',
     lbTitle: 'LEADERBOARD', lbDaily: 'TODAY', lbWeekly: 'THIS WEEK', lbEmpty: 'No scores yet — be the first!', lbLoad: 'Loading...',
     appName: 'Tank Battle 3D', appNameUp: 'TANK BATTLE 3D', privacyClose: 'CLOSE',
-    howBtn: '❓ How to play', howTitle: 'How to play', howBody: '<ul><li><b>Controls:</b> left joystick drives and turns, right button fires (Auto Fire in settings).</li><li><b>Bounce:</b> your shells bounce off walls twice — hit enemies around corners without seeing them. A double-bounce kill = <b>MEGA BOUNCE</b> bonus.</li><li><b>Boss:</b> every 5th wave. Red ring = attack wind-up, then a short <b>vulnerable</b> moment (green ring) — strike then.</li><li><b>Upgrades:</b> pick a card on waves 2/4/6/8/10; clear wave 10 → victory, coins and gems.</li><li><b>Kits:</b> shield/magnet/repair from the map screen before a run.</li><li><b>Garage:</b> coins buy tanks and upgrades, tokens open chests, gems buy premium tanks/accessories.</li></ul>',
+    howBtn: '❓ How to play', howTitle: 'How to play', howBody: '<ul><li><b>Controls:</b> left stick moves in screen direction; right stick independently aims the turret and fires beyond its dead zone. On desktop use WASD and the mouse.</li><li><b>Bounce:</b> your shells bounce off walls twice — hit enemies around corners without seeing them. A double-bounce kill = <b>MEGA BOUNCE</b> bonus.</li><li><b>Boss:</b> every 5th wave. Red ring = attack wind-up, then a short <b>vulnerable</b> moment (green ring) — strike then.</li><li><b>Upgrades:</b> pick a card on waves 2/4/6/8/10; clear wave 10 → victory, coins and gems.</li><li><b>Kits:</b> shield/magnet/repair from the map screen before a run.</li><li><b>Garage:</b> coins buy tanks and upgrades, tokens open chests, gems buy premium tanks/accessories.</li></ul>',
     defaultName: 'Player', nameBad: '🚫 That name is not allowed', lbReport: '🚩 Report a name',
     gpuLost: '⚠️ Graphics driver reset, please wait…', gpuReload: '↻ Graphics did not recover — tap to reload',
     seasonWord: 'Season', seasonTier: 'Tier', seasonTierUp: (n, r) => `🎟️ Season tier ${n}: ${r}`, seasonClosed: (id, t) => `🎟️ Season ${id} ended — you reached tier ${t}. New season is live!`, firstWinXp: '🎉 First victory bonus +40 XP',
@@ -178,7 +187,7 @@ const L = {
     gachaNew: s => `🎁 NEW SKIN! ${s}`, gachaDup: (s, c) => `🔁 ${s} already owned → +🪙${c}`, tokenGot: n => `🎰 +${n} tokens!`,
     ftueGift: s => `🎁 First enemy down! You earned the "${s}" skin — equip it in Garage → Skins`,
     ftueHintDesk: 'W/↑ move · S/↓ back · A/D turn · SPACE fire 🔫',
-    ftueHintTouch: 'Left stick: drive & turn · Right button: fire 🔫',
+    ftueHintTouch: 'Left stick: move · Right stick: aim and fire',
     ftueWelcome: 'Welcome! Drive and shoot 🔫',
     single: 'SINGLE PLAYER', duel: 'DUEL WITH A FRIEND', garage: 'GARAGE', back: '‹ BACK',
     navQuests: 'QUESTS', navLb: 'RANKS', navSeason: 'SEASON', navShop: 'SHOP',
@@ -222,10 +231,12 @@ const T = () => L[lang];
 
 // ---------------------------------------------------------------- kalıcı profil
 const DEFAULT_PROFILE = { coins: 0, owned: ['recruit'], selected: 'recruit', bestWave: 1, upgrades: {}, kills: 0, wins: 0, games: 0, skins: ['default'], skin: 'default', achieved: [], lastDaily: '', streak: 0, name: '', gift1: false, level: 1, xp: 0, tokens: 0, gems: 0, accessories: [], accessory: '', tracks: ['default'], track: 'default', trails: ['default'], trail: 'default', explosions: ['default'], explosion: 'default', titles: [], title: '', chestPity: {}, avatars: ['helmet'], avatar: 'helmet', prestige: 0 };
-const PROFILE_V = 5; // şema sürümü — migrateProfile() eski kayıtları yeni alanlarla tamamlar
+const PROFILE_V = 6; // şema sürümü — migrateProfile() eski kayıtları yeni alanlarla tamamlar
 let profile;
 try {
-  profile = Object.assign({}, DEFAULT_PROFILE, JSON.parse(localStorage.getItem('tankprofile') || '{}'));
+  const savedProfile = localStorage.getItem('tankprofile');
+  if(savedProfile && !localStorage.getItem('tankprofile-before-premium')) localStorage.setItem('tankprofile-before-premium', savedProfile);
+  profile = Object.assign({}, DEFAULT_PROFILE, JSON.parse(savedProfile || '{}'));
   if (!Array.isArray(profile.owned) || !profile.owned.length) profile.owned = ['recruit'];
   if (!profile.upgrades || typeof profile.upgrades !== 'object') profile.upgrades = {};
   profile.kills = profile.kills || 0; profile.wins = profile.wins || 0; profile.games = profile.games || 0;
@@ -250,6 +261,7 @@ try {
 // FAZ0: şema taşıma — v3 alanları (kitler, ustalık, reklam günlüğü, bölümler, sezon geçmişi, arkadaş kodu) eksikse tamamlanır
 function migrateProfile(p) {
   migrateWorkshop(p);
+  migratePremium(p);
   const obj = k => { if (!p[k] || typeof p[k] !== 'object' || Array.isArray(p[k])) p[k] = {}; };
   obj('kits'); obj('mastery'); obj('chapters'); obj('seasonHistory'); obj('mapWins'); obj('dyes'); obj('dye'); obj('chestPity');
   for (const k of ['tracks', 'trails', 'explosions']) if (!Array.isArray(p[k])) p[k] = ['default']; // KOZMETİK 2.0 (v4)
@@ -275,13 +287,13 @@ catch { settings = { muted: false, quality: 'high', music: true }; }
 if (typeof settings.music !== 'boolean') settings.music = true;
 if (typeof settings.haptics !== 'boolean') settings.haptics = true; // titreşim tercihi (yeni ayar)
 // E2: oto-ateş — araştırma: tek-parmak kontrol 9/10 başarılı oyunda; dokunmatikte varsayılan AÇIK (D0 sürtünmesi), PvE'de geçerli
-if (typeof settings.notifs !== 'boolean') settings.notifs = true; // günlük hatırlatma bildirimi (yalnız native)
+if (typeof settings.notifs !== 'boolean') settings.notifs = false; // günlük hatırlatma bildirimi (yalnız native)
 if (typeof settings.volSfx !== 'number') settings.volSfx = 1;
 if (typeof settings.volMusic !== 'number') settings.volMusic = 1;
 if (!['normal', 'tight', 'wide'].includes(settings.stick)) settings.stick = 'normal'; // FAZ3: joystick ölü bölge (0.2 / 0.1 / 0.3)
 const stickDz = () => (settings.stick === 'tight' ? 0.1 : settings.stick === 'wide' ? 0.3 : 0.2);
 if (typeof settings.autoFire !== 'boolean') settings.autoFire = ('ontouchstart' in window || navigator.maxTouchPoints > 0); // (IS_TOUCH henüz tanımsız — TDZ)
-const GAME_VER = '1.0.0'; // ayarlar panelinde görünür; mağaza sürümleriyle birlikte artır
+const GAME_VER = '1.1.0-beta'; // ayarlar panelinde görünür; mağaza sürümleriyle birlikte artır
 function saveSettings() { try { localStorage.setItem('tanksettings', JSON.stringify(settings)); } catch (e) { /* engelli depolama: ayar kalıcı olmaz ama oyun çalışır */ } }
 
 // ---------------------------------------------------------------- sunucu adresi (web vs native app)
@@ -325,8 +337,8 @@ async function setupNotifs() {
       let n;
       if (daysToEnd === 3 && sez.tier < SEASON_LEN) n = { type: 'season', h: 19, m: 0, title: tr ? '⏳ Sezon 3 gün sonra bitiyor' : '⏳ Season ends in 3 days', body: tr ? `${SEASON_LEN - sez.tier} kademe daha var — XP topla!` : `${SEASON_LEN - sez.tier} tiers left — earn XP!` };
       else if (day.getDay() === 5) n = { type: 'event', h: 18, m: 0, title: tr ? '🎉 Hafta sonu etkinliği başladı' : '🎉 Weekend event is live', body: tr ? '72 saat — ekstra ödüller seni bekliyor' : '72 hours — extra rewards await' };
-      else if (d === 1 && (profile.streak || 0) >= 2) n = { type: 'streak', h: 21, m: 30, title: tr ? `🔥 ${profile.streak} günlük serin bu gece bitiyor` : `🔥 Your ${profile.streak}-day streak ends tonight`, body: tr ? 'Bir koşu yeter — seriyi koru!' : 'One run keeps it alive!' };
-      else n = { type: 'daily', h: 20, m: 0, title: tr ? '🎯 Görevlerin hazır!' : '🎯 Your quests are ready!', body: tr ? 'Günlük görevler + sandık seni bekliyor — seri bozulmasın!' : 'Daily quests + chest are waiting — keep your streak!' };
+      else if (d === 1 && (profile.streak || 0) >= 2) n = { type: 'streak', h: 21, m: 30, title: tr ? `🔥 ${profile.streak} günlük günlük hedeflerin hazır` : `🔥 Your daily objectives are ready`, body: tr ? 'Yeni görünüm hedefin seni bekliyor.' : 'Your next cosmetic goal is waiting.' };
+      else n = { type: 'daily', h: 20, m: 0, title: tr ? '🎯 Görevlerin hazır!' : '🎯 Your quests are ready!', body: tr ? 'Günlük görevler + sandık seni bekliyor — istediğin zaman devam et.' : 'Daily quests + chest are waiting — return whenever you like.' };
       const at = new Date(day); at.setHours(n.h, n.m, 0, 0);
       list.push({ id: 110 + d, at, type: n.type, title: n.title, body: n.body });
     }
@@ -356,6 +368,7 @@ async function openLicenses() {
 function closePrivacy() { $('privacybox').classList.add('hidden'); }
 function openHow() { const t = T(); $('privacybody').innerHTML = `<h1>${t.howTitle}</h1>${t.howBody}`; privacyLoaded = false; $('privacyclose').textContent = t.privacyClose; $('privacybox').classList.remove('hidden'); $('privacybody').scrollTop = 0; } /* U12: Nasıl oynanır */
 function handleBack() {
+  if (document.body.dataset.panel === 'panel-queue' && state === 'menu') { $('queue-cancel').click(); return; }
   const P = capPlugins();
   const pb = $('privacybox'); if (pb && !pb.classList.contains('hidden')) { closePrivacy(); return; }
   const chest = $('chestopen');
@@ -448,7 +461,8 @@ async function watchRewarded(place) {
 }
 // maç aralarında interstitial (FTUE'den sonra, 3 maçta 1'den seyrek). Web'de no-op.
 let interstitialCount = 0;
-function maybeInterstitial() {
+function maybeInterstitial() { return; // No forced interruptions in the premium experience.
+
   if ((profile.games || 0) <= 3) return;
   if (++interstitialCount % 3 === 0) Platform.interstitial();
 }
@@ -811,7 +825,7 @@ const ACHIEVEMENTS = [
   { id: 'wave15', name: { tr: 'Aşılmaz', en: 'Unstoppable' }, desc: { tr: 'Dalga 15\'e ulaş', en: 'Reach wave 15' }, stat: 'bestWave', goal: 15, reward: 700 },
   { id: 'win3', name: { tr: 'Rakip', en: 'Challenger' }, desc: { tr: '3 maç kazan', en: 'Win 3 matches' }, stat: 'wins', goal: 3, reward: 200 },
   { id: 'win15', name: { tr: 'Şampiyon', en: 'Champion' }, desc: { tr: '15 maç kazan', en: 'Win 15 matches' }, stat: 'wins', goal: 15, reward: 600 },
-  { id: 'games25', name: { tr: 'Bağımlı', en: 'Hooked' }, desc: { tr: '25 maç oyna', en: 'Play 25 matches' }, stat: 'games', goal: 25, reward: 300 },
+  { id: 'games25', name: { tr: 'Müdavim', en: 'Regular' }, desc: { tr: '25 maç oyna', en: 'Play 25 matches' }, stat: 'games', goal: 25, reward: 300 },
 ];
 function effTank(id) {
   const b = tankById(id);
@@ -1166,12 +1180,15 @@ function getRoomEnv() {
 // ---------------------------------------------------------------- tank modelleri (tembel-yükleme)
 // farklı GLB gövde modelleri; ilk pakete girmez, seçilince/önizlenince yüklenir (performans bütçesi)
 const MODEL_PATHS = { bastion: 'assets/tank_bastion_mk2.glb', recruit: 'assets/tank_recruit_mk2.glb', scout: 'assets/tank_scout_mk2.glb', phantom: 'assets/tank_phantom_mk2.glb', lynx: 'assets/tank_lynx_mk2.glb', boxer: 'assets/tank_boxer_mk2.glb', sniper: 'assets/tank_sniper_mk2.glb', goldking: 'assets/tank_goldking_mk2.glb', guardian: 'assets/tank_guardian_mk2.glb', heavy: 'assets/tank_heavy_mk2.glb', hover: 'assets/tank_hover_mk2.glb', twin: 'assets/tank_twin_mk2.glb', arty: 'assets/tank_arty_mk2.glb', titan: 'assets/tank_titan_mk2.glb', mamut: 'assets/tank_mamut_mk2.glb' };
+const showroomModels = {}, modelPromises = {};
 const loadedModels = {}; // modelId -> gltf.scene
 const _modelLoader = new GLTFLoader();
-async function ensureModel(modelId) {
-  if (!modelId || loadedModels[modelId] || !MODEL_PATHS[modelId]) return;
-  try { const g = await _modelLoader.loadAsync(MODEL_PATHS[modelId]); loadedModels[modelId] = g.scene; }
-  catch (e) { console.warn('tank modeli yüklenemedi:', modelId, e); }
+async function ensureModel(modelId, highDetail=false) {
+  if(!modelId || !MODEL_PATHS[modelId]) return;
+  const store=highDetail?showroomModels:loadedModels, key=modelId+(highDetail?':high':':low');
+  if(store[modelId])return;
+  if(!modelPromises[key]) modelPromises[key]=_modelLoader.loadAsync(highDetail?MODEL_PATHS[modelId].replace('_mk2.glb','_premium.glb'):MODEL_PATHS[modelId]).then(g=>{store[modelId]=g.scene;}).catch(e=>{delete modelPromises[key];console.warn('Model unavailable',modelId);});
+  return modelPromises[key];
 }
 // tema dekor GLB'leri (Blender'da modellendi; harita seçilince tembel yüklenir)
 const DECOR_PATHS = { city: 'assets/decor_city.glb', harbor: 'assets/decor_harbor.glb', canyon: 'assets/decor_canyon.glb', stadium: 'assets/decor_stadium.glb', night: 'assets/decor_stadium.glb', desert: 'assets/decor_desert.glb', snow: 'assets/decor_snow.glb', space: 'assets/decor_space.glb', lava: 'assets/decor_lava.glb' }; // VARLIK FAZ 3: Kenney Doğa/Uzay/Tatil kitleri (CC0) + prosedürel parçalar, düğüm adıyla yerleşim
@@ -1821,9 +1838,18 @@ function buildArenaMarkings(mapIdx) {
   scene.add(arenaMarkings);
 }
 
-function buildArena(mapIdx) {
+const arenaFloor = new THREE.MeshStandardMaterial({color:0x666b64,roughness:.93,metalness:.12});
+const arenaCover = new THREE.MeshStandardMaterial({color:0x343e3e,roughness:.72,metalness:.3});
+let competitiveGrid=null;
+function buildArena(mapIdx,competitive=false) {
   clearCovers(); clearHazards();
-  const wallMaterial = applyTheme(MAPS[mapIdx].theme);
+  let wallMaterial = applyTheme(MAPS[mapIdx].theme);
+  if(competitiveGrid){scene.remove(competitiveGrid);competitiveGrid.geometry.dispose();competitiveGrid.material.dispose();competitiveGrid=null;}
+  if(competitive){
+    buildDecor(null);wallMaterial=arenaCover;arenaCover.color.setHex(mapIdx===15?0x506471:mapIdx===14?0x38464b:0x535d4d);arenaFloor.color.setHex(mapIdx===15?0xb5c4c8:mapIdx===14?0x647078:0x929489);ground.material=arenaFloor;
+    scene.background=new THREE.Color(0x6a7473);sun.intensity=2.5;hemi.intensity=.9;
+    competitiveGrid=new THREE.GridHelper(58.5,13,0xb39467,0x7e8986);competitiveGrid.position.y=.035;scene.add(competitiveGrid);
+  }
   MAP = MAPS[mapIdx].grid;
   ROWS = MAP.length; COLS = MAP[0].length;
   arenaHalf = (Math.max(ROWS, COLS) / 2) * CELL;
@@ -1839,8 +1865,8 @@ function buildArena(mapIdx) {
     for (let c = 0; c < COLS; c++) {
       const x = cellX(c), z = cellZ(r);
       if (MAP[r][c] === '#') {
-        m.makeTranslation(x, WALL_H / 2, z);
-        wallInst.setMatrixAt(i++, m);
+        m.makeTranslation(x, competitive? .85 : WALL_H / 2, z);if(competitive)m.scale(new THREE.Vector3(1,1.7/WALL_H,1));
+        wallInst.setMatrixAt(i,m);if(competitive)wallInst.setColorAt(i,new THREE.Color((r+c)%3===0?0xa7aaa1:0xffffff));i++;
         walls.push({ minX: x - CELL / 2, maxX: x + CELL / 2, minZ: z - CELL / 2, maxZ: z + CELL / 2 });
       } else {
         openCells.push({ r, c, x, z });
@@ -1855,7 +1881,7 @@ buildArena(0);
 
 // ---------------------------------------------------------------- tank fabrikası
 function buildTank(def) {
-  const src = (def.model && loadedModels[def.model]) ? loadedModels[def.model] : tankGltf.scene;
+  const src = (def.showroom && showroomModels[def.model]) || loadedModels[def.model] || tankGltf.scene;
   const g = src.clone(true);
   g.userData.turretTop = def.turretTop || 1.83;
   g.userData.decalWidth = ['scout','sniper','lynx'].includes(def.id) ? 0.82 : 1.04;
@@ -1878,6 +1904,7 @@ function buildTank(def) {
     }
   });
   if (def.scale && def.scale !== 1) g.scale.setScalar(def.scale);
+  enhanceMaterials(g); installTurretPivot(THREE,g);
   return g;
 }
 
@@ -2137,7 +2164,7 @@ function disposeTank(root) {
 function disposeLabel(l) { if (l && l.material) l.material.dispose(); }
 function applyAccessory(root, accId, tankDef, slot) {
   const key = slot === 2 ? 'accMesh2' : 'accMesh';
-  if (root.userData[key]) { root.remove(root.userData[key]); disposeSubtree(root.userData[key]); root.userData[key] = null; }
+  if (root.userData[key]) { root.userData[key].removeFromParent(); disposeSubtree(root.userData[key]); root.userData[key] = null; }
   root.userData[key + 'Want'] = accId || ''; // tembel GLB inince hâlâ istenen aksesuar bu mu? (eski istek takılmasın)
   const a = accById(accId); if (!a) return;
   let g;
@@ -2156,6 +2183,7 @@ function applyAccessory(root, accId, tankDef, slot) {
   if (mt.rx) g.rotation.x = mt.rx; if (mt.ry) g.rotation.y = mt.ry; if (mt.rz) g.rotation.z = mt.rz;
   if (mt.s) g.scale.setScalar(mt.s);
   root.add(g); root.userData[key] = g;
+  if(ACC_TURRET_SLOT.has(a.id) && root.userData.aimPivot) { root.updateMatrixWorld(true); root.userData.aimPivot.attach(g); }
 }
 // FAZ3: 2. yuva — kule + gövde aksesuarı birlikte (60💎 kalıcı). Takma mantığı: boş/uyumlu yuvaya, yoksa aynı tipteki yuvanın yerine.
 const accSlotType = id => (ACC_TURRET_SLOT.has(id) ? 't' : 'h');
@@ -2538,7 +2566,7 @@ const bulletGeo = new THREE.SphereGeometry(0.14, 10, 10);
 const bulletTailGeo = new THREE.BoxGeometry(0.09, 0.09, 1.3);
 
 const player = {
-  mesh: null, a: 0, x: 0, z: 0,
+  mesh: null, a: 0, aim: 0, x: 0, z: 0,
   health: 5, maxHealth: 5, cool: 0, alive: true, speed: 0, inv: 0,
   stat: tankById(profile.selected),
   speedT: 0, tripleT: 0, shieldT: 0,
@@ -2750,7 +2778,7 @@ const TEAM_SPAWNS = [[[1, 11], [1, 1]], [[11, 11], [11, 1]]]; // takım0 sol ken
 
 function fire(owner, angOff = 0, playerShot = null) {
   const isPlayer = owner === player;
-  const a = owner.a + angOff;
+  const a = (isPlayer && Number.isFinite(player.aim) ? player.aim : owner.a) + angOff;
   const shotDef = projectileById(isPlayer && (mode === 'solo' || mode === 'coop') ? profile.projectile : 'default');
   const cosmetic = shotDef.glb && loadedAcc[shotDef.id];
   const mesh = cosmetic ? new THREE.Group() : new THREE.Mesh(bulletGeo, isPlayer ? (playerShotCustom ? customShotMat : playerBulletMat) : enemyBulletMat);
@@ -3481,7 +3509,7 @@ function animateHarvestXp(preLvl, prePct) {
 }
 function updateLevelBar() {
   const el = $('lvlnum'); if (!el) return;
-  const bd = badgeOf(profile.level || 1), lw = $('levelwrap'); if (lw) { lw.style.borderColor = bd.st.col; lw.style.boxShadow = `0 0 8px ${bd.st.col}66`; lw.title = bd.label; } // K6 rozet çerçevesi
+  const bd = badgeOf(profile.level || 1), lw = $('levelwrap'); if (lw) { lw.style.borderColor = bd.st.col; lw.style.boxShadow = `0 0 8px ${bd.st.col}66`; lw.title = (lang==='tr'?'Solo hesap seviyesi ':'Solo account level ')+(profile.level||1); } // K6 rozet çerçevesi
   const need = xpForLevel(profile.level || 1);
   el.textContent = (lang === 'tr' ? 'Sv ' : 'Lv ') + (profile.level || 1);
   $('lvlfill').style.width = Math.max(2, Math.min(100, ((profile.xp || 0) / need) * 100)) + '%';
@@ -3630,7 +3658,7 @@ function renderSeason() {
   const endMs = epoch + s.id * 6 * 7 * 86400000;
   const daysLeft = Math.max(0, Math.ceil((endMs - Date.now()) / 86400000));
   $('season-head').dataset.season = String(s.id).padStart(2,'0');
-  $('season-head').innerHTML = `<div class="sh-name">${seasonName(s.id)}</div>` +
+  $('season-head').innerHTML = `<div class="sh-name">${lang==='tr'?'SOLO SEZONU · ':'SOLO SEASON · '}${seasonName(s.id)}</div>` +
     `<div class="sh-sub">${t.seasonTier} ${s.tier}/${SEASON_LEN} &nbsp;·&nbsp; ⏳ ${t.daysLeft(daysLeft)}</div>` +
     `<div class="sh-progress"><span>${s.tier >= SEASON_LEN ? (lang === 'tr' ? 'Sezon yolu tamamlandı' : 'Season track complete') : (lang === 'tr' ? 'Sıradaki kademe' : 'Next tier') + ' ' + (s.tier+1)}</span><span>${s.tier >= SEASON_LEN ? '✓' : `${s.xp}/${SEASON_TIER_XP} XP`}</span></div>` +
     `<div class="sh-bar"><div class="sh-fill" style="width:${pct}%"></div></div>` +
@@ -3664,6 +3692,7 @@ async function renderLeaderboard(period) {
 }
 let questView = 'daily';
 function renderQuests() {
+  $('arena-progress').hidden=questView==='career';$('solo-objectives').open=questView==='career';
   $('qtab-daily').textContent = lang === 'tr' ? 'GÜNLÜK' : 'DAILY';
   $('qtab-career').textContent = lang === 'tr' ? 'KOMUTAN YOLU' : 'COMMANDER PATH';
   $('qtab-daily').classList.toggle('on', questView === 'daily');
@@ -3894,7 +3923,7 @@ function updateHome() {
   $('home-tank-name').textContent = base.name[lang];
   $('home-tank-role').textContent = `${tr ? 'Zırh' : 'Armor'} ${base.health} · ${tr ? 'Hız' : 'Speed'} ${base.speed}`;
   $('btn-single').innerHTML = gi('crosshair') + (tr ? ' HARİTA SEÇ' : ' CHOOSE MAP');
-  $('btn-quickplay').innerHTML = gi('play') + ' ' + T().quickPlay;
+  $('btn-quickplay').innerHTML = gi('play') + (lang === 'tr' ? ' SAVAŞA GİR' : ' FIND MATCH');
   const portraitKey = JSON.stringify([base.id, profile.skin, profile.track, profile.accessory, profile.accSlot2 && profile.accessory2, profile.decal, profile.decalSide, profile.dye]);
   if (homePortraitKey !== portraitKey) {
     homePortraitKey = portraitKey;
@@ -3983,20 +4012,24 @@ function refreshMenuChrome(id = document.querySelector('.panel.show')?.id) {
 }
 let lastPanelTracked = '';
 function showPanel(id) {
+  if(document.body.dataset.panel==='panel-queue' && id!=='panel-queue'){rankedLoading++;rankedClient.cancel();}
   if (id !== 'panel-main' && id !== lastPanelTracked) track('panel_open', { p: id.replace('panel-', '') }); // meta ekran ziyaret hunisi
   lastPanelTracked = id;
   msgEl.scrollTop = 0;
   msgEl.classList.toggle('home', id === 'panel-main');
   if (id === 'panel-main') updateHome();
-  for (const p of ['panel-main', 'panel-maps', 'panel-garage', 'panel-duel', 'panel-coop', 'panel-profile', 'panel-rematch', 'panel-result', 'panel-quests', 'panel-lb', 'panel-season', 'panel-showroom', 'panel-shop'])
-    $(p).classList.toggle('show', p === id);
+  for (const panel of document.querySelectorAll('#msg > .panel')) panel.classList.toggle('show', panel.id === id);
+  document.body.dataset.panel = id;
   for (const [p, b] of Object.entries(NAV_MAP)) {
     $(b).classList.toggle('on', p === id);
     if(p === id) $(b).setAttribute('aria-current','page'); else $(b).removeAttribute('aria-current');
   }
   refreshMenuChrome(id);
+  refreshPremium(id);
 }
 function openMenu() {
+  if (mode === 'ranked') { practiceMatch=null;rankedClient.leave(); rankedView.clear(); }
+  controls.reset(); document.body.classList.remove('in-combat','ranked-combat');
   matchSeq++; // eski maçın gecikmiş timer'larını geçersiz kıl
   state = 'menu';
   mode = 'solo';
@@ -4046,7 +4079,7 @@ function applyLang() {
   $('btn-bot-pro').textContent = t.botPro;
   $('btn-bot-elite').textContent = t.botElite;
   $('btn-ball').textContent = t.ballBtn;
-  $('btn-quickplay').innerHTML = gi('tank') + ' ' + t.quickPlay;
+  $('btn-quickplay').innerHTML = gi('play') + (lang === 'tr' ? ' SAVAŞA GİR' : ' FIND MATCH');
   { const sn = $('shop-disclaimer'); if (sn) sn.textContent = t.shopNote; } // dükkân dip notu (BUG: .shop-note seçicisi #shop-free'yi eziyordu)
   { const sb = $('sr-back'); if (sb) sb.textContent = t.back; }
   { const bs = $('btn-back-shop'); if (bs) bs.textContent = t.back; }
@@ -4129,16 +4162,26 @@ const SHOWROOM_PIVOT_Y = 0.5; // platform üstü — tank tabanı (y=0) buraya o
 function ensureShowroom() {
   if (showroomScene) return;
   showroomScene = new THREE.Scene();
-  showroomScene.background = new THREE.Color(0x17221c);
-  showroomScene.fog = new THREE.Fog(0x17221c, 18, 48);
+  showroomScene.background = new THREE.Color(0x111a20);
+  showroomScene.fog = new THREE.Fog(0x111a20, 18, 55);
   showroomScene.environment = envTex; // metal/parlak kaplamalarda yansıma (stüdyo HDR inince değişir)
   new RGBELoader().loadAsync('assets/env_studio.hdr').then(t => { t.mapping = THREE.EquirectangularReflectionMapping; studioEnvTex = t; if (showroomScene) showroomScene.environment = t; }).catch(() => {}); // VARLIK FAZ1: Poly Haven studio_small_09 (CC0) 256×128 — ürün çekimi yansıması
   showroomCam = new THREE.PerspectiveCamera(42, innerWidth / innerHeight, 0.1, 120);
   // zemin (gölge alan koyu disk)
-  const floor = new THREE.Mesh(new THREE.CircleGeometry(28, 48), new THREE.MeshStandardMaterial({ color: 0x303a2f, roughness: 0.55, metalness: 0.4 }));
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(80,80), new THREE.MeshStandardMaterial({ color: 0x1c2425, roughness: 0.78, metalness: 0.2 }));
   floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; showroomScene.add(floor);
+  // Original modular workshop architecture; shared materials keep the lobby inexpensive.
+  const steel = new THREE.MeshStandardMaterial({color:0x273236,metalness:.6,roughness:.6});
+  const copper = new THREE.MeshStandardMaterial({color:0x926b4d,metalness:.55,roughness:.55});
+  const glow = new THREE.MeshBasicMaterial({color:0xd5e6cc});
+  const part=(x,y,z,w,h,d,mat)=>{const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);m.position.set(x,y,z);m.castShadow=m.receiveShadow=true;showroomScene.add(m);return m;};
+  for(let i=-3;i<=3;i++) { part(i*4,3.2,-12,.3,6.4,.4,steel);part(i*4,6.3,-6,.3,.3,12,steel);if(i%2===0)part(i*4,5.9,-7,.08,.06,7,glow); }
+  part(0,2.8,-12.3,28,5.6,.2,steel);
+  for(let i=-2;i<=2;i++){part(i*4,2.4,-11.98,3.4,3.9,.1,new THREE.MeshStandardMaterial({color:0x1c282b,metalness:.35,roughness:.8}));part(i*4,4.5,-11.8,2.8,.05,.06,copper);}
+  for(const side of [-1,1]){part(side*7,1.25,-4,2.2,2.5,1.3,steel);for(let y=.5;y<2.5;y+=.5)part(side*7,y,-3.32,1.8,.04,.04,copper);part(side*8,3.2,-9,.12,.12,6,copper);}
+  const grid = new THREE.GridHelper(60,30,0x344349,0x273237);grid.position.y=.004;showroomScene.add(grid);
   // döner platform + parlayan halka
-  const base = new THREE.Mesh(new THREE.BoxGeometry(6.4, 0.5, 7.2), new THREE.MeshStandardMaterial({ color: 0x454b36, roughness: 0.35, metalness: 0.7 }));
+  const base = new THREE.Mesh(new THREE.BoxGeometry(6.4, 0.5, 7.2), new THREE.MeshStandardMaterial({ color: 0x303b3c, roughness: 0.55, metalness: 0.5 }));
   base.position.y = 0.25; base.castShadow = base.receiveShadow = true; showroomScene.add(base);
   srRingMat = new THREE.MeshStandardMaterial({ color: 0xc5d878, emissive: 0xc5d878, emissiveIntensity: 1.4 });
   const ring = new THREE.Mesh(new THREE.TorusGeometry(4.0, 0.035, 4, 4), srRingMat);
@@ -4179,7 +4222,6 @@ function ensureShowroom() {
 function buildShowroomTank() {
   if (showroomTankMesh) {
     showroomTurn.remove(showroomTankMesh);
-    if (showroomTankMesh.userData.accMesh) disposeSubtree(showroomTankMesh.userData.accMesh);
     disposeTank(showroomTankMesh); // TankPaint/kaplama klonu + klonlanmış glow malzemeleri (owned işaretli)
   }
   if (showroom.mode === 'projectile') {
@@ -4190,7 +4232,7 @@ function buildShowroomTank() {
     return;
   }
   const def = effTank(showroom.tankId);
-  const m = buildTank(def);
+  const m = buildTank({...def,showroom:true});
   // seçili tankta oyuncunun kaplaması, diğerlerinde varsayılan görünüm
   applySkin(m, showroom.tankId === profile.selected ? profile.skin : 'default', showroom.tankId);
   if (showroom.mode === 'decal') applyDecal(m, showroom.cosmeticId, showroom.decalSide);
@@ -4213,18 +4255,20 @@ function buildShowroomTank() {
   showroom.fitRadius = Math.max(Math.hypot(Math.max(Math.abs(box.min.x), Math.abs(box.max.x)), Math.max(Math.abs(box.min.z), Math.abs(box.max.z))), size.y * 0.65);
   // ışıkları model boyutuna ölçekle (Titan/Obüs gibi büyük modeller sönük kalıyordu) + premium altın halka
   const bigR = Math.max(size.x, size.y, size.z), ls = Math.max(1, bigR / 3.4);
-  srKey.position.set(4 * ls, 9 * ls, 6 * ls); srKey.intensity = 3.0 + (ls - 1) * 3.2;
-  srRim.position.set(-6 * ls, 4 * ls, -7 * ls); srRim.intensity = 2.4 + (ls - 1) * 2.8;
+  srKey.position.set(4 * ls, 9 * ls, 6 * ls); srKey.intensity = 2.2 + (ls - 1) * 1.2;
+  srRim.position.set(-6 * ls, 4 * ls, -7 * ls); srRim.intensity = 1.8 + (ls - 1) * 1.2;
   srAccent.position.set(-4 * ls, 2.6 * ls, 3.5 * ls); srAccent.distance = 20 * ls; srAccent.intensity = 26 * ls;
   const premium = !!tankById(showroom.tankId).gem;
   srRingMat.color.setHex(premium ? 0xffbd38 : 0xc5d878);
   srRingMat.emissive.setHex(premium ? 0xffbd38 : 0xc5d878);
 }
 function frameShowroomCam() {
-  showroomCam.aspect = innerWidth / innerHeight; showroomCam.updateProjectionMatrix();
+  showroomCam.aspect = innerWidth / innerHeight;
+  const garage=document.body.dataset.panel==='panel-garage'&&!showroom.active;const short=innerHeight<441;showroomCam.setViewOffset(innerWidth,innerHeight,innerWidth*.15,garage?innerHeight*(short?.16:.1):0,innerWidth,innerHeight);
+  showroomCam.updateProjectionMatrix();
   const halfV = THREE.MathUtils.degToRad(showroomCam.fov * 0.5);
   const halfH = Math.atan(Math.tan(halfV) * showroomCam.aspect);
-  const R = (showroom.fitRadius || 3) / Math.sin(Math.min(halfH, halfV)) * (showroom.mode === 'decal' ? 0.92 : 1.10);
+  const R = (showroom.fitRadius || 3) / Math.sin(Math.min(halfH, halfV)) * (showroom.mode === 'decal' ? 0.92 : garage?(short?1.6:1.3):1.10);
   const e = showroom.elev, ty = showroom.centerY;
   showroomCam.position.set(0, ty + R * Math.sin(e), R * Math.cos(e));
   showroomCam.lookAt(0, ty - R * 0.06, 0); // hedefi biraz aşağı al → tank çerçevede yukarı otursun (alt boşluğu stat paneli örter)
@@ -4232,7 +4276,7 @@ function frameShowroomCam() {
 function updateShowroom(dt) {
   if (!showroom.dragging) {
     showroom.rot += showroom.vel; showroom.vel *= 0.90;
-    if (Math.abs(showroom.vel) < 0.002) { showroom.vel = 0; if (showroom.mode !== 'decal') showroom.rot += dt * 0.35; } // side decals stay visible until the player rotates them
+    if (Math.abs(showroom.vel) < 0.002) { showroom.vel = 0; if (showroom.mode !== 'decal' && !settings.reducedMotion) showroom.rot += dt * 0.16; } // side decals stay visible until the player rotates them
   }
   showroomTurn.rotation.y = showroom.rot;
   // premium parçalar vitrinde nabız gibi parlar (klonlanmış malzemeler — oyun içine sızmaz)
@@ -4251,7 +4295,7 @@ function renderShowroomUI() {
   const owned = profile.owned.includes(base.id), sel = profile.selected === base.id;
   $('sr-name').textContent = base.name[lang];
   const fireRate = 1 / def.cool;
-  $('sr-stats').innerHTML = `<p class="showroom-role">${ROLE_NAMES[tankRole(base)][lang === 'tr' ? 0 : 1]} · ${ROLE_TIPS[tankRole(base)][lang === 'tr' ? 0 : 1]}</p>` +
+  $('sr-stats').innerHTML = `<p class="fair-label">${lang === 'tr' ? 'PvP: eşit güç · Aşağıdaki özellikler solo içindir' : 'PvP: equal power · Stats below apply to solo'}</p><p class="showroom-role">${ROLE_NAMES[tankRole(base)][lang === 'tr' ? 0 : 1]} · ${ROLE_TIPS[tankRole(base)][lang === 'tr' ? 0 : 1]}</p>` +
     `<div class="cstat">${t.sHealth}${barHTML(def.health / STAT_MAX.health)}</div>` +
     `<div class="cstat">${t.sSpeed}${barHTML(def.speed / STAT_MAX.speed)}</div>` +
     `<div class="cstat">${t.sFire}${barHTML(fireRate / STAT_MAX.fire)}</div>` + mechLine(def);
@@ -4313,7 +4357,7 @@ function enterShowroomView() {
 }
 async function openShowroom(tankId) {
   ensureShowroom();
-  await ensureModel(tankById(tankId).model); // özel model tembel-yükle
+  await ensureModel(tankById(tankId).model,true); // high-detail inspection LOD
   showroom.mode = 'tank'; showroom.tankId = tankId;
   showroom.accId = tankId === profile.selected ? profile.accessory : '';
   enterShowroomView();
@@ -4433,9 +4477,10 @@ function renderGarage() {
       };
     }
     card.appendChild(btn);
-    // yükseltmeler (sahip olunan tanklar için)
+    // Solo upgrades remain available inside each owned tank's scrollable card.
     if (owned) {
       const up = document.createElement('div');
+      up.innerHTML='<small>'+ (lang==='tr'?'YALNIZ SOLO GELİŞTİRMELER':'SOLO UPGRADES ONLY')+'</small>';
       up.style.cssText = 'margin-top:7px;border-top:1px solid rgba(255,255,255,.15);padding-top:6px';
       for (const u of UPGRADES) {
         const lvl = (profile.upgrades[base.id] && profile.upgrades[base.id][u.key]) || 0;
@@ -4467,7 +4512,12 @@ function renderGarage() {
   }
 }
 let garageTab = 'tanks';
+const GARAGE_GROUPS=[{id:'body',tr:'GÖVDE',en:'BODY',tabs:['tanks']},{id:'paint',tr:'BOYA / DESEN',en:'PAINT / DECAL',tabs:['skins','decals']},{id:'equipment',tr:'DONANIM',en:'EQUIPMENT',tabs:['acc','tracks']},{id:'effects',tr:'MERMİ / EFEKT',en:'SHOT / EFFECT',tabs:['projectiles','fx']},{id:'identity',tr:'KİMLİK',en:'IDENTITY',tabs:['col','crates']}];
 function renderGarageTabs() {
+  const group=GARAGE_GROUPS.find(g=>g.tabs.includes(garageTab))||GARAGE_GROUPS[0];
+  $('garage-groups').innerHTML=GARAGE_GROUPS.map(g=>`<button class="mbtn small ${g===group?'on':''}" data-group="${g.id}" aria-pressed="${g===group}">${lang==='tr'?g.tr:g.en}</button>`).join('');
+  for(const b of $('garage-groups').querySelectorAll('button'))b.onclick=()=>{garageTab=GARAGE_GROUPS.find(g=>g.id===b.dataset.group).tabs[0];renderGarageTabs();};
+  for(const [id,tab] of [['gt-decals','decals'],['gt-projectiles','projectiles'],['gt-crates','crates'],['gt-tanks','tanks'],['gt-skins','skins'],['gt-acc','acc'],['gt-tracks','tracks'],['gt-fx','fx'],['gt-col','col']])$(id).style.display=group.tabs.includes(tab)&&group.tabs.length>1?'':'none';
   $('tankfilters').hidden = garageTab !== 'tanks';
   for (const [id, tab] of [['gt-decals', 'decals'], ['gt-projectiles', 'projectiles'], ['gt-crates', 'crates'], ['gt-tanks', 'tanks'], ['gt-skins', 'skins'], ['gt-acc', 'acc'], ['gt-tracks', 'tracks'], ['gt-fx', 'fx'], ['gt-col', 'col']]) $(id).classList.toggle('on', garageTab === tab);
   { const on = document.querySelector('#garagetabs .mbtn.on'); if (on && on.scrollIntoView) try { on.scrollIntoView({ inline: 'center', block: 'nearest' }); } catch (e) {} } /* LANSMAN: aktif sekme görünür */
@@ -4702,7 +4752,7 @@ async function buyStarter(btn) {
     renderShop();
   } else { btn.disabled = false; btn.textContent = old; showToast(T().shopSoon, 2800); }
 }
-function renderShop() {
+function renderLegacyShop() {
   $('submsg').textContent = `💎 ${profile.gems || 0} · 🎰 ${profile.tokens || 0}`;
   const wrap = $('shoplist');
   wrap.className = 'card-list';
@@ -5842,11 +5892,7 @@ $('home-mission').addEventListener('click', () => { questView = 'daily'; $('btn-
 $('home-career').addEventListener('click', () => { questView = 'career'; $('btn-quests').click(); });
 $('qtab-daily').onclick = () => { questView = 'daily'; renderQuests(); };
 $('qtab-career').onclick = () => { questView = 'career'; renderQuests(); };
-$('btn-quickplay').addEventListener('click', () => {
-  track('quickplay_click');
-  const pool = QUICK_MAPS.filter(mapUnlocked);
-  startSolo(pool.length ? pool[(profile.games || 0) % pool.length] : 0);
-});
+$('btn-quickplay').addEventListener('click', openRankedQueue);
 // v1: koop/2v2/top gizli; lider tablosu SADELEŞTİRİLMİŞ halde açık (yalnız haftalık tek liste — rekabet çıpası)
 if (V1_SIMPLE) {
   for (const id of ['btn-ball', 'btn-coop', 'btn-team']) $(id).style.display = 'none';
@@ -5887,7 +5933,7 @@ $('res-rewarded').addEventListener('click', async () => {
 });
 $('btn-quests').addEventListener('click', () => { const t = T(); $('title').textContent = t.questsTitle; $('submsg').textContent = t.questsSub; renderQuests(); showPanel('panel-quests'); });
 $('btn-back-quests').addEventListener('click', openMenu);
-$('btn-lb').addEventListener('click', () => { const t = T(); $('title').textContent = V1_SIMPLE ? t.lbWeekTitle : t.lbTitle; $('submsg').textContent = ''; showPanel('panel-lb'); renderLeaderboard(V1_SIMPLE ? 'week' : 'day'); });
+$('btn-lb').addEventListener('click', openLeague);
 $('btn-season').addEventListener('click', () => { $('title').textContent = T().navSeason; $('submsg').textContent = ''; renderSeason(); showPanel('panel-season'); });
 $('home-season').addEventListener('click', () => $('btn-season').click());
 $('home-collection').addEventListener('click', () => { garageTab = 'crates'; openGarage(); });
@@ -6040,6 +6086,7 @@ function updateSettingsLabels() {
   }
 }
 function openSettings() {
+  controls.reset();
   const inGame = state === 'play';
   if (inGame && mode === 'solo') paused = true;
   musicDuck = 0.35; updateMusicGain(); // pause'ta müzik kısılır
@@ -6108,30 +6155,7 @@ function onAppHidden() {
 }
 addEventListener('blur', onAppHidden);
 document.addEventListener('visibilitychange', () => { if (document.hidden) onAppHidden(); });
-if (IS_TOUCH) {
-  document.body.classList.add('touch');
-  const stick = $('stick'), knob = $('knob'), fireBtn = $('firebtn');
-  let sid = null;
-  const setKnob = (dx, dy) => { knob.style.transform = `translate(${dx}px, ${dy}px)`; };
-  const applyStick = t => {
-    const r = stick.getBoundingClientRect();
-    let dx = t.clientX - (r.left + r.width / 2), dy = t.clientY - (r.top + r.height / 2);
-    const max = r.width / 2 - 18, d = Math.hypot(dx, dy);
-    if (d > max) { dx = dx / d * max; dy = dy / d * max; }
-    setKnob(dx, dy);
-    const nx = dx / max, ny = dy / max;
-    touchCtl.turn = Math.abs(nx) > stickDz() ? -nx : 0;
-    touchCtl.move = Math.abs(ny) > stickDz() ? -ny : 0;
-  };
-  stick.addEventListener('touchstart', e => { e.preventDefault(); const t = e.changedTouches[0]; sid = t.identifier; applyStick(t); }, { passive: false });
-  stick.addEventListener('touchmove', e => { for (const t of e.changedTouches) { if (t.identifier !== sid) continue; e.preventDefault(); applyStick(t); } }, { passive: false });
-  const stickEnd = e => { for (const t of e.changedTouches) if (t.identifier === sid) { sid = null; setKnob(0, 0); touchCtl.turn = 0; touchCtl.move = 0; } };
-  stick.addEventListener('touchend', stickEnd);
-  stick.addEventListener('touchcancel', stickEnd);
-  fireBtn.addEventListener('touchstart', e => { e.preventDefault(); touchCtl.fire = true; }, { passive: false });
-  fireBtn.addEventListener('touchend', () => { touchCtl.fire = false; });
-  fireBtn.addEventListener('touchcancel', () => { touchCtl.fire = false; });
-}
+if (IS_TOUCH) document.body.classList.add('touch');
 
 // ---------------------------------------------------------------- düşman AI
 // YILDIRIM (boss_blitz) davranışı: gör → 1.2sn kırmızı telegraf (durur, hedefe döner) → 2sn düz dash 3× hız (dönmez; duvar/oyuncu teması bitirir,
@@ -6260,6 +6284,123 @@ function updateEnemy(e, dt, tgt) {
 
 // ---------------------------------------------------------------- ana döngü
 const clock = new THREE.Clock();
+function applyArenaInventory(account){if(!account)return;rankedClient.account=account;for(const key of account.data?.inventory||[]){const offer=ARENA_CATALOG.find(i=>i.id===key);if(offer)grantItem(offer.kind,offer.item);}saveProfile();}
+async function arenaProfile(){const token=await readSession();if(!token)return null;rankedClient.token=token;const a=await rankedClient.request('profile');applyArenaInventory(a);return a;}
+let shopGeneration=0;
+async function renderShop(){
+ const generation=++shopGeneration,wrap=$('shoplist');$('submsg').textContent=ptext('Kozmetik atölyesi · güç satılmaz','Cosmetic workshop · no paid power');wrap.className='card-list';wrap.innerHTML='';
+ let account=null;try{account=await arenaProfile();}catch{}if(generation!==shopGeneration)return;
+ const lead=document.createElement('div');lead.className='shop-intro';lead.innerHTML=`<span class="eyebrow">${ptext('ARENA KOLEKSİYONU','ARENA COLLECTION')}</span><h2>${ptext('TANKINA İMZANI AT.','MAKE IT YOURS.')}</h2><p>${account?`${account.credits} ${ptext('Arena kredisi · maçlarla kazanılır','Arena credits · earned in matches')}`:ptext('Arena kredileri çevrim içi maçlarla kazanılır. İlk maçından sonra bakiyen burada görünür.','Earn Arena credits in online matches. Your balance appears here after your first match.')}</p>`;wrap.append(lead);
+ for(const offer of ARENA_CATALOG){const it=itemOf(offer.kind,offer.item),card=document.createElement('article');card.className='card arena-offer';const owned=account?.data?.inventory?.includes(offer.id);
+  const preview=document.createElement('button');preview.className='workshop-preview';preview.innerHTML=chestSwatch(offer.kind,it);preview.setAttribute('aria-label',it.name[lang]+ptext(' · incele',' · preview'));preview.onclick=()=>offer.kind==='acc'?openAccShowroom(it.id):openWorkshopShowroom(offer.kind,it.id);card.append(preview);
+  if(it.glb)ensureAcc(it).then(()=>{if(preview.isConnected)preview.innerHTML=chestSwatch(offer.kind,it);});
+  const title=document.createElement('h3');title.textContent=it.name[lang];card.append(title);
+  const desc=document.createElement('p');desc.textContent=ptext('Yalnızca görünüm · 1v1 gücü değişmez','Cosmetic only · equal 1v1 power');card.append(desc);
+  const buy=document.createElement('button');buy.className='mbtn small';buy.textContent=owned?ptext('KOLEKSİYONUNDA','OWNED'):`${offer.price} ${ptext('KREDİ','CREDITS')}`;buy.disabled=!!owned||!account||account.credits<offer.price;
+  buy.onclick=async()=>{buy.disabled=true;try{applyArenaInventory(await rankedClient.request('purchase',{method:'POST',body:JSON.stringify({id:offer.id})}));sfxCoin();renderShop();}catch{buy.disabled=false;showToast(ptext('İşlem tamamlanmadı. Bakiyeni kontrol edip tekrar dene.','Purchase could not complete. Check your balance and retry.'));}};card.append(buy);
+  const goal=document.createElement('button');goal.className='mbtn small';goal.textContent=account?.data?.goal===offer.id?ptext('HEDEFİN','YOUR GOAL'):ptext('HEDEF BELİRLE','SET GOAL');goal.disabled=!account||!!owned;goal.onclick=async()=>{goal.disabled=true;try{applyArenaInventory(await rankedClient.request('goal',{method:'POST',body:JSON.stringify({id:offer.id})}));renderShop();}catch{goal.disabled=false;}};card.append(goal);wrap.append(card);
+ }
+ const legacy=document.createElement('details');legacy.className='legacy-catalog';const summary=document.createElement('summary');summary.textContent=ptext('Solo envanteri ve kazanılmış sandıklar','Solo inventory and earned crates');const body=document.createElement('div');body.className='card-list';legacy.append(summary,body);legacy.addEventListener('toggle',()=>{if(legacy.open&&!body.children.length){renderFeatured(body);renderChests(body);}});wrap.append(legacy);
+ $('shop-free').textContent=ptext('Gerçek para satışı kapalı. Eski altın, elmas ve sandık hakların solo kataloğunda korunur.','Real-money sales are disabled. Existing gold, gems and crate rights remain in the solo catalogue.');$('shop-disclaimer').textContent=ptext('Arena ürünlerinin içeriği bellidir; rastgele ücretli kutu yoktur.','Arena offers contain known items; no paid random boxes.');
+}
+async function renderArenaProgress(){const target=$('arena-progress');if(!target)return;target.textContent=ptext('Arena hedeflerin yükleniyor…','Loading Arena objectives…');try{const a=await arenaProfile();if(!a){target.textContent=ptext('İlk çevrim içi maçınla Arena hedeflerini aç. Solo hedeflerin aşağıda.','Play your first online match to begin Arena goals. Solo goals are below.');return;}const currentDate=new Date().toISOString().slice(0,10),currentWeek=Math.floor((Date.now()+3*86400000)/(7*86400000));const d=a.data?.daily?.date===currentDate?a.data.daily:{},w=a.data?.weekly?.week===currentWeek?a.data.weekly:{};target.innerHTML=`<h3>${ptext('ARENA HEDEFLERİ','ARENA OBJECTIVES')}</h3>`+[[ptext('3 maç tamamla','Complete 3 matches'),d.matches||0,3,30],[ptext('5 tank imha et','Score 5 eliminations'),d.kills||0,5,40],[ptext('2 sektirme isabeti','Land 2 ricochet hits'),d.bounces||0,2,50],[ptext('Haftalık: 10 maç','Weekly: 10 matches'),w.matches||0,10,150]].map(([label,n,goal,reward])=>`<div class="arena-objective"><span>${label}</span><strong>${Math.min(n,goal)}/${goal}</strong><small>+${reward} ${ptext('kredi','credits')}</small><progress max="${goal}" value="${Math.min(n,goal)}"></progress></div>`).join('')+`<p>${ptext('Ödüller doğrulanmış maç sonunda otomatik eklenir.','Rewards are credited automatically after verified matches.')}</p>`;}catch{target.textContent=ptext('Arena hizmeti şu an kullanılamıyor.','Arena service is unavailable.');}}
+
+// Premium mobile presentation and authoritative arena integration.
+const controls = createControls({move:$('stick'),aim:$('aimstick'),settings:()=>({deadzone:settings.stick==='wide'?.25:settings.stick==='tight'?.08:.14}),active:()=>state==='play'&&!paused&&$('settings').classList.contains('hidden')});
+const ptext=(tr,en)=>lang==='tr'?tr:en;
+let practiceMatch=null,practiceAcc=0;
+let rankedLoading=0, rankedPending=null, queueSince=0, lobbyStageKey='', leagueGeneration=0;
+const rankedClient = new RankedClient({base:apiBase(),wsBase:wsBase(),name:()=>profile.name,tank:()=>profile.selected,onEvent:rankedEvent});
+const rankedView = new RankedView({scene,camera,renderer,controls,client:rankedClient,disposeTank,buildTank:(id,mine)=>{
+  const def=tankById(id),mesh=buildTank({...def,scale:1});
+  const box=new THREE.Box3().setFromObject(mesh),size=new THREE.Vector3();box.getSize(size);mesh.scale.multiplyScalar(4.8/Math.max(size.x,size.z));
+  if(mine){applySkin(mesh,profile.skin,def.id);applyDecal(mesh,profile.decal,profile.decalSide);applyTracks(mesh,profile.track);applyAccessory(mesh,profile.accessory,def);applyAccessory(mesh,profile.accessory2,def,2);}
+  return mesh;
+},onEffect:(ev,mine)=>{if(ev.t==='fire'){sfxFire();muzzleFlash(ev.x-Math.sin(ev.aim)*1.6,1.2,ev.z-Math.cos(ev.aim)*1.6,0xe8f3b5);}else if(ev.t==='bounce'){sfxBounce();explode(ev.x,1.2,ev.z,false);}else if(ev.t==='hit'){explode(ev.x,1.2,ev.z,false);if(mine){hitFlash();haptic('LIGHT');}}else if(ev.t==='kill'){explode(ev.x,1.2,ev.z,true);sfxBoom(true);if(mine)haptic('MEDIUM');}}});
+function refreshPremium(id){
+  $('btn-quests').querySelector('.nlbl').textContent=ptext('İLERLEME','PROGRESS');$('btn-lb').querySelector('.nlbl').textContent=ptext('LİG','LEAGUE');$('btn-shop-nav').querySelector('.nlbl').textContent=ptext('MAĞAZA','STORE');
+  $('btn-quickplay').innerHTML=gi('play')+ptext(' SAVAŞA GİR',' FIND MATCH');$('btn-single').textContent=ptext('SOLO SEFER','SOLO EXPEDITION');$('btn-duel').textContent=ptext('ANTRENMAN','PRACTICE');
+  $('qtab-season').textContent=ptext('SEZON','SEASON');$('home-tank-role').textContent=ptext('1v1 · Eşit güç, senin tarzın','1v1 · Equal power, your style');
+  $('queue-cancel').textContent=ptext('İPTAL','CANCEL');$('queue-practice').textContent=ptext('BOT ANTRENMANI','BOT PRACTICE');
+  $('league-play').textContent=ptext('SAVAŞA GİR','FIND MATCH');$('arena-again').textContent=ptext('YENİ RAKİP BUL','FIND NEXT MATCH');$('arena-home').textContent=ptext('ÜSSE DÖN','BACK TO BASE');
+  document.body.classList.toggle('reduced-motion',!!settings.reducedMotion);
+  document.body.classList.toggle('left-handed',!!settings.leftHanded);
+  document.documentElement.style.setProperty('--control-scale',String(settings.controlScale||1));
+  if(id==='panel-garage')renderLoadouts();
+ if(id==='panel-quests')renderArenaProgress();
+}
+function renderLoadouts(){const el=$('loadout-bar');el.innerHTML='';for(let i=0;i<3;i++){const slot=document.createElement('div');const use=document.createElement('button');use.className='mbtn small';use.textContent=ptext('KOMBİN ','LOADOUT ')+(i+1);use.disabled=!profile.loadouts[i];use.onclick=()=>{if(restoreLoadout(profile,profile.loadouts[i])){saveProfile();setPlayerTank();lobbyStageKey='';openGarage();}};const save=document.createElement('button');save.className='mbtn small';save.textContent='+';save.setAttribute('aria-label',ptext('Bu kombini kaydet ','Save loadout ')+(i+1));save.onclick=()=>{profile.loadouts[i]=captureLoadout(profile);saveProfile();renderLoadouts();showToast(ptext('Kombin kaydedildi','Loadout saved'));};slot.append(use,save);el.append(slot);}}
+function renderPremiumStage(dt){
+ const panel=document.body.dataset.panel;
+ if(state!=='menu'||showroom.active||!['panel-main','panel-garage','panel-queue'].includes(panel))return false;
+ ensureShowroom();const key=JSON.stringify(captureLoadout(profile));
+ if(lobbyStageKey!==key){lobbyStageKey=key;ensureModel(tankById(profile.selected).model,true).then(()=>{if(lobbyStageKey===key && !showroom.active)buildShowroomTank();});showroom.mode='tank';showroom.tankId=profile.selected;showroom.accId=profile.accessory;showroom.rot=.65;showroom.elev=.36;buildShowroomTank();}
+ updateShowroom(dt);renderer.render(showroomScene,showroomCam);return true;
+}
+function openRankedQueue(){
+ if(!profile.tutorialDone && !(profile.games>0)){startSolo(0);startTutorial();return;}
+ practiceMatch=null;rankedView.client=rankedClient;rankedLoading++;rankedView.clear();controls.reset();rankedClient.stop();rankedClient.match=null;state='menu';mode='solo';showroom.active=false;queueSince=0;
+ $('title').textContent=ptext('ARANAN: RAKİBİN','NEXT: YOUR RIVAL');$('submsg').textContent='';showPanel('panel-queue');msgEl.classList.remove('hidden');$('topbar').style.visibility='hidden';$('queue-title').textContent=ptext('BAĞLANIYOR','CONNECTING');$('queue-status').textContent=ptext('Güvenli maç sunucusuna bağlanılıyor.','Connecting to the match server.');rankedClient.connect();
+}
+async function rankedEvent(m){
+ if(m.t==='ready'){applyArenaInventory(m.account);return;}
+ if(m.t==='queued'){queueSince=Date.now();$('queue-title').textContent=ptext('RAKİP ARANIYOR','FINDING A RIVAL');$('queue-status').textContent=ptext('Becerine ve bağlantına uygun bir oyuncu aranıyor.','Finding a player with a suitable rating and connection.');return;}
+ if(m.t==='unavailable'||m.t==='error'){$('queue-title').textContent=ptext('ARENA ŞU AN KAPALI','ARENA UNAVAILABLE');$('queue-status').textContent=m.code==='version'?ptext('Yeni sürüme güncelle.','Update to the latest version.'):ptext('Çevrim içi hizmete ulaşılamıyor. Solo veya bot antrenmanı oynayabilirsin.','Online service is unavailable. Solo and bot practice remain available.');queueSince=0;return;}
+ if(m.t==='reconnecting'){controls.reset();$('wave').textContent=ptext('BAĞLANTI YENİLENİYOR','RECONNECTING');return;}
+ if(m.t==='saving'){$('wave').textContent=ptext('SONUÇ KAYDEDİLİYOR','SAVING RESULT');return;}
+ if(m.t==='start'){
+  const gen=++rankedLoading;rankedPending=m;controls.reset();$('queue-title').textContent=ptext('RAKİP BULUNDU','RIVAL FOUND');
+  await Promise.all(Object.values(m.appearances||{}).map(id=>ensureModel(tankById(id).model)));
+  if(gen!==rankedLoading)return;
+  clearEnemies();clearBullets();clearPowerups();clearBallMode();clearCoop();clearTeam();buildArena(m.map,true);clearCovers();clearHazards();shieldBubble.visible=false;player.mesh.visible=false;
+  mode='ranked';state='play';paused=false;showroom.active=false;msgEl.classList.add('hidden');$('topbar').style.visibility='visible';$('healthwrap').style.visibility='visible';$('minimap').style.display='none';document.body.classList.add('ranked-combat','in-combat');
+  rankedView.begin(m);let names=$('arena-names');if(!names){names=document.createElement('div');names.id='arena-names';$('topbar').append(names);}names.textContent=Object.entries(m.names||{}).filter(([id])=>id!==m.you).map(([,name])=>name).join('');if(rankedPending?.tick>m.tick)rankedView.receive(rankedPending);rankedPending=null;audio();track('arena_start',{map:m.map});return;
+ }
+ if(m.t==='snapshot'){if(rankedView.latest?.id===m.id)rankedView.receive(m);else rankedPending=m;return;}
+ if(m.t==='result'||m.t==='void'){
+  rankedLoading++;controls.reset();rankedView.clear();rankedClient.stop();state='menu';mode='solo';document.body.classList.remove('in-combat','ranked-combat');$('topbar').style.visibility='hidden';msgEl.classList.remove('hidden');
+  const me=m.players?.[rankedClient.account?.id],won=m.winner===rankedClient.account?.id;
+  if(me)applyArenaInventory({...rankedClient.account,...me});
+  $('title').textContent=ptext('MAÇ RAPORU','MATCH REPORT');showPanel('panel-arena-result');$('arena-result-title').textContent=m.t==='void'?ptext('MAÇ GEÇERSİZ','MATCH VOID'):m.winner===null?ptext('BERABERE','DRAW'):won?ptext('ZAFER','VICTORY'):ptext('YENİDEN DENE','NEXT TIME');
+  $('arena-result-score').textContent=m.players?Object.values(m.players).map(p=>p.score).join(' — '):'—';
+  $('arena-result-detail').textContent=me?`${me.rating} ${ptext('puan','rating')} · ${me.delta>=0?'+':''}${me.delta} · ${me.games<5?ptext('Yerleştirme ','Placement ')+me.games+'/5':(m.reason==='disconnect'?ptext('Hükmen sonuç','Forfeit result'):ptext('Doğrulanmış sonuç','Verified result'))}`:ptext('Sunucu kesintisi · derece kaybı yok','Server interruption · no rating loss');
+  $('arena-result-reward').textContent=me?`+${me.reward} ${ptext('Arena kredisi · sunucuda saklandı','Arena credits · saved on server')}`:'';
+  track('arena_end',{reason:m.reason});return;
+ }
+}
+function updateRankedHud(){const s=rankedView.latest;if(!s)return;const me=s.players.find(p=>p.id===rankedView.you),opp=s.players.find(p=>p.id!==rankedView.you),sec=Math.max(0,Math.ceil((s.time>=180?210:180)-s.time));$('wave').textContent=`${s.time>=180?ptext('UZATMA ','OVERTIME '):''}${Math.floor(sec/60)}:${String(sec%60).padStart(2,'0')}`;$('score').textContent=`${me.score} — ${opp.score}`;$('health').textContent=me.alive?'▰'.repeat(me.hp)+'▱'.repeat(3-me.hp):ptext('YENİDEN DOĞUYOR','RESPAWNING');}
+async function openLeague(){const gen=++leagueGeneration;$('title').textContent=ptext('LİG','LEAGUE');$('submsg').textContent='';showPanel('panel-league');$('league-list').textContent=ptext('Yükleniyor…','Loading…');
+ try{const [board,status]=await Promise.all([fetch(apiBase()+'/api/arena/leaderboard',{cache:'no-store'}).then(r=>{if(!r.ok)throw Error();return r.json();}),fetch(apiBase()+'/api/arena/status',{cache:'no-store'}).then(r=>r.json())]);if(gen!==leagueGeneration)return;
+  const token=await readSession();if(token){const r=await fetch(apiBase()+'/api/arena/profile',{headers:{Authorization:'Bearer '+token},cache:'no-store'});if(r.ok)rankedClient.account=await r.json();}
+  const a=rankedClient.account;if(a)applyArenaInventory(a);$('league-rating').textContent=a?`${a.rating} ${ptext('PUAN','RATING')}`:ptext('YERLEŞTİRME','PLACEMENT');$('league-status').textContent=a?`${a.games} ${ptext('maç','matches')} · ${a.wins} ${ptext('zafer','wins')} · ${a.credits} ${ptext('Arena kredisi','Arena credits')}${status.development?' · TEST':''}`:ptext('İlk beş maçınla dereceni belirle.','Complete five placement matches.');
+  $('league-list').innerHTML=board.rows.length?board.rows.map((r,i)=>`<div class="league-row"><b>${i+1}</b><span>${esc(r.name)}</span><strong>${r.rating}</strong></div>`).join(''):ptext('Sezonun ilk sıralaması seni bekliyor.','Be among the first ranked players.');
+ }catch{$('league-list').textContent=ptext('Lig hizmeti şu an kullanılamıyor. Solo kayıtların cihazında korunuyor.','League is unavailable. Your solo progress remains on this device.');}
+}
+async function startArenaPractice(){
+ rankedClient.leave();practiceMatch=createMatch('practice',13,['local','bot']);practiceAcc=0;
+ rankedView.client={seq:0,send:m=>{if(practiceMatch)acceptInput(practiceMatch,'local',m);}};
+ await rankedEvent({...snapshotArena(practiceMatch),t:'start',you:'local',names:{local:profile.name,bot:'BOT · Eğitim'},appearances:{local:profile.selected,bot:'recruit'}});
+ banner(ptext('BOT ANTRENMANI · LİG PUANI YOK','BOT PRACTICE · NO RATING'));
+}
+function finishArenaPractice(){
+ const m=practiceMatch;practiceMatch=null;controls.reset();rankedView.clear();state='menu';mode='solo';document.body.classList.remove('in-combat','ranked-combat');$('topbar').style.visibility='hidden';msgEl.classList.remove('hidden');
+ $('title').textContent=ptext('ANTRENMAN RAPORU','PRACTICE REPORT');showPanel('panel-arena-result');$('arena-result-title').textContent=m.winner==='local'?ptext('ZAFER','VICTORY'):m.winner===null?ptext('BERABERE','DRAW'):ptext('ANTRENMAN TAMAMLANDI','PRACTICE COMPLETE');$('arena-result-score').textContent=m.players.map(p=>p.score).join(' — ');$('arena-result-detail').textContent=ptext('Aynı Arena kuralları · bot rakip','Same Arena rules · bot opponent');$('arena-result-reward').textContent=ptext('Antrenman lig puanı veya Arena kredisi vermez.','Practice awards no rating or Arena credits.');
+}
+$('queue-cancel').onclick=()=>{rankedLoading++;rankedClient.cancel();openMenu();};$('queue-practice').onclick=()=>{rankedLoading++;rankedClient.cancel();startArenaPractice();};$('league-play').onclick=openRankedQueue;$('arena-again').onclick=openRankedQueue;$('arena-home').onclick=openMenu;
+$('league-solo').onclick=()=>{showPanel('panel-lb');renderLeaderboard('week');};$('qtab-season').onclick=()=>$('btn-season').click();$('garage-inspect').onclick=()=>openShowroom(profile.selected);
+// Training stays available without a progression gate; legacy peer-authoritative rooms stay hidden.
+$('btn-duel').addEventListener('click',e=>{e.stopImmediatePropagation();startArenaPractice();},true);
+const premiumSettings=document.createElement('div');premiumSettings.className='premium-settings';premiumSettings.innerHTML=`<h3>KONTROL / CONTROLS</h3><button id="set-handed" class="mbtn small"></button><button id="set-motion" class="mbtn small"></button><button id="set-size" class="mbtn small"></button><p>1v1: ${ptext('maç duraklatılmaz','matches cannot be paused')}</p>`;$('set-close').before(premiumSettings);
+function refreshControlSettings(){$('set-handed').textContent=ptext('Solak düzeni: ','Left-handed: ')+(settings.leftHanded?ptext('AÇIK','ON'):ptext('KAPALI','OFF'));$('set-motion').textContent=ptext('Azaltılmış hareket: ','Reduced motion: ')+(settings.reducedMotion?ptext('AÇIK','ON'):ptext('KAPALI','OFF'));$('set-size').textContent=ptext('Kontrol boyutu: ','Control size: ')+Math.round((settings.controlScale||1)*100)+'%';refreshPremium(document.body.dataset.panel);}
+$('set-handed').onclick=()=>{settings.leftHanded=!settings.leftHanded;saveSettings();refreshControlSettings();};$('set-motion').onclick=()=>{settings.reducedMotion=!settings.reducedMotion;saveSettings();refreshControlSettings();};$('set-size').onclick=()=>{settings.controlScale=settings.controlScale===1.2?.85:settings.controlScale===.85?1:1.2;saveSettings();refreshControlSettings();};refreshControlSettings();
+const accountSettings=document.createElement('div');accountSettings.className='premium-settings';accountSettings.innerHTML=`<h3>${ptext('ARENA HESABI','ARENA ACCOUNT')}</h3><p>${ptext('Kurtarma kodun Arena dereceni ve kazandığın Arena kozmetiklerini başka cihazda açar. Solo kaydın bu cihazda kalır.','A recovery code restores your Arena rating and earned Arena cosmetics on another device. Solo saves stay on this device.')}</p><button id="account-backup" class="mbtn small">${ptext('KURTARMA KODU OLUŞTUR','CREATE RECOVERY CODE')}</button><input id="account-code" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="${ptext('Kurtarma kodu','Recovery code')}" aria-label="${ptext('Kurtarma kodu','Recovery code')}"><button id="account-restore" class="mbtn small">${ptext('ARENA HESABINI GERİ YÜKLE','RESTORE ARENA ACCOUNT')}</button><button id="account-delete" class="mbtn small">${ptext('ARENA HESABINI SİL','DELETE ARENA ACCOUNT')}</button><p id="account-status" role="status"></p>`;$('set-close').before(accountSettings);
+$('account-backup').onclick=async()=>{const b=$('account-backup');b.disabled=true;try{const a=await arenaProfile();if(!a)throw Error('no_account');const r=await rankedClient.request('recovery',{method:'POST',body:'{}'});$('account-code').value=r.code;$('account-status').textContent=ptext('Kodu güvenli bir yere kaydet; paylaşma. Eski kod geçersizdir. Kod bir kez kullanılabilir.','Save this code privately. The previous code is invalid. This code can be used once.');}catch{$('account-status').textContent=ptext('Önce Arena hesabı oluşturulmalı ve hizmet erişilebilir olmalı.','An Arena account and available service are required.');}finally{b.disabled=false;}};
+$('account-restore').onclick=async()=>{const b=$('account-restore');b.disabled=true;try{const code=$('account-code').value.trim().toLowerCase();if(!/^[a-f0-9]{48}$/.test(code))throw Error('code');const r=await rankedClient.request('recover',{method:'POST',body:JSON.stringify({code})});rankedClient.leave();await saveSession(r.token);rankedClient.token=r.token;applyArenaInventory(r.account);$('account-code').value='';$('account-status').textContent=ptext('Arena hesabın geri yüklendi. Yeni kurtarma kodu oluştur.','Arena account restored. Create a new recovery code.');}catch{$('account-status').textContent=ptext('Kod doğrulanamadı veya hizmete ulaşılamıyor.','Code could not be verified or service is unavailable.');}finally{b.disabled=false;}};
+let deleteArmedUntil=0;
+$('account-delete').onclick=async()=>{if(Date.now()>deleteArmedUntil){deleteArmedUntil=Date.now()+15000;$('account-status').textContent=ptext('Arena derecen, Arena bakiyen ve sunucudaki envanterin kalıcı silinir. Onaylamak için 15 saniye içinde SİL düğmesine yeniden dokun. Solo kayıtların korunur.','This permanently deletes your Arena rating, balance and server inventory. Tap DELETE again within 15 seconds to confirm. Solo saves remain.');return;}deleteArmedUntil=0;const b=$('account-delete');b.disabled=true;try{const a=await arenaProfile();if(!a)throw Error('missing');await rankedClient.request('delete',{method:'POST',body:JSON.stringify({confirm:a.id})});rankedClient.leave();await clearSession();rankedClient.account=null;rankedClient.token=null;$('account-status').textContent=ptext('Arena hesabı silindi.','Arena account deleted.');}catch{$('account-status').textContent=ptext('Silinemedi. Devam eden maçı bitir ve bağlantını kontrol et.','Could not delete. Finish any active match and check the connection.');}finally{b.disabled=false;}};
+renderer.domElement.addEventListener('pointermove',e=>{if(IS_TOUCH||state!=='play')return;const w=innerWidth,h=innerHeight,vw=mode==='ranked'?Math.min(w,h*16/9):w,vh=mode==='ranked'?vw*9/16:h;const ray=new THREE.Raycaster();ray.setFromCamera(new THREE.Vector2((e.clientX-(w-vw)/2)/vw*2-1,-((e.clientY-(h-vh)/2)/vh*2-1)),camera);const hit=new THREE.Vector3();if(ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0,1,0),-1.2),hit)){const p=mode==='ranked'?rankedView.predicted:player;if(p)controls.setAim(hit.x-p.x,hit.z-p.z);}});renderer.domElement.addEventListener('pointerdown',e=>{if(!IS_TOUCH&&state==='play'&&e.button===0)controls.state.fire=true;});addEventListener('pointerup',()=>{if(!IS_TOUCH)controls.state.fire=false;});
+setInterval(()=>{if(document.body.dataset.panel==='panel-queue'){const t=queueSince?Math.floor((Date.now()-queueSince)/1000):0;$('queue-time').textContent=`${String(Math.floor(t/60)).padStart(2,'0')}:${String(t%60).padStart(2,'0')}`;}},1000);
+
 applyLang();
 openMenu();
 // yeni oyuncu (FTUE) anında oyuna düşer: günlük ödül toastu maç başlangıcına binmesin, ilk menü ziyaretine ertele
@@ -6275,7 +6416,7 @@ if ((profile.games || 0) > 0) checkDaily(); else dailyPending = true;
     autoJoinFromLink(jc, validMode);
   } else if ((profile.games || 0) === 0) {
     // FTUE: ilk kez gelen oyuncu menü yerine DOĞRUDAN dalga moduna düşer (GDD: ≤5sn oyna, girişsiz, kontrolleri güvenle öğren)
-    setTimeout(() => { if (state === 'menu' && !ws) { startSolo(0); banner(T().ftueWelcome); } }, 600);
+    $('launch-caption').textContent = ptext('İLK GÖREVİN SENİ BEKLİYOR.','YOUR FIRST MISSION AWAITS.');
   }
 }
 
@@ -6374,7 +6515,7 @@ function pickBuild(id) {
 // oto-kalite: oyun sırasında FPS ölçülür; sürekli düşükse (zayıf cihaz) kalite bir kez otomatik düşürülür
 let perfAccum = 0, perfFrames = 0, perfChecked = false;
 function monitorPerf(dt, active) {
-  if (perfChecked || settings.quality === 'low') { perfChecked = true; return; }
+  if (settings.quality === 'low' || document.hidden || dt>.25) { perfAccum=0;perfFrames=0;return; }
   if (!active) { perfAccum = 0; perfFrames = 0; return; } // sadece oyunda ölç
   perfAccum += dt; perfFrames++;
   if (perfAccum >= 3.5) {
@@ -6383,7 +6524,7 @@ function monitorPerf(dt, active) {
       settings.quality = 'low'; saveSettings(); applyQuality();
       updateSettingsLabels(); showToast(T().autoLow, 3500);
       perfChecked = true;
-    } else if (fps >= 50) perfChecked = true; // yeterince akıcı, artık bakma
+    } // Continue sampling so thermal slowdown later in a session can lower quality.
     perfAccum = 0; perfFrames = 0;
   }
 }
@@ -6395,8 +6536,9 @@ function trackTransitions() {
     if (state === 'play') { matchMode = mode; matchStartT = clock.elapsedTime; matchStartKills = profile.kills || 0; track('gameplay_start', { mode }); }
     else if (lastTrackedState === 'play') {
       track('match_end', { mode: matchMode, dur: Math.round(clock.elapsedTime - matchStartT), reason: matchEndReason || 'quit', wave, tank: profile.selected, map: lastSoloMap }); // tank/map: denge okuması (tank başına zafer oranı) // wave: dalga-bazlı düşüş eğrisi için
+      const completed = ['win','victory','death','lose','wipe','complete','gameover'].includes(matchEndReason);
       matchEndReason = '';
-      questProgress('match', 1);                                   // görev: maç oyna
+      if (completed) questProgress('match', 1);                                   // görev: maç oyna
       questProgress('kill', (profile.kills || 0) - matchStartKills); // görev: tank patlat
     }
     lastTrackedState = state;
@@ -6407,9 +6549,12 @@ function trackTransitions() {
 function tick() {
   requestAnimationFrame(tick);
   if (glLost) { clock.getDelta(); return; } /* bağlam kayıpken çizme (hata seli yok) */
-  let dt = Math.min(clock.getDelta(), 0.05);
-  if (slowmoT > 0) { slowmoT -= dt; dt *= 0.35; } // MEGA SEKME slow-mo (gerçek zamanla söner, sim yavaşlar)
-  monitorPerf(dt, state === 'play' && !paused);
+  const realDt = clock.getDelta();
+  let dt = Math.min(realDt, 0.05);
+  document.body.classList.toggle('in-combat',state === 'play');
+  if (mode === 'ranked' && state === 'play') { if(practiceMatch){practiceAcc+=Math.min(realDt,.1);while(practiceAcc>=1/ARENA_RULES.hz&&!practiceMatch.over){practiceAcc-=1/ARENA_RULES.hz;advancePractice(practiceMatch);stepArena(practiceMatch);rankedView.receive({...snapshotArena(practiceMatch),events:practiceMatch.events});}if(practiceMatch.over){finishArenaPractice();return;}}monitorPerf(realDt,true); rankedView.frame(realDt);updateParticles(realDt);updateFlashes(realDt);updateFloaters(realDt);if(toastT>0){toastT-=realDt;if(toastT<=0){$('toast').style.opacity='0';toastBusy=false;pumpToast();}}updateRankedHud(); return; }
+  if (slowmoT > 0 && mode === 'solo') { slowmoT -= dt; dt *= 0.35; } // MEGA SEKME slow-mo (gerçek zamanla söner, sim yavaşlar)
+  monitorPerf(realDt, state === 'play' && !paused);
   trackTransitions();
 
   if (showroom.active) { updateShowroom(dt); tickCamoAnim(); renderer.render(showroomScene, showroomCam); return; }
@@ -6428,12 +6573,15 @@ function tick() {
       if (player.speedT > 0) player.speedT -= dt;
       if (player.tripleT > 0) player.tripleT -= dt;
       if (player.shieldT > 0) player.shieldT -= dt;
-      let turn = (keys.KeyA || keys.ArrowLeft ? 1 : 0) - (keys.KeyD || keys.ArrowRight ? 1 : 0) + touchCtl.turn;
-      let move = (keys.KeyW || keys.ArrowUp ? 1 : 0) - (keys.KeyS || keys.ArrowDown ? 1 : 0) + touchCtl.move;
-      turn = Math.max(-1, Math.min(1, turn)); move = Math.max(-1, Math.min(1, move));
-      player.a += turn * player.stat.turn * dt;
-      player.speed = move * player.stat.speed * (player.speedT > 0 ? 1.6 : 1) * bSpeed() * ((hazards.length && !mechIs('hover') && hazardAt(player.x, player.z, 'mud')) ? 0.6 : 1); // çamur
-      const dvx = fwdX(player.a) * player.speed, dvz = fwdZ(player.a) * player.speed;
+      const control = controls.read();
+      if (Math.hypot(control.x,control.z) > .05) {
+        const target = Math.atan2(-control.x,-control.z), diff = angNorm(target-player.a);
+        player.a += Math.max(-8*dt,Math.min(8*dt,diff));
+      }
+      player.aim = control.aim;
+      const move = Math.hypot(control.x,control.z);
+      player.speed = move * player.stat.speed * (player.speedT > 0 ? 1.6 : 1) * bSpeed() * ((hazards.length && !mechIs('hover') && hazardAt(player.x,player.z,'mud')) ? .6 : 1);
+      const dvx = control.x * player.speed / (move || 1), dvz = control.z * player.speed / (move || 1);
       const onIce = hazards.length && !mechIs('hover') && hazardAt(player.x, player.z, 'ice'); // Hover: buzda kaymaz
       if (onIce) {
         const k = 1 - Math.exp(-2.2 * dt); // buzda momentum → kayma
@@ -6465,21 +6613,22 @@ function tick() {
       if (settings.autoFire && (mode === 'solo' || mode === 'coop') && player.cool <= 0) {
         let best = 32, tgt = null;
         for (const e of enemies) if (e.alive) { const d = Math.hypot(e.x - player.x, e.z - player.z); if (d < best) { best = d; tgt = e; } }
-        if (tgt && Math.abs(angNorm(headingTo(player.x, player.z, tgt.x, tgt.z) - player.a)) < 0.38 && losClear(player.x, player.z, tgt.x, tgt.z)) autoF = true;
+        if (tgt && Math.abs(angNorm(headingTo(player.x, player.z, tgt.x, tgt.z) - player.aim)) < 0.38 && losClear(player.x, player.z, tgt.x, tgt.z)) autoF = true;
       }
-      if ((keys.Space || touchCtl.fire || autoF) && player.cool <= 0) {
+      if ((control.fire || autoF) && player.cool <= 0) {
         if (player.tripleT > 0 || bMulti()) { fire(player, -0.17); fire(player, 0); fire(player, 0.17); }
         else if (mechIs('twin')) { fire(player, -0.055); fire(player, 0.055); } // İkiz Namlu
         else fire(player);
         player.cool = player.stat.cool * bFire();
         tutEvent('fire');
-        if (mode === 'duel' || mode === 'ball' || mode === 'coop' || mode === 'team') netSend({ t: 'fire', x: player.x, z: player.z, a: player.a, bs: player.stat.bspeed, trip: player.tripleT > 0 });
+        if (mode === 'duel' || mode === 'ball' || mode === 'coop' || mode === 'team') netSend({ t: 'fire', x: player.x, z: player.z, a: player.aim, bs: player.stat.bspeed, trip: player.tripleT > 0 });
       }
       if (Math.abs(player.speed) > 3) { dustT -= dt; if (dustT <= 0) { dustT = 0.06; spawnDust(player.x - fwdX(player.a) * 1.3, player.z - fwdZ(player.a) * 1.3); } }
       if (player.maxHealth > 2 && player.health <= 2) { smokeT -= dt; if (smokeT <= 0) { smokeT = 0.16; spawnSmoke(player.x, player.z); } }
       const bob = Math.abs(Math.sin(clock.elapsedTime * 16)) * 0.05 * Math.min(1, Math.abs(player.speed) / 6);
       player.mesh.position.set(player.x, bob, player.z);
       player.mesh.rotation.y = player.a;
+      aimTank(player.mesh,player.aim,player.a);
       if (playerTurret) { recoil = Math.max(0, recoil - dt * 0.8); playerTurret.position.z = turretBaseZ + recoil; }
     }
 
@@ -6727,18 +6876,13 @@ function tick() {
     }
   }
 
-  const portrait = camera.aspect < 1;
-  const camBack = portrait ? 13 : 11.5;
-  _camTarget.set(player.x - fwdX(player.a) * camBack, portrait ? 21 : 9.0, player.z - fwdZ(player.a) * camBack); // kare başı alloc yok
-  camera.position.lerp(_camTarget, 1 - Math.exp(-4 * dt));
-  shake = Math.max(0, shake - dt * 1.2);
-  if (shake > 0) {
-    camera.position.x += (Math.random() - 0.5) * shake;
-    camera.position.y += (Math.random() - 0.5) * shake * 0.6;
-    camera.position.z += (Math.random() - 0.5) * shake;
-  }
-  const ahead = portrait ? 5.5 : 6;
-  camera.lookAt(player.x + fwdX(player.a) * ahead, 1.0, player.z + fwdZ(player.a) * ahead);
+  if (renderPremiumStage(dt)) return;
+  const focusX=player.x-Math.sin(player.aim)*2, focusZ=player.z-Math.cos(player.aim)*2;
+  _camTarget.set(focusX,32,focusZ+23);
+  camera.position.lerp(_camTarget,1-Math.exp(-6*dt));
+  shake=Math.max(0,shake-dt*2);
+  if(!settings.reducedMotion && shake>0) camera.position.x+=(Math.random()-.5)*Math.min(shake,.15);
+  camera.lookAt(focusX,0,focusZ-1.5);
 
   tickCamoAnim(); // animasyonlu desen (KOZMETİK 2.0)
   renderer.render(scene, camera);
