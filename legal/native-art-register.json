@@ -1,0 +1,59 @@
+{
+  "scope": "Native icon/splash authoring inputs and store artwork; not public web files",
+  "files": [
+    {
+      "file": "assets/icon-1024.png",
+      "sha256": "a0f878b133f1ac0ab78a1bf975f0d45b4fe1f0eecfc314c660eb3692b238de0e",
+      "bytes": 139148,
+      "release": true,
+      "status": "project-authored",
+      "source": "design/identity/app-icon.svg",
+      "generation": "design/identity/build_identity.cjs"
+    },
+    {
+      "file": "resources/icon.png",
+      "sha256": "a0f878b133f1ac0ab78a1bf975f0d45b4fe1f0eecfc314c660eb3692b238de0e",
+      "bytes": 139148,
+      "release": true,
+      "status": "project-authored",
+      "source": "design/identity/app-icon.svg",
+      "generation": "design/identity/build_identity.cjs"
+    },
+    {
+      "file": "resources/splash.png",
+      "sha256": "c533e7d85a81990109b6e6a63228cffc324fce7666a503411da64920146a3501",
+      "bytes": 244548,
+      "release": true,
+      "status": "project-authored",
+      "source": "design/identity/app-icon.svg",
+      "generation": "design/identity/build_identity.cjs"
+    },
+    {
+      "file": "resources/splash-dark.png",
+      "sha256": "c533e7d85a81990109b6e6a63228cffc324fce7666a503411da64920146a3501",
+      "bytes": 244548,
+      "release": true,
+      "status": "project-authored",
+      "source": "design/identity/app-icon.svg",
+      "generation": "design/identity/build_identity.cjs"
+    },
+    {
+      "file": "resources/store/play-icon-512.png",
+      "sha256": "d47312908456dfa26dce5c6f54576c871d439b1c831e5a2c55b880f5032048cc",
+      "bytes": 56757,
+      "release": true,
+      "status": "project-authored",
+      "source": "design/identity/app-icon.svg",
+      "generation": "design/identity/build_identity.cjs"
+    },
+    {
+      "file": "resources/store/feature-1024x500.jpg",
+      "sha256": "2d6496cf0e21afccdf352c4c99c9de95966ec52e72c32eb5a0e977a36b11ef1a",
+      "bytes": 28611,
+      "release": true,
+      "status": "project-authored",
+      "source": "design/identity/app-icon.svg",
+      "generation": "design/identity/build_identity.cjs"
+    }
+  ]
+}

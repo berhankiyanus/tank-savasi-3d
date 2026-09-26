@@ -1,0 +1,137 @@
+[
+  {
+    "localSource": "recovery-2026-09-26/blender-source-history/ce425a7ad40379f6.py",
+    "sha256": "ce425a7ad40379f672e8d18b46bf095cbc5de840d410a429ad2bf40467813624",
+    "imports": [
+      "imp(path):",
+      "imp(NAT+'cactus_tall.glb'),'Kaktus',height=4.6)",
+      "imp(NAT+'rock_largeB.glb'),'Kaya',height=2.6, at=(10,0,0)); remap(k,{'grass':flat('KumAcik',(0.86,0.74,0.52),0.95),'_defaultMat':sand2,'dirt':flat('KayaCol',(0.6,0.5,0.4),0.95)})",
+      "imp(NAT+'tree_palmDetailedTall.glb'),'Palmiye',height=9.0, at=(20,0,0))",
+      "imp(HOL+'tree-snow-a.glb'),'Cam1',height=8.0); rep['cam1_groups']=flatten(c1,'KarA')",
+      "imp(HOL+'tree-snow-b.glb'),'Cam2',height=7.0, at=(10,0,0)); rep['cam2_groups']=flatten(c2,'KarB')",
+      "imp(HOL+'rocks-large.glb'),'Kaya',height=3.0, at=(20,0,0)); rep['kaya_groups']=flatten(ky,'KarK')",
+      "imp(HOL+'snowman.glb'),'Kardan',height=2.6, at=(30,0,0)); rep['kardan_groups']=flatten(sm,'KarS')",
+      "imp(SPC+'satelliteDish_large.glb'),'Anten',height=8.0)",
+      "imp(SPC+'hangar_roundGlass.glb'),'Kubbe',height=6.0, at=(20,0,0)); remap(kb,{'_defaultMat':flat('GlowKubbe',(0.3,0.7,0.8),0.3)})",
+      "imp(SPC+fn); sel([o]); bpy.ops.object.transform_apply(location=True, rotation=True, scale=True); a,b=bbox([o]); o.data.transform(Matrix.Translation(Vector((-(a.x+b.x)/2,-(a.y+b.y)/2,-a.z+z)))); z+= (b.z-a.z)*0.96; parts.append(o)",
+      "imp(SPC+'rock_crystalsLargeA.glb'),'Kaya',height=4.5, at=(0,20,0)); remap(kr,{'crystal':flat('GlowKristal',(0.55,0.35,1.0),0.3)})",
+      "imp(SPC+'meteor_detailed.glb'),'Meteor',height=3.0, at=(20,20,0))",
+      "imp(NAT+'rock_tallA.glb'),'Kaya',height=4.5); remap(r1,{'*':lk})"
+    ],
+    "outputs": [
+      "decor_desert_raw.glb",
+      "decor_lava_raw.glb",
+      "decor_snow_raw.glb",
+      "decor_space_raw.glb"
+    ]
+  },
+  {
+    "localSource": "recovery-2026-09-26/blender-source-history/299852ebcfe1f559.py",
+    "sha256": "299852ebcfe1f559f34cdf93bd662708fe1f3b8c90c887f9d0ce50bf93473bc8",
+    "imports": [
+      "imp(path):",
+      "imp(HOL+'tree-snow-a.glb'),'Cam1',height=8.0); rep['c1']=flatten(c1,'Cam',4)",
+      "imp(HOL+'tree-snow-b.glb'),'Cam2',height=7.0, at=(10,0,0)); rep['c2']=flatten(c2,'Cam',4)",
+      "imp(HOL+'rocks-large.glb'),'Kaya',height=3.0, at=(20,0,0)); rep['ky']=flatten(ky,'Kaya',3)",
+      "imp(HOL+'snowman.glb'),'Kardan',height=2.6, at=(30,0,0)); rep['sm']=flatten(sm,'Kardan',5)"
+    ],
+    "outputs": [
+      "decor_snow_raw.glb"
+    ]
+  },
+  {
+    "localSource": "recovery-2026-09-26/blender-source-history/54c8058b36ee2bd5.py",
+    "sha256": "54c8058b36ee2bd5961650ca6fef0e500a10a79ab453addd10f4373de9dc07e5",
+    "imports": [],
+    "outputs": [
+      "decor_canyon.glb"
+    ]
+  },
+  {
+    "localSource": "recovery-2026-09-26/blender-source-history/239160c3172ece65.py",
+    "sha256": "239160c3172ece65120ec7b7137c4ab560b93a60e6d1749f40fdd5c9cb04bc96",
+    "imports": [],
+    "outputs": [
+      "decor_city.glb"
+    ]
+  },
+  {
+    "localSource": "recovery-2026-09-26/blender-source-history/f95ea7dc613634e5.py",
+    "sha256": "f95ea7dc613634e50aa7029fbc96030eebe9cfef1f27b74d0e03d53ff296da4e",
+    "imports": [
+      "imp(path):",
+      "imp(HOL+'tree-snow-a.glb'),'Cam1',height=8.0); rep['c1']=flatten(c1)",
+      "imp(HOL+'tree-snow-b.glb'),'Cam2',height=7.0, at=(10,0,0)); rep['c2']=flatten(c2)",
+      "imp(HOL+'rocks-large.glb'),'Kaya',height=3.0, at=(20,0,0)); rep['ky']=flatten(ky)",
+      "imp(HOL+'snowman.glb'),'Kardan',height=2.6, at=(30,0,0)); rep['sm']=flatten(sm)"
+    ],
+    "outputs": [
+      "decor_snow_raw.glb"
+    ]
+  },
+  {
+    "localSource": "recovery-2026-09-26/blender-source-history/19d1794bc01ee517.py",
+    "sha256": "19d1794bc01ee517fddc5cbc6dea43dc71074881d407b02f866f65cf3c2af69b",
+    "imports": [],
+    "outputs": [
+      "decor_canyon.glb"
+    ]
+  },
+  {
+    "localSource": "recovery-2026-09-26/blender-source-history/e7fd09c40af1b5a7.py",
+    "sha256": "e7fd09c40af1b5a790386610fd2b4c1877f2a656d9351f40235a82cd1975e4e7",
+    "imports": [
+      "imp(path):",
+      "imp(NAT+'tree_default.glb'),'Agac1',height=7.5)",
+      "imp(NAT+'tree_oak.glb'),'Agac2',height=6.5, at=(12,0,0))",
+      "imp(NAT+'cactus_tall.glb'),'Kaktus',height=4.6)",
+      "imp(NAT+'rock_largeB.glb'),'Kaya',height=2.6, at=(10,0,0)); remap(k,{'grass':flat('KumAcik',(0.82,0.7,0.48),0.95),'_defaultMat':sand2,'dirt':flat('KayaCol',(0.55,0.45,0.36),0.95)})",
+      "imp(NAT+'tree_palmDetailedTall.glb'),'Palmiye',height=9.0, at=(20,0,0))"
+    ],
+    "outputs": [
+      "decor_desert_raw.glb",
+      "decor_stadium_raw.glb"
+    ]
+  },
+  {
+    "localSource": "recovery-2026-09-26/blender-source-history/7ef2e84b241d0c48.py",
+    "sha256": "7ef2e84b241d0c4895c8b2adbeacb7cbca8af79028440fe5916f08e4caacb752",
+    "imports": [],
+    "outputs": [
+      "decor_harbor.glb"
+    ]
+  },
+  {
+    "localSource": "recovery-2026-09-26/blender-source-history/9eb8e808f3080871.py",
+    "sha256": "9eb8e808f3080871b7fc428c13c1b5873672c07b56abeedeb11601301d5e3dd0",
+    "imports": [
+      "imp(path):",
+      "imp(path), tid, **dim)"
+    ],
+    "outputs": []
+  },
+  {
+    "localSource": "recovery-2026-09-26/blender-source-history/4414bb02c7fd3f0b.py",
+    "sha256": "4414bb02c7fd3f0b782a4355a99d103949afceb5b32fd362c8651ecec4926061",
+    "imports": [],
+    "outputs": [
+      "decor_city.glb"
+    ]
+  },
+  {
+    "localSource": "recovery-2026-09-26/blender-source-history/6c457c13058995f6.py",
+    "sha256": "6c457c13058995f68dd397683f2d0b1b8eb8cc893de07ccdbcbc558f1a1a3fc4",
+    "imports": [
+      "imp(path):",
+      "imp(NAT+'tree_default.glb'),'Agac1',height=7.5, at=(0,0,0))",
+      "imp(NAT+'tree_oak.glb'),'Agac2',height=6.5, at=(12,0,0))",
+      "imp(NAT+'cactus_tall.glb'),'Kaktus',height=4.6, at=(0,0,0))",
+      "imp(NAT+'rock_largeB.glb'),'Kaya',height=2.6, at=(10,0,0))",
+      "imp(NAT+'tree_palmDetailedTall.glb'),'Palmiye',height=9.0, at=(20,0,0))"
+    ],
+    "outputs": [
+      "decor_desert_raw.glb",
+      "decor_stadium_raw.glb"
+    ]
+  }
+]

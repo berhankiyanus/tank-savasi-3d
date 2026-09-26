@@ -9,9 +9,10 @@
 <link rel="icon" href="data:,">
 %%GOOGLE_EXIT%%
 <style>
-@font-face { font-family: 'Russo One'; font-style: normal; font-weight: 400; src: url(data:font/woff2;base64,%%FONT_LATIN%%) format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
-@font-face { font-family: 'Russo One'; font-style: normal; font-weight: 400; src: url(data:font/woff2;base64,%%FONT_LATINEXT%%) format('woff2'); unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF; }
-html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #0d1409; font-family: 'Russo One', "Courier New", monospace; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: none; }
+@font-face{font-family:Field;src:url(data:font/ttf;base64,%%FONT_MAIN%%) format("truetype")}
+@font-face{font-family:Symbols;src:url(data:font/ttf;base64,%%FONT_SYMBOLS%%) format("truetype")}
+#pa-licenses{position:fixed;right:8px;bottom:8px;z-index:60;color:#e4ebc8;background:#17221c;padding:7px;font:11px/1.5 sans-serif;max-width:90vw;touch-action:pan-y}#pa-licenses[open]{inset:12px;overflow:auto;max-height:90vh}#pa-licenses pre{white-space:pre-wrap;overflow-wrap:anywhere}#pa-licenses summary{cursor:pointer;min-height:24px}
+html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #0d1409; font-family: Field,Symbols, Field,Symbols,sans-serif; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: none; }
 #game { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
 .hud { position: fixed; z-index: 10; pointer-events: none; color: #fff; text-shadow: 0 2px 0 #000, 0 0 10px rgba(0,0,0,.8); }
 #top { top: calc(10px + env(safe-area-inset-top)); left: 12px; right: 12px; display: flex; justify-content: space-between; align-items: flex-start; font-size: clamp(13px, 3.6vmin, 20px); letter-spacing: 1px; }
@@ -38,7 +39,7 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
 #end .b { display: inline-block; margin-top: 4vh; background: linear-gradient(#ffb347, #ff8c1a); color: #1a1000; font-size: clamp(18px, 5.6vmin, 34px); padding: 3vmin 8vmin; border-radius: 60px; border: 3px solid #ffd88a; box-shadow: 0 10px 30px rgba(0,0,0,.5); animation: pulse .9s ease-in-out infinite; }
 @keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.06); } }
 #load { position: fixed; inset: 0; z-index: 50; background: #0d1409; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #ffd76a; letter-spacing: 4px; font-size: clamp(20px, 7vmin, 40px); }
-#load small { font-size: clamp(11px, 3vmin, 15px); color: #cfe6bf; letter-spacing: 2px; margin-top: 14px; font-family: "Courier New", monospace; }
+#load small { font-size: clamp(11px, 3vmin, 15px); color: #cfe6bf; letter-spacing: 2px; margin-top: 14px; font-family: Field,Symbols,sans-serif; }
 </style>
 </head>
 <body>
@@ -52,9 +53,10 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
 <div id="flash"></div>
 <div id="stick"><div id="knob"></div></div>
 <div id="fire">ATEŞ</div>
-<div id="end"><div class="t">TANK SAVAŞI 3D</div><div class="r" id="endr"></div><div class="s">15 TANK · 12 HARİTA · SANDIKLAR</div><div><div class="b">▶ ÜCRETSİZ İNDİR</div></div></div>
+<div id="end"><div class="t">TANK SAVAŞI 3D</div><div class="r" id="endr"></div><div class="s">15 TANK · 16 HARİTA · SANDIKLAR</div><div><div class="b">▶ ÜCRETSİZ İNDİR</div></div></div>
 <div id="load">TANK SAVAŞI 3D<small>YÜKLENİYOR…</small></div>
 <script>window.__PA = { player: "%%GLB_PLAYER%%", enemy: "%%GLB_ENEMY%%", boss: "%%GLB_BOSS%%", url: "%%STORE_URL%%" };</script>
 <script>%%JS%%</script>
+<details id="pa-licenses"><summary>Lisanslar / Licenses</summary><p>Tank modelleri proje üretimidir. Field Symbols, Noto Emoji altkümesidir; fontlar SIL OFL 1.1 ile dağıtılır. Three.js r160 MIT lisanslıdır.</p><pre>%%LICENSE_TEXT%%</pre></details>
 </body>
 </html>

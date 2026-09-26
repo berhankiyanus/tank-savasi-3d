@@ -1,0 +1,30 @@
+[
+  {
+    "file": "libs/three.module.js",
+    "source": "https://raw.githubusercontent.com/mrdoob/three.js/r160/build/three.module.js",
+    "sourceSha256": "76dea8151bc9352aef3528b4262e249b2604f62543828328db978d060d61a495",
+    "sha256": "76dea8151bc9352aef3528b4262e249b2604f62543828328db978d060d61a495",
+    "match": "exact"
+  },
+  {
+    "file": "libs/jsm/loaders/GLTFLoader.js",
+    "source": "https://raw.githubusercontent.com/mrdoob/three.js/r160/examples/jsm/loaders/GLTFLoader.js",
+    "sourceSha256": "d073b438e6a07e1359741dd5d6c76c953420cc0d4fd84eb1bdde94315540e6a3",
+    "sha256": "4ca7dd12b6be001ecbd52091e6f21503dca3944d4e389af7b57da16275d31827",
+    "match": "only local import path changed"
+  },
+  {
+    "file": "libs/jsm/loaders/RGBELoader.js",
+    "source": "https://raw.githubusercontent.com/mrdoob/three.js/r160/examples/jsm/loaders/RGBELoader.js",
+    "sourceSha256": "f0e87d0008d9484d31358b32befd1bf80e4301f77573cc9a7cf7d871cc3f64b4",
+    "sha256": "a450e3eb44d92f450606902431807f0f51d970efe35c75c037a781c50829f9c8",
+    "match": "only local import path changed"
+  },
+  {
+    "file": "libs/jsm/utils/BufferGeometryUtils.js",
+    "source": "https://raw.githubusercontent.com/mrdoob/three.js/r160/examples/jsm/utils/BufferGeometryUtils.js",
+    "sourceSha256": "9be041e96308775d00e2695cc607645b9a9b64fd7c0e759dd8f7c00a8d92becb",
+    "sha256": "5e330ce5bc7f2f46c07c67646e18ed2472e9f4479546a253b5ab3dfc5ab0244b",
+    "match": "only local import path changed"
+  }
+]

@@ -1,0 +1,393 @@
+{
+  "checkedAt": "2026-09-26T12:00:55.550Z",
+  "files": [
+    {
+      "file": "assets/textures/asphalt_diff.jpg",
+      "asset": "asphalt_03",
+      "author": {
+        "Dario Barresi": "processing",
+        "Charlotte Baglioni": "photography"
+      },
+      "license": "CC0-1.0",
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/asphalt_03/asphalt_03_diff_1k.jpg",
+      "sourcePage": "https://polyhaven.com/a/asphalt_03",
+      "downloadSha256": "95ad02e2631c41cf9fdd6a37596cf75adb4fb8a8b6880567cc78ed1c41dc5681",
+      "upstreamMd5": "1dba74b167b3d8460717776b22ca42c5",
+      "sha256": "f6bc65aa3a182c8752fc39b8dbef629778420a0a25f9027a07a8b69c4ae8702c",
+      "transformation": "Sharp resize 1024px; JPEG 82"
+    },
+    {
+      "file": "assets/textures/asphalt_nor.jpg",
+      "asset": "asphalt_03",
+      "author": {
+        "Dario Barresi": "processing",
+        "Charlotte Baglioni": "photography"
+      },
+      "license": "CC0-1.0",
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/asphalt_03/asphalt_03_nor_gl_1k.jpg",
+      "sourcePage": "https://polyhaven.com/a/asphalt_03",
+      "downloadSha256": "978de8349ce2e9989325099a6fd1f5ea6b2826528e1264606a5c51296b1e2888",
+      "upstreamMd5": "e24cfa2b2c30c16374424eecbebfc201",
+      "sha256": "323ac6339b4080a51680740cc3502802a76fa012301e0b37a19d582432311f03",
+      "transformation": "Sharp resize 512px; JPEG 88"
+    },
+    {
+      "file": "assets/textures/asphalt_ao.jpg",
+      "asset": "asphalt_03",
+      "author": {
+        "Dario Barresi": "processing",
+        "Charlotte Baglioni": "photography"
+      },
+      "license": "CC0-1.0",
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/asphalt_03/asphalt_03_ao_1k.jpg",
+      "sourcePage": "https://polyhaven.com/a/asphalt_03",
+      "downloadSha256": "b2b71533d93ab134b6ff24418806079bc2d0f03ec29e619bdef91bba9ab41a1b",
+      "upstreamMd5": "42c7a6189e3416d175cb2e18e055b994",
+      "sha256": "736e8b33e6ca4a60097e486cf8e099488200c91ed3fbd0dfb356591dc5bd3f4d",
+      "transformation": "Sharp resize 512px; JPEG 82"
+    },
+    {
+      "file": "assets/textures/asphalt_rough.jpg",
+      "asset": "asphalt_03",
+      "author": {
+        "Dario Barresi": "processing",
+        "Charlotte Baglioni": "photography"
+      },
+      "license": "CC0-1.0",
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/asphalt_03/asphalt_03_rough_1k.jpg",
+      "sourcePage": "https://polyhaven.com/a/asphalt_03",
+      "downloadSha256": "069b6ea342aaad04fd1582f59c16fbbe5c7a6f0f3a87bc9d57648ed53336fb3a",
+      "upstreamMd5": "475b1ae5bce5abb88a73b14abc5eab5d",
+      "sha256": "898f19481aea9b9640a226b7648a562bad98c0f02641da4ecef70d8ac86a363b",
+      "transformation": "Sharp resize 512px; JPEG 82"
+    },
+    {
+      "file": "assets/textures/ground_diff.jpg",
+      "asset": "brown_mud_leaves_01",
+      "author": {
+        "Rob Tuytel": "All"
+      },
+      "license": "CC0-1.0",
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/brown_mud_leaves_01/brown_mud_leaves_01_diff_1k.jpg",
+      "sourcePage": "https://polyhaven.com/a/brown_mud_leaves_01",
+      "downloadSha256": "c598c555f13cd5328409fd5e2a45496a26e319e52299e3959042f1449c2f1b06",
+      "upstreamMd5": "5340848384f9bb19bfa6e7ac459683d7",
+      "sha256": "7045eb6d2febbebfd8fe94d0a6f9fc7d9230d246b996e1f03b657c52a84a9279",
+      "transformation": "Sharp resize 1024px; JPEG 82"
+    },
+    {
+      "file": "assets/textures/ground_nor.jpg",
+      "asset": "brown_mud_leaves_01",
+      "author": {
+        "Rob Tuytel": "All"
+      },
+      "license": "CC0-1.0",
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/brown_mud_leaves_01/brown_mud_leaves_01_nor_gl_1k.jpg",
+      "sourcePage": "https://polyhaven.com/a/brown_mud_leaves_01",
+      "downloadSha256": "8dd5166ddcc293cefd331d491ce6b9162bc9202ddd999ac1e4141697560d38e0",
+      "upstreamMd5": "3698df51ef8262ddf2248ffca1e73196",
+      "sha256": "acf1c5f3948e251d400b3c7256e5e2483d66258ffc99cdcd376970719b13d873",
+      "transformation": "Sharp resize 512px; JPEG 88"
+    },
+    {
+      "file": "assets/textures/ground_ao.jpg",
+      "asset": "brown_mud_leaves_01",
+      "author": {
+        "Rob Tuytel": "All"
+      },
+      "license": "CC0-1.0",
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/brown_mud_leaves_01/brown_mud_leaves_01_ao_1k.jpg",
+      "sourcePage": "https://polyhaven.com/a/brown_mud_leaves_01",
+      "downloadSha256": "313206ae1529264d21085a0017e054010f2e37e89a7bb14296c95bbf8d760cb8",
+      "upstreamMd5": "f9195054f2368febc0358bfabaf12148",
+      "sha256": "9f9a7c9bb955d3c76aae467c4dd33e9c5c44067e193772ea7ca57a5d74b0742e",
+      "transformation": "Sharp resize 512px; JPEG 82"
+    },
+    {
+      "file": "assets/textures/ground_rough.jpg",
+      "asset": "brown_mud_leaves_01",
+      "author": {
+        "Rob Tuytel": "All"
+      },
+      "license": "CC0-1.0",
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/brown_mud_leaves_01/brown_mud_leaves_01_rough_1k.jpg",
+      "sourcePage": "https://polyhaven.com/a/brown_mud_leaves_01",
+      "downloadSha256": "9f84b7e7b5fdd2ff9798645fdec243b994fced05e543692761994b793211b5d0",
+      "upstreamMd5": "3896f151d1b1de421a61c3c5d9a742b0",
+      "sha256": "8a2f2a2b83400d51b5c1df54e75f1e8bb3cb44fbdd8d3eb3e6ccc9b54f86630f",
+      "transformation": "Sharp resize 512px; JPEG 82"
+    },
+    {
+      "file": "assets/textures/grass_diff.jpg",
+      "asset": "leafy_grass",
+      "author": {
+        "Charlotte Baglioni": "All"
+      },
+      "license": "CC0-1.0",
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/leafy_grass/leafy_grass_diff_1k.jpg",
+      "sourcePage": "https://polyhaven.com/a/leafy_grass",
+      "downloadSha256": "cfa40bc9d9417d1852db8753a8d5917f110c40101179f63543c382e39bc05e4a",
+      "upstreamMd5": "0dbc071e91d6905edfcfbe8eb785a1ab",
+      "sha256": "f259177f7699af93910054ff832b0d57a437e63c3ad50c2b3b3453555eca01e0",
+      "transformation": "Sharp resize 1024px; JPEG 82"
+    },
+    {
+      "file": "assets/textures/grass_nor.jpg",
+      "asset": "leafy_grass",
+      "author": {
+        "Charlotte Baglioni": "All"
+      },
+      "license": "CC0-1.0",
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/leafy_grass/leafy_grass_nor_gl_1k.jpg",
+      "sourcePage": "https://polyhaven.com/a/leafy_grass",
+      "downloadSha256": "832328216adc0a7e1f70a31d5ee48c9ab7f2152d83816122736cf42ac4b2ebd6",
+      "upstreamMd5": "8279e096e204ea326d57a318869f99df",
+      "sha256": "6e3d1027c946ff372a77cf44b012afc413e96b1c5f535964f39b0cb6f96f00e2",
+      "transformation": "Sharp resize 512px; JPEG 88"
+    },
+    {
+      "file": "assets/textures/grass_ao.jpg",
+      "asset": "leafy_grass",
+      "author": {
+        "Charlotte Baglioni": "All"
+      },
+      "license": "CC0-1.0",
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/leafy_grass/leafy_grass_ao_1k.jpg",
+      "sourcePage": "https://polyhaven.com/a/leafy_grass",
+      "downloadSha256": "0a53eeb9a89531b5d2ceb42f5d86f320396612844dc376c8f0d6d93d6e14cefa",
+      "upstreamMd5": "c9d0077eefe28c5b18cf2fe78e945abb",
+      "sha256": "d8c2d1639f59af3bab0cc4fa77640a9fc64be24c3baf0498a6783d6cd820ffa0",
+      "transformation": "Sharp resize 512px; JPEG 82"
+    },
+    {
+      "file": "assets/textures/grass_rough.jpg",
+      "asset": "leafy_grass",
+      "author": {
+        "Charlotte Baglioni": "All"
+      },
+      "license": "CC0-1.0",
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/leafy_grass/leafy_grass_rough_1k.jpg",
+      "sourcePage": "https://polyhaven.com/a/leafy_grass",
+      "downloadSha256": "0c2a1d91aacb8e54a496051b59854e51e456fe858abeade778e308359ef16463",
+      "upstreamMd5": "05f6bb1383e12b327727d313c5899cf2",
+      "sha256": "2f14453006505dabc1a4c47491f8ad5434367303da8829e929ef2683640b1d7f",
+      "transformation": "Sharp resize 512px; JPEG 82"
+    },
+    {
+      "file": "assets/textures/sand_diff.jpg",
+      "asset": "aerial_beach_01",
+      "author": {
+        "Rob Tuytel": "All"
+      },
+      "license": "CC0-1.0",
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/aerial_beach_01/aerial_beach_01_diff_1k.jpg",
+      "sourcePage": "https://polyhaven.com/a/aerial_beach_01",
+      "downloadSha256": "5b849983d08fda1c6d28b95b55851c2227697598721b25ff2b85e57cf8b04fc4",
+      "upstreamMd5": "0ec8483b18d960f2152dae2a64806b3d",
+      "sha256": "e741b7a58b61e6222465526f00d3e6ff881092a81f4535849112fe9c968266e1",
+      "transformation": "Sharp resize 1024px; JPEG 82"
+    },
+    {
+      "file": "assets/textures/sand_nor.jpg",
+      "asset": "aerial_beach_01",
+      "author": {
+        "Rob Tuytel": "All"
+      },
+      "license": "CC0-1.0",
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/aerial_beach_01/aerial_beach_01_nor_gl_1k.jpg",
+      "sourcePage": "https://polyhaven.com/a/aerial_beach_01",
+      "downloadSha256": "0133712fbe5de7389948150a6900a687707b93df4e6652b531b6e317b49737b3",
+      "upstreamMd5": "f6810f845aefe51dccf4c4ac6f2ab05a",
+      "sha256": "149aa64353a7c58ec7e265dd63be57dea2d4333f042755826ed46e7bffe81df8",
+      "transformation": "Sharp resize 512px; JPEG 88"
+    },
+    {
+      "file": "assets/textures/sand_ao.jpg",
+      "asset": "aerial_beach_01",
+      "author": {
+        "Rob Tuytel": "All"
+      },
+      "license": "CC0-1.0",
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/aerial_beach_01/aerial_beach_01_ao_1k.jpg",
+      "sourcePage": "https://polyhaven.com/a/aerial_beach_01",
+      "downloadSha256": "5a814b7486c2e7fab80f905ba041d0af07879377578d6c47ec379a24e9ecdb6b",
+      "upstreamMd5": "a48eec1b538bb80021ae8e168be47f58",
+      "sha256": "53743f7eca5f273b29d9c61612190fa0da136a78f8b68ade2e40e8c999ac7d5b",
+      "transformation": "Sharp resize 512px; JPEG 82"
+    },
+    {
+      "file": "assets/textures/sand_rough.jpg",
+      "asset": "aerial_beach_01",
+      "author": {
+        "Rob Tuytel": "All"
+      },
+      "license": "CC0-1.0",
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/aerial_beach_01/aerial_beach_01_rough_1k.jpg",
+      "sourcePage": "https://polyhaven.com/a/aerial_beach_01",
+      "downloadSha256": "1c5ed28fc47821fea601da5f8793462fc1aebe009ea72c272b9c32ce5eb27ccf",
+      "upstreamMd5": "de38ac4f204371566b06c806236d656c",
+      "sha256": "4d4ee5a20c6dceda513fc423ce35e333d0752d842e203f4476c413b0aeeb83a5",
+      "transformation": "Sharp resize 512px; JPEG 82"
+    },
+    {
+      "file": "assets/textures/snow_diff.jpg",
+      "asset": "snow_02",
+      "author": {
+        "Rob Tuytel": "All"
+      },
+      "license": "CC0-1.0",
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/snow_02/snow_02_diff_1k.jpg",
+      "sourcePage": "https://polyhaven.com/a/snow_02",
+      "downloadSha256": "523a4e69c90b96d787dd69b897f29a2b3761a017024405c60aa630d1e8e9009a",
+      "upstreamMd5": "fc54766c6b36ff298699115a619d440b",
+      "sha256": "6a04bb21126c21f8c8c172016fd3099c881e6f4eb21f8e1cf305cf1ec7789b49",
+      "transformation": "Sharp resize 1024px; JPEG 82"
+    },
+    {
+      "file": "assets/textures/snow_nor.jpg",
+      "asset": "snow_02",
+      "author": {
+        "Rob Tuytel": "All"
+      },
+      "license": "CC0-1.0",
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/snow_02/snow_02_nor_gl_1k.jpg",
+      "sourcePage": "https://polyhaven.com/a/snow_02",
+      "downloadSha256": "9495ec680616b8340e2cbecbd151bff84c690cfad4209e90cc98d2d0ba81f810",
+      "upstreamMd5": "f16b5701f9ad521cdd6af10c1d6d2b48",
+      "sha256": "02ac1460873fcedcfe5ab41ef90f399a9c7b63c15261c7158cd35e893a9b1eab",
+      "transformation": "Sharp resize 512px; JPEG 88"
+    },
+    {
+      "file": "assets/textures/snow_ao.jpg",
+      "asset": "snow_02",
+      "author": {
+        "Rob Tuytel": "All"
+      },
+      "license": "CC0-1.0",
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/snow_02/snow_02_ao_1k.jpg",
+      "sourcePage": "https://polyhaven.com/a/snow_02",
+      "downloadSha256": "1be6441229c6db11ca39068e46eb4275e33d9c99f8e15d7a5b53d95c47e10ff6",
+      "upstreamMd5": "c3cbf062262bc7ac6ecc9099ac81b4a3",
+      "sha256": "4cb651d90b99e8fe7d5e3636b31fb39d8ddd41c42731380fe9123b9318abf375",
+      "transformation": "Sharp resize 512px; JPEG 82"
+    },
+    {
+      "file": "assets/textures/snow_rough.jpg",
+      "asset": "snow_02",
+      "author": {
+        "Rob Tuytel": "All"
+      },
+      "license": "CC0-1.0",
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/snow_02/snow_02_rough_1k.jpg",
+      "sourcePage": "https://polyhaven.com/a/snow_02",
+      "downloadSha256": "b6dea8039ac2a5beaed6fd41834fb55540cc76b492edd1d48ba2da2f30f1cb75",
+      "upstreamMd5": "1dbae0269e53dbf80d4fd1c4335f25a2",
+      "sha256": "2ea7a87e1eaacc98dec532c5fc2cc05d1e9598cdf3de5330e10f2a61c1cc18da",
+      "transformation": "Sharp resize 512px; JPEG 82"
+    },
+    {
+      "file": "assets/textures/wall_diff.jpg",
+      "asset": "brick_wall_001",
+      "author": {
+        "Rob Tuytel": "Processing",
+        "Dimitrios Savva": "Photography"
+      },
+      "license": "CC0-1.0",
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/brick_wall_001/brick_wall_001_diffuse_1k.jpg",
+      "sourcePage": "https://polyhaven.com/a/brick_wall_001",
+      "downloadSha256": "6a1233ec0186703de830354d89f122991e61e67fb67e0846c7eaf6c5aefea902",
+      "upstreamMd5": "955d2d4500eb549be0f2873305782798",
+      "sha256": "e881dd54acfb95d0ba1626d65952fb2e325a9f47f59bec008cc99dd8e19df03f",
+      "transformation": "Sharp resize 1024px; JPEG 82"
+    },
+    {
+      "file": "assets/textures/wall_nor.jpg",
+      "asset": "brick_wall_001",
+      "author": {
+        "Rob Tuytel": "Processing",
+        "Dimitrios Savva": "Photography"
+      },
+      "license": "CC0-1.0",
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/brick_wall_001/brick_wall_001_nor_gl_1k.jpg",
+      "sourcePage": "https://polyhaven.com/a/brick_wall_001",
+      "downloadSha256": "8afbe3919308b168a6b7235fe7b930f670cfffa1a34de39ee790d55c9d7bda09",
+      "upstreamMd5": "be151875ed0897fc716aeef6daac8bd5",
+      "sha256": "a79cb9b307539c71bff3a2441542e72bc9eb50baf933e98119ab1e661b93a98a",
+      "transformation": "Sharp resize 512px; JPEG 88"
+    },
+    {
+      "file": "assets/textures/wall_ao.jpg",
+      "asset": "brick_wall_001",
+      "author": {
+        "Rob Tuytel": "Processing",
+        "Dimitrios Savva": "Photography"
+      },
+      "license": "CC0-1.0",
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/brick_wall_001/brick_wall_001_ao_1k.jpg",
+      "sourcePage": "https://polyhaven.com/a/brick_wall_001",
+      "downloadSha256": "2f3135384946565118afd5b17a36c9535a4946445e6b005b406097c6c719828f",
+      "upstreamMd5": "aa63a3345a5217f34aae37a05344ce00",
+      "sha256": "ab9be3925d9335e47981aa95fbfd3ad01175fe206b0f5a6c1923617a971af0b0",
+      "transformation": "Sharp resize 512px; JPEG 82"
+    },
+    {
+      "file": "assets/textures/wall_rough.jpg",
+      "asset": "brick_wall_001",
+      "author": {
+        "Rob Tuytel": "Processing",
+        "Dimitrios Savva": "Photography"
+      },
+      "license": "CC0-1.0",
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/brick_wall_001/brick_wall_001_rough_1k.jpg",
+      "sourcePage": "https://polyhaven.com/a/brick_wall_001",
+      "downloadSha256": "a23342b02e6c5af106aaece16130aa9153a801cb1a84d5f3e0d06ce248677f38",
+      "upstreamMd5": "618ceca60a4321aecc6d61eebe53d551",
+      "sha256": "33502f71abd3d9a6adb6d1c229316eeae97d2c4147f46138a53fb067ff249cf1",
+      "transformation": "Sharp resize 512px; JPEG 82"
+    },
+    {
+      "file": "/tmp/tank-audit-outdoor.hdr",
+      "source": "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/kloofendal_48d_partly_cloudy_puresky_1k.hdr",
+      "downloadSha256": "fd94c84997b8a3c353b62c2125a9b44e19509956986a126e472684432a02d798",
+      "sha256": "fd94c84997b8a3c353b62c2125a9b44e19509956986a126e472684432a02d798",
+      "transformation": "none",
+      "asset": "kloofendal_48d_partly_cloudy_puresky"
+    },
+    {
+      "file": "/tmp/tank-audit-studio.hdr",
+      "source": "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/studio_small_09_1k.hdr",
+      "downloadSha256": "e7cfda5f4e98e623db12b8bfd0184e048488e4855d9c83e2751fb44a32e80c45",
+      "sha256": "e7cfda5f4e98e623db12b8bfd0184e048488e4855d9c83e2751fb44a32e80c45",
+      "transformation": "none",
+      "asset": "studio_small_09"
+    },
+    {
+      "file": "assets/fonts/BarlowSemiCondensed-SemiBold.ttf",
+      "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/barlowsemicondensed/BarlowSemiCondensed-SemiBold.ttf",
+      "downloadSha256": "bd299f4bc5b44d30be8d42e9bad3a5df7d66af1cd55d0ed72a8b8916360a1424",
+      "sha256": "bd299f4bc5b44d30be8d42e9bad3a5df7d66af1cd55d0ed72a8b8916360a1424",
+      "transformation": "none"
+    },
+    {
+      "file": "legal/licenses/Barlow-OFL.txt",
+      "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/barlowsemicondensed/OFL.txt",
+      "downloadSha256": "186d750eb496a4c17a76385f82be6aea2ac1cf2de074a811d63786cf374ea73f",
+      "sha256": "186d750eb496a4c17a76385f82be6aea2ac1cf2de074a811d63786cf374ea73f",
+      "transformation": "none"
+    },
+    {
+      "file": "legal/licenses/Archived-Russo-OFL.txt",
+      "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/russoone/OFL.txt",
+      "downloadSha256": "3ac1301549523d9861fedca12871f24e575fbd26d520632fc00ba849b471d275",
+      "sha256": "3ac1301549523d9861fedca12871f24e575fbd26d520632fc00ba849b471d275",
+      "transformation": "none"
+    },
+    {
+      "file": "legal/licenses/three-r160-MIT.txt",
+      "source": "https://raw.githubusercontent.com/mrdoob/three.js/r160/LICENSE",
+      "downloadSha256": "852e0e8699169bf9f6fdc6bda3e682d078dcbc738b5d33e74df594721bff271d",
+      "sha256": "852e0e8699169bf9f6fdc6bda3e682d078dcbc738b5d33e74df594721bff271d",
+      "transformation": "none"
+    }
+  ]
+}

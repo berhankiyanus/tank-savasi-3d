@@ -1,26 +1,26 @@
 // Service worker — uygulama kabuğu + boot'u bloklayan varlıklar önbellekte (kurulabilirlik, hızlı ve OFFLINE açılış).
 // SÜRÜM: her yayında el ile artır (web bu dosyayı repodan sunar); native pakette build-www.js
 // __BUILDSTAMP__ damgasını gerçek zamanla değiştirir → her native sürüm otomatik taze önbellek.
-const CACHE = 'tank3d-v1.0.0-arena1-__BUILDSTAMP__'; // web: sürüm adı her yayında değişir; native: build-www damgalar
+const CACHE = 'tank3d-v1.0.0-outpost2-__BUILDSTAMP__'; // web: sürüm adı her yayında değişir; native: build-www damgalar
 // Denetim fix'i: eski CORE tank.glb+env.hdr'ı içermiyordu → offline ilk açılış HEP retry ekranına düşüyordu.
 const CORE = [
   './',
   'index.html',
-  'assets/hero.jpg',
-  'assets/arena-lobby-v2.jpg',
+  'assets/outpost-lobby.jpg',
   'main.js',
   'game-progress.mjs', 'garage-content.mjs', 'garage-visuals.mjs',
   'polish.css',
   'libs/three.module.js',
   'manifest.json',
-  'assets/tank.glb',
+  'assets/tank_recruit_mk2.glb',
   'assets/env.hdr',
   'assets/sky.jpg',
-  'assets/fonts/russo-latin.woff2',
-  'assets/fonts/russo-latin-ext.woff2',
+  'assets/fonts/BarlowSemiCondensed-SemiBold.ttf',
+  'assets/fonts/field-symbols.ttf',
+  'licenses.html',
 ];
 // değişmez varlıklar (glb/doku/font): önbellek-önce + arkaplanda tazele (SWR) — her açılışta yeniden inmesinler
-const ASSET_RE = /\/(assets|libs)\/.+\.(glb|hdr|jpg|png|woff2|js)$/;
+const ASSET_RE = /\/(assets|libs)\/.+\.(glb|hdr|jpg|png|woff2|ttf|js)$/;
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(CORE)).catch(() => {}));

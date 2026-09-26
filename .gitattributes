@@ -1,0 +1,2 @@
+# Preserve upstream license whitespace verbatim; application code keeps normal checks.
+legal/licenses/** -whitespace

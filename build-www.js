@@ -5,24 +5,16 @@ const path = require('path');
 
 const root = __dirname;
 const out = path.join(root, 'www');
-const items = ['index.html', 'main.js', 'game-progress.mjs', 'garage-content.mjs', 'garage-visuals.mjs', 'polish.css', 'manifest.json', 'sw.js', 'CREDITS.md', 'privacy.html', 'libs', 'assets']; // privacy.html: uygulama içi gizlilik kutusu (LANSMAN)
-
-const EXCLUDE = new Set(['icon-1024.png']); // 813KB kaynak ikon — pakete girmesin (resources/icon.png zaten kaynak)
-// Preserve historical exports in the workspace, but do not ship replaced models.
-const retiredTanks = ['recruit', 'scout', 'guardian', 'sniper', 'phantom', 'goldking', 'heavy', 'twin', 'arty', 'mamut', 'lynx', 'boxer', 'hover', 'titan'];
-const runtimeSource = ['main.js', 'index.html', 'sw.js'].map(f => fs.readFileSync(path.join(root, f), 'utf8')).join('\n');
-for (const id of retiredTanks) {
-  const name = `tank_${id}.glb`;
-  if (runtimeSource.includes(name)) throw new Error(`Still-referenced model cannot be excluded: ${name}`);
-  EXCLUDE.add(name);
-}
+const { files: items } = require('./release-policy.cjs');
+require('./legal/verify-release.cjs').verifyRelease();
 
 function copy(src, dst) {
+  fs.mkdirSync(path.dirname(dst), { recursive: true });
   const st = fs.statSync(src);
   if (st.isDirectory()) {
     fs.mkdirSync(dst, { recursive: true });
     for (const f of fs.readdirSync(src)) {
-      if (f === '.DS_Store' || EXCLUDE.has(f)) continue;
+      if (f === '.DS_Store') continue;
       copy(path.join(src, f), path.join(dst, f));
     }
   } else if (path.basename(src) === 'main.js') {

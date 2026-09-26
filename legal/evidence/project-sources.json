@@ -1,0 +1,50 @@
+[
+  {
+    "source": "design/identity/subset_symbols.py",
+    "sha256": "2e3098172b2b6ced735d385e64d46a86d15f2a065676c08cb382d1baa753be45"
+  },
+  {
+    "source": "design/identity/build_outpost.py",
+    "sha256": "d08b978303b00dd922e8e04bb4c52d843c9459cc3e0b4af926129e3eab7ee657"
+  },
+  {
+    "source": "design/garage-expansion/build_workshop.py",
+    "sha256": "bc12f7787f00da55f894fb74f73ccf15d50ae7eff2da7b9b3a5dae88e20720d2"
+  },
+  {
+    "source": "design/complete-fleet/build_complete_fleet.py",
+    "sha256": "b04aac86e2ceff94797f45f839deedfddbcda4f036c555d1120038ab35a68947"
+  },
+  {
+    "source": "design/armored-update/build_armored_fleet.py",
+    "sha256": "c35503d4e06c7f3050a786e506c1bb84526373b0a2a1da3266a431b0aea685b1"
+  },
+  {
+    "source": "design/build_field_radio.py",
+    "sha256": "913c174984e0fd197ffeae4bf722d1d7055d9cd9ea5ebdc9669ceecb75266c9d"
+  },
+  {
+    "source": "design/identity/app-icon.svg",
+    "sha256": "a10f335f1770a5b9f315a4f925ecd28179acc94b8e22c262e0b65377c343eecc"
+  },
+  {
+    "source": "garage-content.mjs",
+    "sha256": "5ed1696eee28d1ba2176bc0c7195c328d709de89bed331570dba3cc9724bda3b"
+  },
+  {
+    "source": "garage-visuals.mjs",
+    "sha256": "58a612d966893a0b934726b4e69b17aab765af84f204e6a153cda649435bf214"
+  },
+  {
+    "source": "index.html",
+    "sha256": "9c66ed0db5f5b3f8e06c598e9a07d83716c8b7ece5fe61770cb32af820e3ed78"
+  },
+  {
+    "source": "main.js",
+    "sha256": "5ee65d13c1d3d2222a0d2bc0959819c8e50645f764bad3e8f7772ee187e764d2"
+  },
+  {
+    "source": "polish.css",
+    "sha256": "828cf19df588912537661f1e43413447b11b1f080b809d374b59ce34cc20bfb1"
+  }
+]

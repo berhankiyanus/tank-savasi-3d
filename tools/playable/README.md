@@ -27,3 +27,7 @@ Otomatik testler (scratchpad'de yazıldı, repoda değil): playwright-core ile 5
 
 ## Ayar noktaları
 `GRID` (Kar düzeni; çit yeşili), `P` hızları, `spawnEnemy` konumları (dalga 1: (8,6) önde + (9,2)/(9,10) yanlar; dalga 2 boss (8,6)), boss hp 6, düşman ateşi 4 sn sonra başlar, süre tavanı 45 sn → "Devamı oyunda" kartı.
+
+## 26 Eylül 2026 lisans/kimlik güncellemesi
+
+Güncel derleyici 15 tank / 16 harita tanıtımıyla Mk2 Gold King, Recruit ve Heavy modellerini kullanır. Eski GLB/fontlar yeni çıktıya gömülmez. Barlow Semi Condensed ve Noto Emoji'den türetilmiş Field Symbols gömülüdür; tam MIT/OFL metinleri reklam içindeki **Lisanslar / Licenses** kutusunda okunur. `build.js` mevcut yayın varlıklarının lisans/hash kontrolünü çalıştırır. Yenilenmiş HTML yaklaşık 2,22 MB; ZIP yaklaşık 481 KB. Ağ/politika kabulü ve mağaza bağlantısı bu teknik değişiklikle onaylanmış sayılmaz; yukarıdaki eski test/ağ notları güncel sertifikasyon değildir.

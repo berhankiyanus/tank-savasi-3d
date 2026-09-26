@@ -343,6 +343,16 @@ async function openPrivacy(ev) { // LANSMAN P0-3: gizlilik metni uygulama içind
   if (!privacyLoaded) { try { const html = await (await fetch('privacy.html', { cache: 'no-store' })).text(); const i = html.indexOf('<body>'), j = html.lastIndexOf('</body>'); body.innerHTML = i >= 0 && j > i ? html.slice(i + 6, j) : html; privacyLoaded = true; } catch (e) { body.innerHTML = '<p>privacy.html</p>'; } }
   $('privacyclose').textContent = T().privacyClose; box.classList.remove('hidden'); body.scrollTop = 0;
 }
+async function openLicenses() {
+  const body = $('privacybody'); privacyLoaded = false;
+  body.innerHTML = '<p>Lisanslar yükleniyor / Loading licenses…</p>';
+  $('privacyclose').textContent = T().privacyClose; $('privacybox').classList.remove('hidden');
+  try { const response = await fetch('licenses.html'); if (!response.ok) throw new Error('licenses');
+    const html = await response.text(); const doc = new DOMParser().parseFromString(html, 'text/html');
+    body.innerHTML = doc.querySelector('main').innerHTML;
+  } catch { body.innerHTML = '<p>Lisanslar açılamadı. Tekrar deneyin / Please retry.</p>'; }
+  body.scrollTop = 0;
+}
 function closePrivacy() { $('privacybox').classList.add('hidden'); }
 function openHow() { const t = T(); $('privacybody').innerHTML = `<h1>${t.howTitle}</h1>${t.howBody}`; privacyLoaded = false; $('privacyclose').textContent = t.privacyClose; $('privacybox').classList.remove('hidden'); $('privacybody').scrollTop = 0; } /* U12: Nasıl oynanır */
 function handleBack() {
@@ -489,7 +499,7 @@ async function fetchLeaderboard(period) {
 let paused = false;
 let matchSeq = 0; // gecikmiş timer'ların eski maça ait sonuç üretmesini önler
 let matchEndReason = ''; // analitik: maç neden bitti (death/victory/win/lose/disconnect/quit) — D1/D7 huni analizi için
-// game-icons stencil yardımcıları (index.html'deki #gisprite sembollerine referans; renk currentColor'dan)
+// Project-authored vector icon helpers (index.html'deki #gisprite sembollerine referans; renk currentColor'dan)
 const gi = id => `<svg class="gi" aria-hidden="true" focusable="false"><use href="#gi-${id}"/></svg>`;
 // VARLIK FAZ 4: innerHTML'e giden metinlerde para/elmas/jeton emojisi → stencil ikon (textContent/bildirim/toast'ta emoji kalır)
 const iconize = s => String(s).replace(/🪙/g, gi('coins')).replace(/💎/g, gi('gem')).replace(/🎰/g, gi('token')).replace(/⚡/g, gi('bolt')).replace(/🔒/g, gi('lock')).replace(/📤/g, gi('share')).replace(/🎁/g, gi('chest')).replace(/🕹️/g, gi('joystick')).replace(/🛡️/g, gi('shield')).replace(/🏆/g, gi('trophy')); /* U5: innerHTML'e giden en görünür emojiler stencil ikon */
@@ -1117,7 +1127,7 @@ function tex(url, srgb = false, repeat = 1) {
 let tankGltf, envTex, skyTex;
 try {
   [tankGltf, envTex, skyTex] = await Promise.all([
-    new GLTFLoader().loadAsync('assets/tank.glb'),
+    new GLTFLoader().loadAsync('assets/tank_recruit_mk2.glb'),
     new RGBELoader().loadAsync('assets/env.hdr'),   // VARLIK FAZ1: 256×128 HDR yalnız IBL için (PMREM zaten bulanıklaştırır) — 1.4 MB → 97 KB
     texLoader.loadAsync('assets/sky.jpg'),          // arka plan: aynı Poly Haven gökyüzü (kloofendal 48d puresky, CC0) ön-eşlenmiş JPG 1024×512
   ]);
@@ -1128,7 +1138,7 @@ try {
     const trq = (localStorage.getItem('tanklang') || navigator.language || 'tr').toLowerCase().startsWith('tr');
     ld.innerHTML = `<div class="ldtitle">TANK SAVAŞI 3D</div>
       <div class="ldtext" style="max-width:280px;text-align:center">⚠️ ${trq ? 'Yükleme başarısız — internet bağlantını kontrol et' : 'Loading failed — check your connection'}</div>
-      <button id="bootretry" style="margin-top:18px;font:bold 17px 'Russo One',monospace;padding:12px 26px;border-radius:12px;border:2px solid #7dff9b;background:#1c2a14;color:#7dff9b;cursor:pointer">↻ ${trq ? 'TEKRAR DENE' : 'RETRY'}</button>`;
+      <button id="bootretry" style="margin-top:18px;font:bold 17px 'Barlow Semi Condensed','Field Symbols',monospace;padding:12px 26px;border-radius:12px;border:2px solid #7dff9b;background:#1c2a14;color:#7dff9b;cursor:pointer">↻ ${trq ? 'TEKRAR DENE' : 'RETRY'}</button>`;
     document.getElementById('bootretry').onclick = () => location.reload();
   }
   throw err; // modül dursun; retry temiz reload yapar
@@ -2054,7 +2064,7 @@ function buildJetpack() {
 }
 const ACCESSORIES = [
   ...WORKSHOP_ACCESSORIES,
-  { id: 'rescuepack', name: { tr: 'Sıhhiye Çantası', en: 'Medical Pack' }, icon: '✚', price: 1100, r: 'r', glb: 'assets/acc_rescuepack.glb', mount: { x: 0, y: 1.5, z: 0.32 } },
+  { id: 'rescuepack', name: { tr: 'Kurtarma Çantası', en: 'Rescue Pack' }, icon: '▰', price: 1100, r: 'r', glb: 'assets/acc_rescuepack.glb', mount: { x: 0, y: 1.5, z: 0.32 } },
   { id: 'cargorack', name: { tr: 'Sefer Sandıkları', en: 'Expedition Cargo' }, icon: '▣', price: 900, r: 'c', glb: 'assets/acc_cargorack.glb', mount: { x: 0, y: 1.1, z: 1.12 } },
   { id: 'searchlight', name: { tr: 'Keşif Projektörü', en: 'Recon Searchlight' }, icon: '◉', price: 1200, r: 'r', glb: 'assets/acc_searchlight.glb', mount: { x: 0.22, y: 1.5, z: 0.2 } },
   { id: 'fieldradio', name: { tr: 'Saha Telsizi', en: 'Field Radio' }, icon: '📻', price: 650, r: 'c', glb: 'assets/acc_fieldradio.glb', mount: { x: 0, y: 1.5, z: 0.28 } },
@@ -2460,7 +2470,7 @@ function floaterTexture(text, color) {
   if (floaterTexCache[key]) return floaterTexCache[key];
   const cv = document.createElement('canvas'); cv.width = 160; cv.height = 72;
   const g = cv.getContext('2d');
-  g.font = 'bold 46px "Courier New", monospace'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.font = 'bold 46px "Barlow Semi Condensed", "Field Symbols", monospace'; g.textAlign = 'center'; g.textBaseline = 'middle';
   g.lineWidth = 7; g.strokeStyle = 'rgba(0,0,0,0.85)'; g.strokeText(text, 80, 38);
   g.fillStyle = color; g.fillText(text, 80, 38);
   const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace;
@@ -2499,7 +2509,7 @@ function nameTexture(text) {
   if (nameTexCache[text]) return nameTexCache[text];
   const cv = document.createElement('canvas'); cv.width = 256; cv.height = 64;
   const g = cv.getContext('2d');
-  g.font = 'bold 34px "Courier New", monospace'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.font = 'bold 34px "Barlow Semi Condensed", "Field Symbols", monospace'; g.textAlign = 'center'; g.textBaseline = 'middle';
   g.lineWidth = 6; g.strokeStyle = 'rgba(0,0,0,0.9)'; g.strokeText(text, 128, 34);
   g.fillStyle = '#ffffff'; g.fillText(text, 128, 34);
   const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace;
@@ -3378,13 +3388,13 @@ let snapshotCb = null, lastMatch = null;
 function grabFrame() { return new Promise(res => { snapshotCb = () => res(renderer.domElement); }); }
 async function makeShareCard(m) {
   const W = 1080, H = 1350, c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d');
-  try { await document.fonts.load('80px "Russo One"'); } catch (e) {}
+  try { await Promise.all([document.fonts.load('80px "Barlow Semi Condensed"'), document.fonts.load('80px "Field Symbols"')]); } catch (e) {}
   const bg = g.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, '#0d1409'); bg.addColorStop(1, '#1a2412'); g.fillStyle = bg; g.fillRect(0, 0, W, H);
   try { // oyun karesi (üst 900px, kapak-sığdır)
     const src = state === 'over' || state === 'play' ? await Promise.race([grabFrame(), new Promise(r => setTimeout(() => r(null), 400))]) : null;
     if (src) { const sw = src.width, sh = src.height, sc = Math.max(W / sw, 900 / sh), dw = sw * sc, dh = sh * sc; g.save(); g.beginPath(); g.roundRect(0, 0, W, 900, [0, 0, 36, 36]); g.clip(); g.drawImage(src, (W - dw) / 2, (900 - dh) / 2, dw, dh); const vg = g.createLinearGradient(0, 560, 0, 900); vg.addColorStop(0, 'rgba(13,20,9,0)'); vg.addColorStop(1, 'rgba(13,20,9,1)'); g.fillStyle = vg; g.fillRect(0, 560, W, 340); g.restore(); }
   } catch (e) {}
-  const txt = (str, x, y, size, col, align = 'center') => { g.font = `${size}px "Russo One", "Courier New", monospace`; g.textAlign = align; g.textBaseline = 'middle'; g.lineWidth = size * 0.14; g.lineJoin = 'round'; g.strokeStyle = '#0b0f08'; g.strokeText(str, x, y); g.fillStyle = col; g.fillText(str, x, y); };
+  const txt = (str, x, y, size, col, align = 'center') => { g.font = `${size}px "Barlow Semi Condensed", "Field Symbols", monospace`; g.textAlign = align; g.textBaseline = 'middle'; g.lineWidth = size * 0.14; g.lineJoin = 'round'; g.strokeStyle = '#0b0f08'; g.strokeText(str, x, y); g.fillStyle = col; g.fillText(str, x, y); };
   txt(T().appNameUp, W / 2, 70, 54, '#ffd76a');
   txt(m.title, W / 2, 800, 110, m.won ? '#7dff9b' : '#ffb04a');
   const stats = `🌊 ${T().wave} ${m.wave}   ·   ⏱ ${fmtTime(m.dur)}   ·   ⚔️ ${m.kills}`;
@@ -3876,7 +3886,7 @@ function updateHome() {
   const claims = (profile.careerClaims || []).length;
   $('home-career').textContent = `${tr ? 'KOMUTAN YOLU' : 'COMMANDER PATH'} · ${claims}/${CAREER_STEPS.length} ${tr ? 'ödül' : 'rewards'} ↗`;
   $('home-career').style.display = claims < CAREER_STEPS.length ? '' : 'none';
-  $('hangar-kicker').textContent = tr ? '● ARENAYA HAZIR' : '● ARENA READY';
+  $('hangar-kicker').textContent = tr ? '● SEFERE HAZIR' : '● FIELD READY';
   document.querySelector('.hangar-serial').textContent = `${String(TANKS.indexOf(base)+1).padStart(2,'0')} / ${TANKS.length}`;
   document.querySelector('.hangar-watermark').textContent = base.name[lang].toLocaleUpperCase(tr ? 'tr-TR' : 'en-US');
   $('hangar-link').textContent = tr ? 'ÖZELLEŞTİR ↗' : 'CUSTOMIZE ↗';
@@ -3952,7 +3962,7 @@ const NAV_MAP = { 'panel-main': 'btn-home-nav', 'panel-garage': 'btn-garage', 'p
 function refreshMenuChrome(id = document.querySelector('.panel.show')?.id) {
   const tr = lang === 'tr';
   const sections = {
-    'panel-main':['ZIRHINI KUŞAN. ARENAYA ÇIK.','GEAR UP. OWN THE ARENA.',''],
+    'panel-main':['KEŞİF · DONANIM · TAKTİK','EXPLORE · EQUIP · OUTMANEUVER',''],
     'panel-garage':['SENİN TANKIN. SENİN TARZIN.','YOUR TANK. YOUR STYLE.',tr ? 'Filonu kur. Rengini seç. İmzanı bırak.' : 'Build your fleet. Pick your colors. Make your mark.'],
     'panel-quests':['HER HEDEF YENİ BİR ÖDÜL','EVERY GOAL. A NEW REWARD.',tr ? 'Görevleri tamamla. Koleksiyonunu büyüt.' : 'Complete challenges. Grow your collection.'],
     'panel-shop':['KOLEKSİYONUNU BÜYÜT','BUILD YOUR COLLECTION',tr ? 'Kendi tarzın için yeni parçalar keşfet.' : 'Discover new gear for your signature style.'],
@@ -3967,7 +3977,7 @@ function refreshMenuChrome(id = document.querySelector('.panel.show')?.id) {
   $('menu-kicker').textContent = section ? section[tr ? 0 : 1] : '';
   $('menu-intro').textContent = section?.[2] || '';
   $('menu-intro').hidden = !section?.[2];
-  $('brand-label').textContent = tr ? 'TANK ARENASI' : 'TANK ARENA';
+  $('brand-label').textContent = tr ? 'SAHA ATÖLYESİ' : 'FIELD WORKSHOP';
   $('btn-home-nav').querySelector('.nlbl').textContent = tr ? 'ÜS' : 'HOME';
   $('bottomnav').setAttribute('aria-label',tr ? 'Ana menü' : 'Main navigation');
 }
@@ -4119,23 +4129,23 @@ const SHOWROOM_PIVOT_Y = 0.5; // platform üstü — tank tabanı (y=0) buraya o
 function ensureShowroom() {
   if (showroomScene) return;
   showroomScene = new THREE.Scene();
-  showroomScene.background = new THREE.Color(0x071630);
-  showroomScene.fog = new THREE.Fog(0x071630, 18, 48);
+  showroomScene.background = new THREE.Color(0x17221c);
+  showroomScene.fog = new THREE.Fog(0x17221c, 18, 48);
   showroomScene.environment = envTex; // metal/parlak kaplamalarda yansıma (stüdyo HDR inince değişir)
   new RGBELoader().loadAsync('assets/env_studio.hdr').then(t => { t.mapping = THREE.EquirectangularReflectionMapping; studioEnvTex = t; if (showroomScene) showroomScene.environment = t; }).catch(() => {}); // VARLIK FAZ1: Poly Haven studio_small_09 (CC0) 256×128 — ürün çekimi yansıması
   showroomCam = new THREE.PerspectiveCamera(42, innerWidth / innerHeight, 0.1, 120);
   // zemin (gölge alan koyu disk)
-  const floor = new THREE.Mesh(new THREE.CircleGeometry(28, 48), new THREE.MeshStandardMaterial({ color: 0x11294b, roughness: 0.55, metalness: 0.4 }));
+  const floor = new THREE.Mesh(new THREE.CircleGeometry(28, 48), new THREE.MeshStandardMaterial({ color: 0x303a2f, roughness: 0.55, metalness: 0.4 }));
   floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; showroomScene.add(floor);
   // döner platform + parlayan halka
-  const base = new THREE.Mesh(new THREE.CylinderGeometry(3.1, 3.4, 0.5, 56), new THREE.MeshStandardMaterial({ color: 0x15345c, roughness: 0.35, metalness: 0.7 }));
+  const base = new THREE.Mesh(new THREE.BoxGeometry(6.4, 0.5, 7.2), new THREE.MeshStandardMaterial({ color: 0x454b36, roughness: 0.35, metalness: 0.7 }));
   base.position.y = 0.25; base.castShadow = base.receiveShadow = true; showroomScene.add(base);
-  srRingMat = new THREE.MeshStandardMaterial({ color: 0x50dfff, emissive: 0x50dfff, emissiveIntensity: 1.4 });
-  const ring = new THREE.Mesh(new THREE.TorusGeometry(3.08, 0.05, 12, 64), srRingMat);
-  ring.rotation.x = Math.PI / 2; ring.position.y = 0.5; showroomScene.add(ring);
-  // Low-cost physical light strips frame the rotating vehicle like an arena pit lane.
+  srRingMat = new THREE.MeshStandardMaterial({ color: 0xc5d878, emissive: 0xc5d878, emissiveIntensity: 1.4 });
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(4.0, 0.035, 4, 4), srRingMat);
+  ring.rotation.x = Math.PI / 2; ring.rotation.z = Math.PI / 4; ring.position.y = 0.5; showroomScene.add(ring);
+  // Low-cost physical light strips frame the rotating vehicle inside the expedition maintenance bay.
   for (const side of [-1, 1]) {
-    const color = side < 0 ? 0x279bff : 0xffa029;
+    const color = side < 0 ? 0xc5d878 : 0xc5d878;
     const railMat = new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 2 });
     for (let i = 0; i < 3; i++) {
       const rail = new THREE.Mesh(new THREE.BoxGeometry(.065, .025, 4), railMat);
@@ -4147,9 +4157,9 @@ function ensureShowroom() {
   srKey = new THREE.DirectionalLight(0xffffff, 3.0); srKey.position.set(4, 9, 6); srKey.castShadow = true;
   srKey.shadow.mapSize.set(1024, 1024); const sc = srKey.shadow.camera; sc.left = -8; sc.right = 8; sc.top = 8; sc.bottom = -8; sc.near = 1; sc.far = 44; srKey.shadow.bias = -0.0006;
   showroomScene.add(srKey);
-  showroomScene.add(new THREE.HemisphereLight(0x9fc0ff, 0x241d2e, 0.75));
-  srRim = new THREE.DirectionalLight(0x66aaff, 2.4); srRim.position.set(-6, 4, -7); showroomScene.add(srRim);
-  srAccent = new THREE.PointLight(0xff9a3c, 26, 20, 2); srAccent.position.set(-4, 2.6, 3.5); showroomScene.add(srAccent);
+  showroomScene.add(new THREE.HemisphereLight(0xd8dec7, 0x241d2e, 0.75));
+  srRim = new THREE.DirectionalLight(0xbcd796, 2.4); srRim.position.set(-6, 4, -7); showroomScene.add(srRim);
+  srAccent = new THREE.PointLight(0xe0be83, 26, 20, 2); srAccent.position.set(-4, 2.6, 3.5); showroomScene.add(srAccent);
   // sürükle-çevir kontrolleri (yalnızca vitrin açıkken)
   renderer.domElement.addEventListener('pointerdown', e => {
     if (!showroom.active) return;
@@ -4207,8 +4217,8 @@ function buildShowroomTank() {
   srRim.position.set(-6 * ls, 4 * ls, -7 * ls); srRim.intensity = 2.4 + (ls - 1) * 2.8;
   srAccent.position.set(-4 * ls, 2.6 * ls, 3.5 * ls); srAccent.distance = 20 * ls; srAccent.intensity = 26 * ls;
   const premium = !!tankById(showroom.tankId).gem;
-  srRingMat.color.setHex(premium ? 0xffbd38 : 0x50dfff);
-  srRingMat.emissive.setHex(premium ? 0xffbd38 : 0x50dfff);
+  srRingMat.color.setHex(premium ? 0xffbd38 : 0xc5d878);
+  srRingMat.emissive.setHex(premium ? 0xffbd38 : 0xc5d878);
 }
 function frameShowroomCam() {
   showroomCam.aspect = innerWidth / innerHeight; showroomCam.updateProjectionMatrix();
@@ -6039,7 +6049,7 @@ function openSettings() {
 }
 function closeSettings() {
   musicDuck = 1; updateMusicGain(); paused = false; $('settings').classList.add('hidden'); }
-$('set-privacy').addEventListener('click', openPrivacy); $('set-how').addEventListener('click', openHow); $('privacyclose').addEventListener('click', closePrivacy);
+$('set-licenses').addEventListener('click', openLicenses); $('set-privacy').addEventListener('click', openPrivacy); $('set-how').addEventListener('click', openHow); $('privacyclose').addEventListener('click', closePrivacy);
 $('btn-settings').addEventListener('click', openSettings);
 $('btn-settings-menu').addEventListener('click', openSettings);
 $('set-sound').addEventListener('click', () => { // 3 kademe: AÇIK → KISIK → KAPALI

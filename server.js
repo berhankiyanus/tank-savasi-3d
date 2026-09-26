@@ -6,7 +6,7 @@ const WebSocket = require('ws');
 
 const ROOT = __dirname;
 const PORT = process.env.PORT || 8734;
-const MIME = {
+const MIME = { '.ttf': 'font/ttf', '.txt': 'text/plain; charset=utf-8',
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript',
   '.mjs': 'text/javascript',
@@ -20,8 +20,8 @@ const MIME = {
   '.md': 'text/plain; charset=utf-8',
 };
 // yalnızca yayın dosyaları sunulur (kod/.git/konfig sızıntısına karşı allowlist)
-const ALLOW_FILES = new Set(['/index.html', '/main.js', '/game-progress.mjs', '/garage-content.mjs', '/garage-visuals.mjs', '/polish.css', '/sw.js', '/manifest.json', '/privacy.html', '/CREDITS.md', '/playable.html']); // playable.html: oynanabilir reklam demosu (tools/playable/dist kopyası)
-const ALLOW_DIRS = ['/assets/', '/libs/'];
+const { isAllowed } = require('./release-policy.cjs');
+require('./legal/verify-release.cjs').verifyRelease();
 
 // ---- LANSMAN P0-12: koruma katmanı ----
 // /stats yalnız STATS_KEY ile (env yoksa kapalı) — KPI panosu herkese açık olmasın
@@ -265,7 +265,7 @@ function handleReq(req, res) {
   if (p === '/') p = '/index.html';
   if (p === '/privacy' || p === '/privacy/') p = '/privacy.html';
   const norm = path.normalize(p).replace(/\\/g, '/');
-  const allowed = ALLOW_FILES.has(norm) || ALLOW_DIRS.some(d => norm.startsWith(d));
+  const allowed = isAllowed(norm);
   if (!allowed || norm.includes('..')) { res.writeHead(404); return res.end('not found'); }
   const file = path.join(ROOT, norm);
   const rel = path.relative(ROOT, file);

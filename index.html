@@ -5,19 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#07132c">
+<meta name="theme-color" content="#17221c">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="assets/icon-192.png">
 <title>TANK SAVAŞI 3D</title>
 <style>
+@font-face { font-family: "Field Symbols"; src: url(assets/fonts/field-symbols.ttf) format("truetype"); font-display: swap; }
   /* oyun fontu (yerel — native pakette de çalışır, CDN yok) */
-  @font-face { font-family: 'Russo One'; font-style: normal; font-weight: 400; font-display: swap;
-    src: url(assets/fonts/russo-latin-ext.woff2) format('woff2');
-    unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0; }
-  @font-face { font-family: 'Russo One'; font-style: normal; font-weight: 400; font-display: swap;
-    src: url(assets/fonts/russo-latin.woff2) format('woff2');
-    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+2000-206F, U+20AC, U+2122; }
-  :root { --gold: #ffd76a; --gold-deep: #7a4a00; --green: #7dff9b; --cta: #ff8c1a; --ink: #0d1409; --panel: rgba(6,12,8,.68); --line: rgba(125,255,155,.28); --font: 'Russo One', "Courier New", monospace; --tap: 44px; } /* LANSMAN U1: tasarım belirteçleri */
+  @font-face { font-family: 'Barlow Semi Condensed'; font-style: normal; font-weight: 600; font-display: swap; src: url(assets/fonts/BarlowSemiCondensed-SemiBold.ttf) format('truetype'); }
+  :root { --gold: #d4ec7d; --gold-deep: #576b0f; --green: #7dff9b; --cta: #bde237; --ink: #0d1409; --panel: rgba(6,12,8,.68); --line: rgba(125,255,155,.28); --font: 'Barlow Semi Condensed','Field Symbols', "Courier New", monospace; --tap: 44px; } /* LANSMAN U1: tasarım belirteçleri */
   button, .buildcard, .gear { font-family: var(--font); }
   html, body { margin: 0; padding: 0; overflow: hidden; background: #0d1409; height: 100%; /* tek boot rengi (manifest+capacitor ile aynı) */
                touch-action: none; overscroll-behavior: none;
@@ -29,13 +25,13 @@
   #loading.gone { opacity: 0; pointer-events: none; transition: opacity .5s; }
   #ldhero { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .55; z-index: -1; pointer-events: none; }
   #loading > * { position: relative; }
-  .ldtitle { font-family: 'Russo One', "Courier New", monospace; font-weight: bold; letter-spacing: 5px; font-size: 34px;
-             color: #ffd76a; text-shadow: 0 0 26px rgba(255,160,40,.7), 0 4px 0 #7a4a00; }
+  .ldtitle { font-family: 'Barlow Semi Condensed','Field Symbols', "Courier New", monospace; font-weight: bold; letter-spacing: 5px; font-size: 34px;
+             color: #d4ec7d; text-shadow: 0 0 26px rgba(255,160,40,.7), 0 4px 0 #576b0f; }
   .ldspin { width: 52px; height: 52px; border: 5px solid rgba(125,255,155,.25); border-top-color: #7dff9b;
             border-radius: 50%; animation: ldsp 0.9s linear infinite; }
   @keyframes ldsp { to { transform: rotate(360deg); } }
   .ldtext { font-family: "Courier New", monospace; color: #cfe6bf; letter-spacing: 2px; font-size: 15px; }
-  .hud { position: fixed; font-family: 'Russo One', "Courier New", monospace; color: #fff; z-index: 10;
+  .hud { position: fixed; font-family: 'Barlow Semi Condensed','Field Symbols', "Courier New", monospace; color: #fff; z-index: 10;
          text-shadow: 0 2px 6px rgba(0,0,0,.8); user-select: none; pointer-events: none; }
   #topbar { top: calc(14px + env(safe-area-inset-top, 0px)); left: 0; right: 0; display: flex; justify-content: space-between;
             padding: 0 22px; font-size: 20px; font-weight: bold; letter-spacing: 1px; }
@@ -51,23 +47,23 @@
          transition: opacity .4s; pointer-events: auto;
          overflow-y: auto; padding: calc(56px + env(safe-area-inset-top)) 0 calc(86px + env(safe-area-inset-bottom)); box-sizing: border-box; }
   #msg.sr { padding-bottom: 18px; } /* vitrin açıkken alt nav yok */
-  #msg h1 { font-size: 56px; margin: 0 0 6px; letter-spacing: 6px; color: #ffd76a;
-            text-shadow: 0 0 30px rgba(255,160,40,.8), 0 4px 0 #7a4a00; }
+  #msg h1 { font-size: 56px; margin: 0 0 6px; letter-spacing: 6px; color: #d4ec7d;
+            text-shadow: 0 0 30px rgba(255,160,40,.8), 0 4px 0 #576b0f; }
   #msg h2 { font-size: 22px; margin: 4px 0; color: #fff; font-weight: normal; }
-  #msg .keys { font-size: 15px; color: #b8e6ff; line-height: 1.8; margin-top: 8px; }
-  .mbtn { font-family: 'Russo One', "Courier New", monospace; font-weight: normal; letter-spacing: 1.5px;
+  #msg .keys { font-size: 15px; color: #d0e7da; line-height: 1.8; margin-top: 8px; }
+  .mbtn { font-family: 'Barlow Semi Condensed','Field Symbols', "Courier New", monospace; font-weight: normal; letter-spacing: 1.5px;
           font-size: 18px; color: #fff; background: linear-gradient(180deg, #4a8c38, #275420 55%, #1c3d16);
           border: 1px solid rgba(125,255,155,.65); border-radius: 14px; padding: 13px 24px; margin: 7px;
           cursor: pointer; text-shadow: 0 1px 3px rgba(0,0,0,.6); transition: transform .08s, filter .15s;
           box-shadow: 0 4px 14px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.22), 0 0 14px rgba(125,255,155,.18); }
   .mbtn:hover { filter: brightness(1.12); }
   .mbtn:active { transform: scale(.95); }
-  .mbtn.alt { background: linear-gradient(180deg, #8a4a1f, #5a2c0e); border-color: #ffd76a;
+  .mbtn.alt { background: linear-gradient(180deg, #6b7d2c, #5a2c0e); border-color: #d4ec7d;
               box-shadow: 0 4px 14px rgba(0,0,0,.5), 0 0 14px rgba(255,215,106,.25); }
-  .mbtn.gold { background: linear-gradient(180deg, #b8892a, #6e4e11); border-color: #ffdd55; }
+  .mbtn.gold { background: linear-gradient(180deg, #8fa63c, #53621d); border-color: #ceea6a; }
   .mbtn.play { display: block; width: min(92%, 420px); margin: 8px auto 14px; font-size: 26px;
                padding: 20px 26px; letter-spacing: 3px;
-               background: linear-gradient(180deg, #ffb733, #e8631a); border-color: #ffe08a; color: #2a1600;
+               background: linear-gradient(180deg, #c4e64c, #e8631a); border-color: #ddf099; color: #1e2505;
                text-shadow: 0 1px 2px rgba(255,255,255,.35);
                box-shadow: 0 6px 22px rgba(0,0,0,.55), 0 0 26px rgba(255,170,60,.5);
                animation: playpulse 1.8s ease-in-out infinite; }
@@ -93,11 +89,11 @@
                     border-radius: 50%; background: #ff4a3a; box-shadow: 0 0 7px #ff4a3a; }
   .navbtn.claim .navdot { display: block; animation: dotpulse 1.2s ease-in-out infinite; }
   @keyframes dotpulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.35); } }
-  .qrow.ready { border-color: #ffd24a; box-shadow: 0 0 10px rgba(255, 210, 74, .35); }
+  .qrow.ready { border-color: #cbe861; box-shadow: 0 0 10px rgba(255, 210, 74, .35); }
   .qrow .qclaim { margin-top: 5px; padding: 6px 10px; font-size: 12px; }
   .navbtn { position: relative; flex: 1; max-width: 96px; display: flex; flex-direction: column; align-items: center; gap: 3px;
             background: none; border: none; border-radius: 12px; padding: 6px 4px 5px; cursor: pointer;
-            font-family: 'Russo One', "Courier New", monospace; color: #9fb8a4;
+            font-family: 'Barlow Semi Condensed','Field Symbols', "Courier New", monospace; color: #9fb8a4;
             transition: color .15s, background .15s, transform .08s; }
   .navbtn .nicon { font-size: 23px; line-height: 1; filter: grayscale(.35) brightness(.9); transition: filter .15s, transform .15s; }
   .navbtn .nlbl { font-size: 10.5px; letter-spacing: 1px; }
@@ -110,23 +106,23 @@
   .or { color: #888; margin: 6px 0; }
   #joincode, #coopcode { font-family: "Courier New", monospace; font-size: 24px; font-weight: bold;
               width: 110px; text-align: center; letter-spacing: 6px; text-transform: uppercase;
-              background: rgba(255,255,255,.1); color: #ffd76a; border: 2px solid #ffd76a;
+              background: rgba(255,255,255,.1); color: #d4ec7d; border: 2px solid #d4ec7d;
               border-radius: 10px; padding: 12px 8px; outline: none; }
   #duelstatus { margin-top: 14px; font-size: 20px; color: #7dff9b; min-height: 28px; }
   #rematchstatus { margin-top: 14px; font-size: 19px; color: #7dff9b; min-height: 26px; }
   #coopstatus { margin-top: 12px; font-size: 18px; color: #7dff9b; min-height: 26px; line-height: 1.5; }
-  #coopstatus .code { font-size: 30px; letter-spacing: 7px; color: #ffd76a; font-weight: bold; }
+  #coopstatus .code { font-size: 30px; letter-spacing: 7px; color: #d4ec7d; font-weight: bold; }
   #statsline { margin-top: 16px; font-size: 15px; color: #cfe6bf; letter-spacing: 1px; cursor: pointer; pointer-events: auto;
                display: inline-block; padding: 6px 14px; background: rgba(10,16,8,.55); border: 1px solid rgba(150,255,170,.28); border-radius: 12px; } /* başarımlar paneli gömülüydü — buton görünümü (P1) */
   #statsline:active { transform: scale(.96); }
   #garagetabs { display: flex; justify-content: flex-start; width: 100%; box-sizing: border-box; gap: 8px; margin-bottom: 4px; overflow-x: auto; flex-wrap: nowrap; padding: 0 14px 4px; scrollbar-width: none; -webkit-overflow-scrolling: touch;
                 scroll-snap-type: x proximity; -webkit-mask-image: linear-gradient(90deg, #000 88%, transparent); mask-image: linear-gradient(90deg, #000 88%, transparent); } /* LANSMAN: soldan başlar, sağda solma = kaydırma ipucu */
   #garagetabs::-webkit-scrollbar { display: none; }
-  #updbar { display: none; position: fixed; left: 50%; bottom: calc(96px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 60; background: rgba(6,12,8,.92); color: #7dff9b; border: 1px solid rgba(125,255,155,.5); border-radius: 12px; padding: 8px 14px; font-size: 13px; font-family: 'Russo One', "Courier New", monospace; cursor: pointer; }
+  #updbar { display: none; position: fixed; left: 50%; bottom: calc(96px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 60; background: rgba(6,12,8,.92); color: #7dff9b; border: 1px solid rgba(125,255,155,.5); border-radius: 12px; padding: 8px 14px; font-size: 13px; font-family: 'Barlow Semi Condensed','Field Symbols', "Courier New", monospace; cursor: pointer; }
   .strip { display: block; margin: 6px auto 0; padding: 9px 16px; min-height: 40px; max-width: 92vw; box-sizing: border-box; font-family: var(--font); font-size: 13px; font-weight: bold; letter-spacing: .4px; color: #bfffcf; background: rgba(10,16,8,.72); border: 1px solid rgba(125,255,155,.35); border-radius: 12px; cursor: pointer; } /* U4: menü ikincil şeritleri tek stil */
   .strip.gold { color: var(--gold); border-color: rgba(255,210,80,.5); }
-  .strip.event { color: #ffe2b0; background: linear-gradient(180deg,#8a4a12,#5a2e08); border-color: #ffb04a; box-shadow: 0 0 14px rgba(255,150,40,.25); }
-  .strip.weekly { color: #d8c8ff; background: linear-gradient(180deg,#3a2a5a,#241a3a); border-color: #9a7ae0; }
+  .strip.event { color: #e8f5ba; background: linear-gradient(180deg,#677b21,#425012); border-color: #cbe861; box-shadow: 0 0 14px rgba(255,150,40,.25); }
+  .strip.weekly { color: #dbece2; background: linear-gradient(180deg,#3a4a41,#252f29); border-color: #9dbdab; }
   .strip:active { transform: scale(.97); }
   #rematchbtns { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 12px; }
   #msg:has(#panel-result.show) .keys { display: none; } /* U11: sonuç ekranında klavye ipucu yok */
@@ -136,21 +132,21 @@
   .pbox { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%; max-width: 640px; max-height: calc(100vh - 32px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); background: #f6f8f4; color: #1c1c1c; border-radius: 14px; padding: 12px; box-sizing: border-box; }
   #privacybody { overflow-y: auto; width: 100%; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 14px; line-height: 1.5; padding: 4px 8px; text-align: left; -webkit-overflow-scrolling: touch; }
   #privacybody h1 { font-size: 20px; margin: 8px 0 2px; } #privacybody h2 { font-size: 16px; margin-top: 18px; border-bottom: 1px solid #ddd; }
-  #privacybody a { color: #1b6fa8; } #privacybody hr { margin: 24px 0; }
+  #privacybody a { color: #4b785e; } #privacybody hr { margin: 24px 0; }
   .lbreport { display: inline-block; font-size: 12px; color: #9fb8a4; text-decoration: underline; margin: 2px 0 6px; pointer-events: auto; }
   #garagetabs .mbtn { flex: 0 0 auto; scroll-snap-align: start; }
   #achlist { display: flex; flex-direction: column; gap: 8px; width: 100%; max-width: 460px; margin: 10px 0; }
   .achrow { background: rgba(30,40,22,.7); border: 1px solid #4a6b3a; border-radius: 10px; padding: 8px 12px; text-align: left; }
-  .achrow.done { border-color: #ffd76a; }
+  .achrow.done { border-color: #d4ec7d; }
   .achtop { font-size: 16px; font-weight: bold; color: #fff; display: flex; justify-content: space-between; }
-  .achr { color: #ffdd55; }
-  .achdesc { font-size: 12px; color: #b8e6ff; margin: 2px 0 5px; }
+  .achr { color: #ceea6a; }
+  .achdesc { font-size: 12px; color: #d0e7da; margin: 2px 0 5px; }
   .abar { height: 8px; background: rgba(255,255,255,.15); border-radius: 4px; overflow: hidden; }
   .abar > i { display: block; height: 100%; background: #7dff9b; border-radius: 4px; }
   #toast { top: calc(182px + env(safe-area-inset-top, 0px)); /* mini harita + eğitim kartının altında */ left: 50%; right: auto; transform: translateX(-50%); width: max-content; max-width: min(88vw, 420px);
            box-sizing: border-box; padding: 8px 14px; border-radius: 12px; background: rgba(6,12,8,.86); border: 1px solid rgba(255,224,138,.35);
-           text-align: center; font-family: 'Russo One', "Courier New", monospace; font-weight: bold; line-height: 1.3;
-           font-size: 16px; color: #ffe08a; opacity: 0; transition: opacity .4s; z-index: 45;
+           text-align: center; font-family: 'Barlow Semi Condensed','Field Symbols', "Courier New", monospace; font-weight: bold; line-height: 1.3;
+           font-size: 16px; color: #ddf099; opacity: 0; transition: opacity .4s; z-index: 45;
            text-shadow: 0 2px 8px rgba(0,0,0,.9); } /* LANSMAN: kutulu toast — mini harita/eğitim kartına binmez, uzun metin sarar */
   .gear { font-size: 19px; background: rgba(0,0,0,.35); border: 2px solid rgba(255,255,255,.4);
           color: #fff; border-radius: 8px; width: 44px; height: 44px; cursor: pointer; pointer-events: auto; }
@@ -160,11 +156,11 @@
   .setbox { display: flex; flex-direction: column; align-items: center; gap: 7px;
             background: linear-gradient(180deg, rgba(30,40,22,.96), rgba(16,22,12,.98));
             border: 2px solid #7dff9b; border-radius: 14px; padding: 22px 34px; min-width: 240px; }
-  .setbox h2 { color: #ffd76a; margin: 0 0 8px; letter-spacing: 3px; }
-  #duelstatus .code { font-size: 34px; letter-spacing: 8px; color: #ffd76a; font-weight: bold; }
+  .setbox h2 { color: #d4ec7d; margin: 0 0 8px; letter-spacing: 3px; }
+  #duelstatus .code { font-size: 34px; letter-spacing: 8px; color: #d4ec7d; font-weight: bold; }
   #langsw { position: absolute; top: calc(16px + env(safe-area-inset-top)); right: 18px; }
   #coinbar { position: absolute; top: calc(14px + env(safe-area-inset-top)); left: 14px;
-             font-size: 18px; font-weight: bold; color: #ffdd55; letter-spacing: 1px;
+             font-size: 18px; font-weight: bold; color: #ceea6a; letter-spacing: 1px;
              display: flex; align-items: center; gap: 8px; }
   .pill { display: inline-flex; align-items: center; gap: 6px; padding: 5px 13px;
           background: rgba(6,12,8,.68); border: 1px solid rgba(125,255,155,.24);
@@ -185,15 +181,15 @@
   #res-xpbar { flex: 1; height: 16px; background: rgba(255,255,255,.14); border-radius: 8px;
                overflow: hidden; border: 1px solid rgba(125,255,155,.45); }
   #res-xpfill { height: 100%; width: 0%; background: linear-gradient(90deg, #3f7d2f, #7dff9b); border-radius: 8px; }
-  #res-rewards { font-size: 20px; font-weight: bold; color: #ffdd55; margin: 14px 0 22px; letter-spacing: 1px; }
+  #res-rewards { font-size: 20px; font-weight: bold; color: #ceea6a; margin: 14px 0 22px; letter-spacing: 1px; }
   #questlist { display: flex; flex-direction: column; gap: 12px; width: min(92%, 440px); margin: 10px auto 18px; }
-  .qhead { display: flex; justify-content: space-between; gap: 10px; font-size: 14px; color: #ffb84d;
+  .qhead { display: flex; justify-content: space-between; gap: 10px; font-size: 14px; color: #cce963;
            background: rgba(0,0,0,.28); border-radius: 8px; padding: 8px 12px; }
   .qhead .qchest-done { color: #7dff9b; }
   .qrow { background: rgba(0,0,0,.32); border: 1px solid rgba(125,255,155,.3); border-radius: 10px; padding: 11px 14px; text-align: left; }
   .qrow.done { border-color: #7dff9b; background: rgba(60,125,47,.28); }
   .qtext { font-size: 16px; color: #fff; margin-bottom: 7px; display: flex; justify-content: space-between; gap: 8px; }
-  .qrew { color: #ffdd55; font-weight: bold; }
+  .qrew { color: #ceea6a; font-weight: bold; }
   .qbar { height: 10px; background: rgba(255,255,255,.14); border-radius: 5px; overflow: hidden; }
   .qfill { height: 100%; background: linear-gradient(90deg, #3f7d2f, #7dff9b); border-radius: 5px; }
   .qprog { font-size: 12px; color: #bdbdbd; text-align: right; margin-top: 4px; }
@@ -203,7 +199,7 @@
   .lbrow { display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,.3); border-radius: 8px;
            padding: 9px 14px; font-size: 16px; color: #fff; }
   .lbrow.me { background: rgba(60,125,47,.4); border: 1px solid #7dff9b; }
-  .lbrank { min-width: 34px; font-weight: bold; color: #ffdd55; }
+  .lbrank { min-width: 34px; font-weight: bold; color: #ceea6a; }
   .lbname { flex: 1; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .lbscore { color: #7dff9b; font-weight: bold; }
   .lbempty { color: #cfcfcf; font-size: 16px; margin: 20px; }
@@ -220,9 +216,9 @@
   .st-t { min-width: 26px; font-weight: bold; color: #ff9de0; }
   .st-r { flex: 1; text-align: left; }
   #tokenbar { color: #ff9de0; }
-  #gembar { color: #6fe0ff; cursor: pointer; }
+  #gembar { color: #a0ceb4; cursor: pointer; }
   .gem-plus { display: inline-block; margin-left: 3px; background: #2ea043; color: #fff; border-radius: 6px; padding: 0 5px; font-size: 13px; font-weight: bold; line-height: 1.5; }
-  .shop-note { color: #9fb4c4; font-size: 12px; text-align: center; max-width: 420px; margin: 8px 14px 2px; line-height: 1.5; }
+  .shop-note { color: #acb7b1; font-size: 12px; text-align: center; max-width: 420px; margin: 8px 14px 2px; line-height: 1.5; }
   #tokenmachine { margin: 8px auto 2px; }
   .tm-box { display: inline-flex; flex-direction: column; align-items: center; gap: 6px;
             background: rgba(0,0,0,.35); border: 2px solid #ff9de0; border-radius: 12px; padding: 12px 22px; }
@@ -244,19 +240,19 @@
   .chest-pool { font-size: 11px; line-height: 1.7; color: #cfe6bf; margin: 6px 0; }
   .lbtitle { font-size: 10px; opacity: .9; margin-left: 4px; font-weight: normal; }
   /* K6: komutan kartı + avatar seçimi */
-  .idcard { display: flex; align-items: center; gap: 12px; margin: 8px auto; padding: 10px 12px; max-width: 440px; border: 2px solid #c8d0d8; border-radius: 14px; background: linear-gradient(180deg, rgba(40,50,30,.9), rgba(20,28,16,.92)); }
-  .idav { width: 62px; height: 62px; border-radius: 50%; border: 3px solid #c8d0d8; display: flex; align-items: center; justify-content: center; font-size: 34px; background: #0f1610; flex: 0 0 auto; }
+  .idcard { display: flex; align-items: center; gap: 12px; margin: 8px auto; padding: 10px 12px; max-width: 440px; border: 2px solid #cdd3d0; border-radius: 14px; background: linear-gradient(180deg, rgba(40,50,30,.9), rgba(20,28,16,.92)); }
+  .idav { width: 62px; height: 62px; border-radius: 50%; border: 3px solid #cdd3d0; display: flex; align-items: center; justify-content: center; font-size: 34px; background: #0f1610; flex: 0 0 auto; }
   .idtxt { text-align: left; min-width: 0; } .idname { font-size: 19px; font-weight: bold; letter-spacing: 1px; overflow-wrap: anywhere; } .idline { font-size: 13px; margin-top: 2px; }
   .avpick { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin: 6px 0 10px; }
   .avbtn { padding: 6px 8px; min-width: 56px; display: inline-flex; flex-direction: column; align-items: center; gap: 2px; } .avic { font-size: 22px; line-height: 1; } .avsub { font-size: 10px; }
   @keyframes coshake { 0%,100% { transform: rotate(0) } 15% { transform: rotate(-12deg) scale(1.05) } 30% { transform: rotate(10deg) } 45% { transform: rotate(-9deg) scale(1.1) } 60% { transform: rotate(8deg) } 75% { transform: rotate(-5deg) scale(1.15) } 90% { transform: rotate(3deg) } }
-  @keyframes coburst { 0% { transform: scale(1.15); filter: drop-shadow(0 0 20px var(--rc,#ffd76a)) brightness(1.3) } 100% { transform: scale(1.8); opacity: 0; filter: drop-shadow(0 0 90px var(--rc,#ffd76a)) brightness(3) } }
+  @keyframes coburst { 0% { transform: scale(1.15); filter: drop-shadow(0 0 20px var(--rc,#d4ec7d)) brightness(1.3) } 100% { transform: scale(1.8); opacity: 0; filter: drop-shadow(0 0 90px var(--rc,#d4ec7d)) brightness(3) } }
   @keyframes copop { 0% { opacity: 0; transform: scale(.6) } 100% { opacity: 1; transform: scale(1) } }
   #buildchoice { inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
                  background: rgba(6,10,4,.82); z-index: 40; gap: 22px; pointer-events: auto; }
   /* oyun içi koşu-parası sayacı (denetim: kill geliri oyun sırasında görünmüyordu) */
   #runcoins { display: none; position: fixed; top: calc(44px + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%);
-              font-size: 15px; font-weight: bold; color: #ffd76a; letter-spacing: .5px;
+              font-size: 15px; font-weight: bold; color: #d4ec7d; letter-spacing: .5px;
               text-shadow: 0 1px 4px rgba(0,0,0,.85); z-index: 12; pointer-events: none; }
   #runcoins .gi { width: 14px; height: 14px; vertical-align: -2px; }
   #runcoins.pop { animation: coinpop .35s ease; }
@@ -269,15 +265,15 @@
   #reviveoffer { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center;
                  justify-content: center; gap: 14px; background: rgba(6, 10, 4, .8); z-index: 45; }
   #reviveoffer.hidden { display: none; }
-  #rv-title { font-size: 34px; font-weight: bold; color: #ffdd55; letter-spacing: 2px; text-shadow: 0 2px 8px #000; }
+  #rv-title { font-size: 34px; font-weight: bold; color: #ceea6a; letter-spacing: 2px; text-shadow: 0 2px 8px #000; }
   #rv-timer { width: min(70vw, 280px); height: 6px; border-radius: 4px; background: rgba(255,255,255,.16); overflow: hidden; margin: 6px 0 2px; } #rv-timer i { display: block; height: 100%; width: 100%; background: var(--gold); } /* P1-6 */
   #rv-sub { color: #d6ffde; font-size: 16px; text-align: center; max-width: 320px; padding: 0 14px; text-shadow: 0 1px 4px #000; }
-  #build-title { font-size: 30px; font-weight: bold; color: #ffdd55; letter-spacing: 2px; text-shadow: 0 2px 8px #000; }
+  #build-title { font-size: 30px; font-weight: bold; color: #ceea6a; letter-spacing: 2px; text-shadow: 0 2px 8px #000; }
   #build-cards { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; padding: 0 14px; }
   .buildcard { width: 150px; min-height: 168px; background: linear-gradient(180deg, #2a3d1c, #16220e);
                border: 2px solid #7dff9b; border-radius: 14px; padding: 18px 12px; cursor: pointer; color: #fff;
                display: flex; flex-direction: column; align-items: center; gap: 10px; transition: transform .12s; }
-  .buildcard:hover, .buildcard:active { transform: scale(1.05); border-color: #ffdd55; }
+  .buildcard:hover, .buildcard:active { transform: scale(1.05); border-color: #ceea6a; }
   .bc-ic { font-size: 46px; }
   .bc-nm { font-size: 18px; font-weight: bold; letter-spacing: 1px; }
   .bc-ds { font-size: 13px; color: #cfe8cf; }
@@ -286,10 +282,10 @@
             word-break: break-all; }
   #flash { inset: 0; box-shadow: inset 0 0 120px 40px rgba(255,30,30,.9); opacity: 0; }
   #wavebanner { top: 26%; left: 0; right: 0; text-align: center; font-size: 42px; font-weight: bold;
-                color: #ffd76a; letter-spacing: 5px; opacity: 0; text-shadow: 0 0 24px rgba(255,170,40,.9); }
+                color: #d4ec7d; letter-spacing: 5px; opacity: 0; text-shadow: 0 0 24px rgba(255,170,40,.9); }
   #namerow { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 6px; font-size: 18px; color: #cfe6bf; }
   #playername { font-family: "Courier New", monospace; font-weight: bold; font-size: 17px; width: 150px; text-align: center;
-                background: rgba(255,255,255,.1); color: #ffd76a; border: 2px solid #7dff9b; border-radius: 8px; padding: 6px 8px; outline: none; }
+                background: rgba(255,255,255,.1); color: #d4ec7d; border: 2px solid #7dff9b; border-radius: 8px; padding: 6px 8px; outline: none; }
   #coophud { top: calc(78px + env(safe-area-inset-top, 0px)); left: 22px; display: none; font-size: 14px; line-height: 1.5; }
   #coophud .crow { color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.9); }
   #ftuehint { display: none; bottom: 15%; left: 0; right: 0; text-align: center; font-size: 17px; font-weight: bold;
@@ -309,7 +305,7 @@
   #killfeed { top: calc(182px + env(safe-area-inset-top, 0px)); right: calc(12px + env(safe-area-inset-right, 0px)); display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
   .kfrow { font-size: 14px; color: #fff; background: rgba(0,0,0,.5); border-radius: 6px; padding: 3px 8px;
            transition: opacity .5s; text-shadow: 0 1px 2px #000; }
-  .kfrow b { color: #ffd76a; }
+  .kfrow b { color: #d4ec7d; }
   #buffs { top: calc(50px + env(safe-area-inset-top, 0px)); left: calc(22px + env(safe-area-inset-left, 0px)); display: flex; gap: 6px; }
   .buff { font-family: "Courier New", monospace; font-weight: bold; font-size: 15px; color: #fff;
           background: rgba(20,30,15,.7); border: 1px solid #7dff9b; border-radius: 7px; padding: 3px 8px;
@@ -328,7 +324,7 @@
   .card-list { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin: 12px 8px; width: 100%; } /* U1: main.js'teki 8 cssText yerine */
   .card { width: 210px; background: linear-gradient(180deg, rgba(40,50,30,.9), rgba(20,28,16,.92));
           border: 2px solid #4a6b3a; border-radius: 12px; padding: 12px; text-align: center; }
-  .card.sel { border-color: #ffd76a; box-shadow: 0 0 18px rgba(255,215,106,.4); }
+  .card.sel { border-color: #d4ec7d; box-shadow: 0 0 18px rgba(255,215,106,.4); }
   .card.locked { opacity: .55; filter: grayscale(.5); }
   .card .cname { font-size: 19px; font-weight: bold; letter-spacing: 1px; }
   .card .cswatch { width: 100%; height: 46px; border-radius: 8px; margin: 8px 0;
@@ -338,14 +334,14 @@
   .card .cs-3d { position: absolute; right: 5px; bottom: 4px; font-size: 10px; font-weight: bold;
                  background: rgba(0,0,0,.55); color: #bff; padding: 2px 6px; border-radius: 6px; letter-spacing: .5px; }
   /* garaj kartı tank görseli (offscreen render önbelleği) */
-  .card .cswatch.has-thumb { height: 72px; background: radial-gradient(ellipse at 50% 80%, #232d38, #10151c); overflow: hidden; }
+  .card .cswatch.has-thumb { height: 72px; background: radial-gradient(ellipse at 50% 80%, #2a312d, #141816); overflow: hidden; }
   .card .tankthumb { width: 100%; height: 100%; object-fit: contain; display: block; pointer-events: none; }
   /* premium (elmas) satın alma butonu nefes animasyonu */
   @keyframes srbreath { 0%, 100% { transform: scale(1); box-shadow: 0 0 0 rgba(255, 210, 80, 0); }
                         50% { transform: scale(1.045); box-shadow: 0 0 22px rgba(255, 210, 80, .55); } }
   .sr-btn.breath { animation: srbreath 1.7s ease-in-out infinite; }
   .mbtn.cant { opacity: .55; filter: saturate(.55); } /* alınamaz ama tıklanınca 'Yetersiz 🪙' der (sessiz disabled yerine) */
-  /* game-icons stencil seti (insan-yapımı UI kimliği; emoji yalnız içerikte) */
+  /* Project-authored vector symbols; see design/identity/ */
   .gi { width: 1em; height: 1em; display: inline-block; vertical-align: -0.12em; fill: currentColor; }
   .pill .gi { width: 15px; height: 15px; vertical-align: -2px; }
   .navbtn .nicon .gi { width: 23px; height: 23px; color: #b9c8ba; display: block; }
@@ -358,8 +354,8 @@
                     justify-content: space-between; pointer-events: none; z-index: 40; }
   .panel.showroom .sr-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px;
                     width: 100%; box-sizing: border-box; padding: calc(14px + env(safe-area-inset-top)) 16px 0; }
-  .sr-name { flex: 1; text-align: center; font-size: 26px; font-weight: bold; color: #ffdd77; text-shadow: 0 2px 10px #000; }
-  .sr-wallet { min-width: 78px; text-align: right; font-size: 15px; font-weight: bold; color: #ffdd55; white-space: nowrap; text-shadow: 0 1px 4px #000; }
+  .sr-name { flex: 1; text-align: center; font-size: 26px; font-weight: bold; color: #d8ee88; text-shadow: 0 2px 10px #000; }
+  .sr-wallet { min-width: 78px; text-align: right; font-size: 15px; font-weight: bold; color: #ceea6a; white-space: nowrap; text-shadow: 0 1px 4px #000; }
   .sr-btn { pointer-events: auto; }
   .sr-hint { text-align: center; color: #dff; opacity: .55; font-size: 13px; letter-spacing: 1px; transition: opacity .4s; text-shadow: 0 1px 4px #000; }
   .sr-bottom { width: 100%; max-width: 460px; align-self: center; box-sizing: border-box;
@@ -372,7 +368,7 @@
          vertical-align: middle; margin-left: 5px; }
   .bar.bg { background: rgba(255,255,255,.15); width: 70px; position: relative; }
   .bar.bg > i { position: absolute; left: 0; top: 0; bottom: 0; background: #7dff9b; border-radius: 4px; }
-  .card .cprice { font-size: 16px; font-weight: bold; color: #ffdd55; margin: 6px 0; }
+  .card .cprice { font-size: 16px; font-weight: bold; color: #ceea6a; margin: 6px 0; }
 
   #msg .blink { margin-top: 10px; font-size: 15px; color: #7dff9b; }
 
@@ -424,11 +420,11 @@
 </head>
 <body>
 <canvas id="game"></canvas>
-<svg id="gisprite" style="display:none" aria-hidden="true"><symbol id="gi-garage" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><path d="m3 8 9-5 9 5v13H3Z M7 21V11h10v10M7 15h10M7 18h10"/></g></symbol><symbol id="gi-quests" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="5" width="14" height="17" rx="2"/><path d="M9 5V2h6v3M9 11l1 1 2-2M14 11h2M9 17l1 1 2-2M14 17h2"/></g></symbol><symbol id="gi-gem" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><path d="m3 8 4-5h10l4 5-9 13Zm0 0h18M7 3l5 18 5-18M7 3l5 5 5-5"/></g></symbol><symbol id="gi-podium" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21V10h8v11M2 21V15h6M16 13h6v8M1 21h22M12 2l1 2 2 .4-1.5 1.5.4 2.1L12 7l-1.9 1 .4-2.1L9 4.4l2-.4Z"/></g></symbol><symbol id="gi-ticket" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18v5a2 2 0 0 0 0 4v5H3v-5a2 2 0 0 0 0-4Zm12 0v2m0 3v2m0 3v4M7 9h4M7 13h3"/></g></symbol><symbol id="gi-coins" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="10" cy="6" rx="7" ry="3"/><path d="M3 6v5c0 4 14 4 14 0V6M3 10v5c0 3 9 4 13 1M7 18c3 4 14 3 14-1v-7c0-1-1-2-3-2M18 13c1 0 2-1 3-2"/></g></symbol><symbol id="gi-token" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><path d="m8 2 8 0 6 6v8l-6 6H8l-6-6V8Zm1 5h6l3 5-3 5H9l-3-5Z"/></g></symbol><symbol id="gi-swords" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2h4l11 15-2 2L4 6ZM20 2h-4l-5 7m-3 4-3 4 2 2 4-3M3 16l5 5m8-1 5-5M2 22l3-3m14 0 3 3"/></g></symbol><symbol id="gi-tank" viewBox="0 0 512 512"><path fill="currentColor" d="M232.197 104v80h96v-80h-96zm112 32v16h136v-16h-136zm-163.054 64l-37.504 75.008 224.767-58.635L362.56 200H181.143zm222.133 25.092c-3.69.026-6.933.46-9.2 1.117l-.103.031-297.46 77.598c-12.339 3.219-19.092 6.415-24.038 10.695-4.942 4.276-8.702 10.272-13.754 20.254L31.358 392.18c-2.754 6.371-5.853 27.068-.338 43.568 5.52 16.518 17.015 30.102 47.45 30.08h.003l273.697-.88 94.795-.348c16.262-4.548 26.11-14.702 31.715-25.704 5.701-11.19 6.156-23.595 4.558-28.35l-.068-.206-6.693-24.24-37.315-139.42c-3.892-10.64-11.61-16.252-20.588-19.272-4.514-1.519-9.343-2.194-13.691-2.303a50.494 50.494 0 0 0-1.607-.013zm-1.977 11.27c17.578 0 32 14.421 32 32 0 17.578-14.422 32-32 32s-32-14.422-32-32c0-17.579 14.422-32 32-32zm0 16c-8.931 0-16 7.068-16 16 0 8.93 7.069 16 16 16 8.931 0 16-7.07 16-16 0-8.932-7.069-16-16-16zm-58.27 21.53l4.028 15.485-191.738 49.865-4.026-15.484 191.736-49.865zm74.657 36.083l12.416 51.15-15.55 3.775-12.415-51.152 15.549-3.773zm-31.82 2.441l12.273 60.002-258.727 30.598 7.826-43.82 230.84-45.253 7.787-1.527zm-285.348 5.555c17.578 0 32 14.421 32 32 0 17.578-14.422 32-32 32-1.35 0-2.678-.095-3.985-.26 14.23 6.145 24.26 20.332 24.26 36.748 0 21.997-18.003 40-40 40s-40-18.003-40-40 18.003-40 40-40c2.116 0 4.194.17 6.223.49-10.893-5.123-18.498-16.216-18.498-28.978 0-17.579 14.421-32 32-32zm272.851 13.2L161.063 372.79l-2.108 11.803 220.02-26.02-5.606-27.4zm-272.851 2.8c-8.932 0-16 7.068-16 16 0 8.931 7.068 16 16 16 8.931 0 16-7.069 16-16 0-8.932-7.069-16-16-16zM432.198 376c21.996 0 40 18.003 40 40s-18.004 40-40 40c-21.997 0-40-18.003-40-40s18.003-40 40-40zm0 16c-13.35 0-24 10.65-24 24s10.65 24 24 24c13.349 0 24-10.65 24-24s-10.651-24-24-24zm-351.405 2.459c-13.35 0-24 10.65-24 24s10.65 24 24 24 24-10.65 24-24-10.65-24-24-24zM365.986 413.4l.252 15.998-223.341 3.512-.252-15.998 223.341-3.512z"/></symbol><symbol id="gi-skull" viewBox="0 0 512 512"><circle cx="128" cy="128" r="128"/><circle stroke="#fff" stroke-width="18" cx="128" cy="128" r="101"/><path fill="currentColor" d="M128 58c-32 0-64 16-64 37.838C64 154 96 142 96 142l-6 24h76l-6-24s32 12 32-52c0-16-32-32-64-32zm-26 38a16 16 0 0 1 16 16 16 16 0 0 1-16 16 16 16 0 0 1-16-16 16 16 0 0 1 16-16zm52 0a16 16 0 0 1 16 16 16 16 0 0 1-16 16 16 16 0 0 1-16-16 16 16 0 0 1 16-16zm-26 34l10 26h-20l10-26zm-28 51.002v17.996h56v-17.996h-56z"/></symbol><symbol id="gi-crosshair" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="7"/><path d="M12 1v5m0 12v5M1 12h5m12 0h5M10 12h4m-2-2v4"/></g></symbol><symbol id="gi-bolt" viewBox="0 0 512 512"><path fill="currentColor" d="M29.805 29.777L242.14 209.55H118.712l112.54 86.784H95.995l225.656 174.012-81.537-116.05 66.487.143 179.185 138.175-171.96-244.746h84.568L248.082 29.776H29.805z"/></symbol><symbol id="gi-chest" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10 5 4h14l2 6v11H3Zm0 0h18M7 4v6m10-6v6M10 10v5h4v-5"/></g></symbol><symbol id="gi-lock" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10" width="14" height="12" rx="2"/><path d="M8 10V6a4 4 0 0 1 8 0v4M12 15v3"/></g></symbol><symbol id="gi-share" viewBox="0 0 512 512"><path fill="currentColor" d="M384 64a64 64 0 0 0-64 64 64 64 0 0 0 1.1 11.3l-146.3 73.2A64 64 0 0 0 128 192a64 64 0 0 0-64 64 64 64 0 0 0 64 64 64 64 0 0 0 46.8-20.5L321 372.7a64 64 0 0 0-1 11.3 64 64 0 0 0 64 64 64 64 0 0 0 64-64 64 64 0 0 0-64-64 64 64 0 0 0-46.8 20.5L191 267.4a64 64 0 0 0 1-11.4 64 64 0 0 0-1.1-11.4l146.3-73.1A64 64 0 0 0 384 192a64 64 0 0 0 64-64 64 64 0 0 0-64-64z"/></symbol><symbol id="gi-joystick" viewBox="0 0 512 512"><path fill="currentColor" d="M307.723 39.623c-25.627-.292-48.63 17.365-54.246 43.44-6.418 29.8 12.39 58.93 42.19 65.347 29.798 6.417 58.927-12.39 65.345-42.19 6.417-29.798-12.39-58.928-42.188-65.345-3.725-.802-7.44-1.21-11.1-1.252zm-37.543 117.88L237.123 311h47.055l30.97-143.81c-7.584.836-15.418.507-23.27-1.184-7.854-1.69-15.13-4.617-21.698-8.502zM198.486 329l-10 30h135.028l-10-30H198.486zM73 377v30h30v-30H73zm93.486 0l-10 30h199.028l-10-30H166.486zM409 377v30h30v-30h-30zM57 425v62h398v-62H57z"/></symbol><symbol id="gi-shield" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2 9 4v6c0 5-9 10-9 10S3 17 3 12V6Zm-4 9 3 3 5-6"/></g></symbol><symbol id="gi-trophy" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h10v6a5 5 0 0 1-10 0ZM7 5H3v3a4 4 0 0 0 5 4m9-7h4v3a4 4 0 0 1-5 4M12 14v5m-4 2v-2h8v2"/></g></symbol><symbol id="gi-home" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11 12 3l9 8M5 10v11h5v-7h4v7h5V10"/></g></symbol><symbol id="gi-gear" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><path d="m9 3 1-2h4l1 2 2 1 2-.2 2 3-1 2v3l1 2-2 3-2-.2-2 1-1 3h-4l-1-3-2-1-2 .2-2-3 1-2V9L3 7l2-3 2 .2Z"/><circle cx="12" cy="10.5" r="3"/></g></symbol><symbol id="gi-play" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><path d="m8 4 12 8-12 8Z"/></g></symbol><symbol id="gi-mark" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2 9 5v10l-9 5-9-5V7Z M7 9h10M12 9v8M6 13l3 2m9-2-3 2"/></g></symbol></svg>
+<svg id="gisprite" style="display:none" aria-hidden="true"><symbol id="gi-garage" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><path d="m3 8 9-5 9 5v13H3Z M7 21V11h10v10M7 15h10M7 18h10"/></g></symbol><symbol id="gi-quests" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="5" width="14" height="17" rx="2"/><path d="M9 5V2h6v3M9 11l1 1 2-2M14 11h2M9 17l1 1 2-2M14 17h2"/></g></symbol><symbol id="gi-gem" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><path d="m3 8 4-5h10l4 5-9 13Zm0 0h18M7 3l5 18 5-18M7 3l5 5 5-5"/></g></symbol><symbol id="gi-podium" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21V10h8v11M2 21V15h6M16 13h6v8M1 21h22M12 2l1 2 2 .4-1.5 1.5.4 2.1L12 7l-1.9 1 .4-2.1L9 4.4l2-.4Z"/></g></symbol><symbol id="gi-ticket" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18v5a2 2 0 0 0 0 4v5H3v-5a2 2 0 0 0 0-4Zm12 0v2m0 3v2m0 3v4M7 9h4M7 13h3"/></g></symbol><symbol id="gi-coins" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="10" cy="6" rx="7" ry="3"/><path d="M3 6v5c0 4 14 4 14 0V6M3 10v5c0 3 9 4 13 1M7 18c3 4 14 3 14-1v-7c0-1-1-2-3-2M18 13c1 0 2-1 3-2"/></g></symbol><symbol id="gi-token" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><path d="m8 2 8 0 6 6v8l-6 6H8l-6-6V8Zm1 5h6l3 5-3 5H9l-3-5Z"/></g></symbol><symbol id="gi-swords" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2h4l11 15-2 2L4 6ZM20 2h-4l-5 7m-3 4-3 4 2 2 4-3M3 16l5 5m8-1 5-5M2 22l3-3m14 0 3 3"/></g></symbol><symbol id="gi-tank" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11h14l3 5v4H3v-4zm3 0V7h8v4m-4-4V2h2v5M3 16h18M6 18h.1m4 0h.1m4 0h.1m4 0h.1"/></g></symbol><symbol id="gi-skull" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17H5V8l4-4h6l4 4v9h-2v4H7zM8 10v3m8-3v3m-6 5v3m4-3v3m-3-6h2"/></g></symbol><symbol id="gi-crosshair" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="7"/><path d="M12 1v5m0 12v5M1 12h5m12 0h5M10 12h4m-2-2v4"/></g></symbol><symbol id="gi-bolt" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><path d="m13 2-9 12h7l-1 8 10-13h-7z"/></g></symbol><symbol id="gi-chest" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10 5 4h14l2 6v11H3Zm0 0h18M7 4v6m10-6v6M10 10v5h4v-5"/></g></symbol><symbol id="gi-lock" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10" width="14" height="12" rx="2"/><path d="M8 10V6a4 4 0 0 1 8 0v4M12 15v3"/></g></symbol><symbol id="gi-share" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6m0-6L10 14M11 5H4v15h15v-7"/></g></symbol><symbol id="gi-joystick" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13h14l2 8H3zM12 13V7m-3-3a3 3 0 1 0 6 0 3 3 0 1 0-6 0M7 17h2m7 0h.1"/></g></symbol><symbol id="gi-shield" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2 9 4v6c0 5-9 10-9 10S3 17 3 12V6Zm-4 9 3 3 5-6"/></g></symbol><symbol id="gi-trophy" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h10v6a5 5 0 0 1-10 0ZM7 5H3v3a4 4 0 0 0 5 4m9-7h4v3a4 4 0 0 1-5 4M12 14v5m-4 2v-2h8v2"/></g></symbol><symbol id="gi-home" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11 12 3l9 8M5 10v11h5v-7h4v7h5V10"/></g></symbol><symbol id="gi-gear" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><path d="m9 3 1-2h4l1 2 2 1 2-.2 2 3-1 2v3l1 2-2 3-2-.2-2 1-1 3h-4l-1-3-2-1-2 .2-2-3 1-2V9L3 7l2-3 2 .2Z"/><circle cx="12" cy="10.5" r="3"/></g></symbol><symbol id="gi-play" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><path d="m8 4 12 8-12 8Z"/></g></symbol><symbol id="gi-mark" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9 7 3h10l4 6M3 18l9 4 9-4M5 15l4-7 3 4 3-4 4 7-7 3zM12 12v6"/></g></symbol></svg>
 
 
 <div id="loading">
-  <img id="ldhero" src="assets/arena-lobby-v2.jpg" alt="" decoding="async">
+  <img id="ldhero" src="assets/outpost-lobby.jpg" alt="" decoding="async">
   <div class="ld-emblem" aria-hidden="true"><svg class="gi"><use href="#gi-mark"/></svg></div>
   <div class="ldtitle">TANK SAVAŞI 3D</div>
   <div class="ldspin"></div>
@@ -700,7 +696,7 @@
       <button class="mbtn" id="set-resume">DEVAM ET</button>
       <button class="mbtn alt" id="set-quit">ANA MENÜ</button>
     </div>
-    <div style="font-size:10px;color:#8aa08c;margin-top:10px;max-width:230px;text-align:center">Icons: Lorc, Delapouite &amp; contributors — game-icons.net (CC BY 3.0) · HDRI/dokular: Poly Haven (CC0) · Modeller: Quaternius, Kenney (CC0); Zsky, KolosStudios (CC BY 3.0, değiştirildi) · Font: Russo One (OFL) · <a href="CREDITS.md" target="_blank" style="color:#9fb8a4">tüm krediler</a></div>
+    <div class="credits-summary">Modeller: Kenney (CC0) + proje tasarımları · Doku / ışık: Poly Haven (CC0) · Barlow (OFL)<br><button class="mbtn small" id="set-licenses">LİSANSLAR / LICENSES</button></div>
     <div style="font-size:11px;color:#8aa08c;margin-top:6px"><a id="set-privacy" href="privacy.html" style="color:#7dd8a0">Gizlilik</a> &nbsp;·&nbsp; <span id="set-ver">v0.9.0</span></div>
     <button class="mbtn small" id="set-how">❓ Nasıl Oynanır</button>
     <button class="mbtn small" id="set-close">KAPAT</button>

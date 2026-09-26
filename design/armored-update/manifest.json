@@ -3,36 +3,36 @@
     "id": "tank_recruit_mk2",
     "triangles": 5700,
     "meshes": 12,
-    "bytes": 415928
+    "bytes": 415852
   },
   {
     "id": "tank_scout_mk2",
     "triangles": 5656,
     "meshes": 12,
-    "bytes": 412820
+    "bytes": 412760
   },
   {
     "id": "tank_heavy_mk2",
     "triangles": 6052,
     "meshes": 12,
-    "bytes": 442580
+    "bytes": 442520
   },
   {
     "id": "acc_rescuepack",
-    "triangles": 308,
+    "triangles": 352,
     "meshes": 4,
-    "bytes": 27412
+    "bytes": 30388
   },
   {
     "id": "acc_cargorack",
     "triangles": 308,
     "meshes": 4,
-    "bytes": 26472
+    "bytes": 26440
   },
   {
     "id": "acc_searchlight",
     "triangles": 356,
     "meshes": 3,
-    "bytes": 26416
+    "bytes": 26404
   }
 ]

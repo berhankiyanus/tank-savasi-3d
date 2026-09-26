@@ -1,0 +1,17 @@
+[
+  {
+    "file": "tools/playable/dist/tank-savasi-playable-google.zip",
+    "sha256": "2847473d444ffd48b7af97ddbb11dd4a5819ce686899fd3e5e1157fdbd3b4710",
+    "bytes": 492965
+  },
+  {
+    "file": "tools/playable/dist/tank-savasi-playable.html",
+    "sha256": "3e937928e97adacbaaac781f4952769f40de022e67e955b96e3787ba80d99251",
+    "bytes": 2325391
+  },
+  {
+    "file": "tools/playable/dist/tank-savasi-playable-google.html",
+    "sha256": "bfebbb3b4ad665e8fece36a43d2f25ba041386d857d2e1a08c215a43e2f7eeb4",
+    "bytes": 2325507
+  }
+]
